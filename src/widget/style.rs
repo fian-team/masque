@@ -94,9 +94,14 @@ pub struct FlexStyle {
     /// composite. Does not affect layout.
     pub opacity: Opacity,
     /// Paint-time affine transform applied to the widget and its
-    /// descendants. Pivots around the widget's center. Does not affect
-    /// layout or hit-testing (hit-tests ignore the transform for now).
+    /// descendants. Pivots around [`Self::transform_origin`]. Does not
+    /// affect layout or hit-testing (hit-tests ignore the transform for
+    /// now).
     pub transform: Transform,
+    /// The point a transform's scale and rotation pivot around, as a
+    /// fraction of the widget's own box (CSS `transform-origin`). Paint
+    /// only, and not animated: a change snaps.
+    pub transform_origin: TransformOrigin,
     /// Paint-time backdrop filter applied to the canvas content
     /// underneath this widget's border box (i.e. the panel "frosts"
     /// what's behind it). `None` is a no-op. The filter is captured
@@ -193,8 +198,9 @@ impl Opacity {
 
 /// Affine transform with separate translation, scale, and rotation
 /// components. Composed at paint time as
-/// `translate(center) * rotate * scale * translate(-center) * translate(tx, ty)`
-/// so scale and rotation pivot around the widget's center.
+/// `translate(pivot) * rotate * scale * translate(-pivot) * translate(tx, ty)`
+/// so scale and rotation pivot around the widget's
+/// [`TransformOrigin`] — its center unless the style says otherwise.
 ///
 /// A translation has two parts that add: a length in logical pixels, and
 /// a percentage of the widget's own laid-out size (`translate_x: "-100%"`,
@@ -215,6 +221,51 @@ pub struct Transform {
     pub scale_y: f32,
     /// Rotation in degrees. Positive rotates clockwise (Skia convention).
     pub rotate: f32,
+}
+
+/// Where a [`Transform`] pivots, as fractions of the widget's own laid-out
+/// box: `(0, 0)` is the top-left corner, `(0.5, 0.5)` the center, `(1, 1)`
+/// the bottom-right. A bar that drains is a full-width fill scaled on `x`
+/// about its left edge — paint, where the same bar written as a `width`
+/// would be a layout change on every step.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TransformOrigin {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl TransformOrigin {
+    pub const CENTER: Self = Self { x: 0.5, y: 0.5 };
+
+    /// The origin a keyword names: `center`, an edge (`left`, `right`,
+    /// `top`, `bottom`), or a corner (`top_left`, …). `None` for any other
+    /// word.
+    pub fn from_keyword(word: &str) -> Option<Self> {
+        let (x, y) = match word {
+            "center" => (0.5, 0.5),
+            "left" => (0.0, 0.5),
+            "right" => (1.0, 0.5),
+            "top" => (0.5, 0.0),
+            "bottom" => (0.5, 1.0),
+            "top_left" => (0.0, 0.0),
+            "top_right" => (1.0, 0.0),
+            "bottom_left" => (0.0, 1.0),
+            "bottom_right" => (1.0, 1.0),
+            _ => return None,
+        };
+        Some(Self { x, y })
+    }
+
+    /// The pivot in the same space as `rect`.
+    pub fn pivot_in(&self, rect: &super::rect::Rect) -> (f32, f32) {
+        (rect.x + rect.width * self.x, rect.y + rect.height * self.y)
+    }
+}
+
+impl Default for TransformOrigin {
+    fn default() -> Self {
+        Self::CENTER
+    }
 }
 
 impl Default for Transform {
@@ -282,6 +333,7 @@ impl Default for FlexStyle {
             scroll_follow_end: false,
             opacity: Opacity::OPAQUE,
             transform: Transform::IDENTITY,
+            transform_origin: TransformOrigin::CENTER,
             backdrop_filter: None,
             inner_glow: None,
             shadow: None,
@@ -371,6 +423,7 @@ impl FlexStyle {
             && self.corners == other.corners
             && self.opacity == other.opacity
             && self.transform == other.transform
+            && self.transform_origin == other.transform_origin
             && self.backdrop_filter == other.backdrop_filter
             && self.inner_glow == other.inner_glow
             && self.shadow == other.shadow

@@ -176,9 +176,9 @@ the length of a drag; it is also why capture needed no
 measured-position query. `Slider` and `TextInput` (drag-select) are
 the two takers. Requests on any event but `mouse_down` are dropped.
 
-Capture is the UI's; the host's drag state machine
-(`dispatch_drag_*`) is separate and unchanged — a slider carries no
-`drag_payload`, so the host never starts a drag over one.
+Capture is the UI's, and so is the drag gesture; a press that takes
+capture never arms a drag, and a slider carries no `drag_payload`
+anyway.
 
 #### Non-pointer events (no point)
 
@@ -463,7 +463,7 @@ of it.
 | `keydown` (chord map on Flex) | A key the focus chain's listeners match, see *Key chords* | `keyboard_data` |
 | `drag_start`   | Cursor crossed dead-zone past `mouse_down` on a widget with `drag_payload:` | `point`, `payload` |
 | `drag_move`    | `mouse_move` while a drag is in flight (deepest widget at cursor) | `point`, `payload` |
-| `drag_end`     | `mouse_up` while a drag is in flight (resolves to the deepest accepting drop target, or originator) | `point`, `payload` |
+| `drag_end`     | `mouse_up` while a drag is in flight (resolves to the deepest accepting drop target, or originator) | `point`, `payload`, `drop_at` (second listener argument `at`) |
 | `contextmenu`  | Right-click on the deepest widget at cursor (no auto-bubble) | `point`           |
 
 The widget's listener map is built from descriptor properties
@@ -473,22 +473,34 @@ are `Box<dyn Fn(&Event)>`; the standard one-arg version
 `make_event_listener_with_arg` (used for `on_change`) extracts
 `event.value` and passes it as the closure's first argument.
 
-### Drag dispatch (Phase 3)
+### Drag gesture (2026-10-11)
 
-Drag isn't dispatched through `UI::call_event` — it has its own
-seam through `UI::dispatch_drag_*`, called by `Ogham::dispatch_drag_*`
-on the host side. The split exists because:
+`UI::call_event` runs the whole gesture (`widget::drag_gesture`'s
+header is the record). A `mouse_down` nothing captured arms the
+deepest widget under it with a `drag_payload` (portal layers first);
+the press still reaches the tree as an ordinary press. Past that
+widget's `drag_dead_zone` the drag starts (`dispatch_drag_start`),
+and from then on the drag owns the pointer: every move, the release,
+the wheel and Escape are reported handled. The release fires
+`drag_end` on the deepest accepting target; Escape, or the source
+leaving the tree, ends it with nothing fired.
 
-- The dead-zone state machine (deciding when a `mouse_down` plus
-  cursor delta becomes a drag rather than a click) lives in the
-  host's input pump; the runtime doesn't know how the host
-  reasons about the boundary.
-- Drag end has to walk *portal layers* high-priority-to-low
-  before the base tree to find the right drop target — a
-  routing path `call_event` doesn't do.
-- Drag preview rendering goes through the
-  `cursor-attached` portal layer; the dispatch path needs to
-  know about it to set up `UI::active_drag_preview`.
+- A `drag_payload` of `""` declares no source — the document's way to
+  say *not this one*, since ogham has no null.
+- A two-parameter `drag_end` listener is handed `at`, the drop point in
+  the target's own pixels as `{ x, y }`. That is what lets a widget
+  stand for a surface the host draws (a map, a world view).
+- Wheel notches during a drag add to `DragView::turn`, signed; what a
+  notch means is the host's.
+- `UI::drag() -> Option<DragView>` is the drag as a host reads it each
+  frame: payload, window point, turn, and the accepting target under
+  the pointer with its key and local point. `UI::pointer_is_ours()` is
+  true while a drag (or a capture) holds the pointer.
+- `UI::cancel_drag()` ends it from the host, for a surface that went
+  away under the gesture.
+
+`UI::dispatch_drag_*` remain public for a host or test that drives a
+drag by hand; the gesture is built on them.
 
 Source-side fields on a draggable `FlexWidget`:
 

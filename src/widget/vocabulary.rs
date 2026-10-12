@@ -140,6 +140,26 @@ pub const SLIDER_PROPERTIES: &[&str] = &[
 /// The colour-map properties a `Slider` carries at its root.
 pub const SLIDER_COLOR_PROPERTIES: &[&str] = &["fill_color", "thumb_color", "track_color"];
 
+/// `Pad`.
+pub const PAD_PROPERTIES: &[&str] = &[
+    "dot_color",
+    "on_change",
+    "on_commit",
+    "rest",
+    "ring_color",
+    "shape",
+    "style",
+    "x",
+    "x_max",
+    "x_min",
+    "y",
+    "y_max",
+    "y_min",
+];
+
+/// The colour-map properties a `Pad` carries at its root.
+pub const PAD_COLOR_PROPERTIES: &[&str] = &["dot_color", "ring_color"];
+
 /// `Canvas`.
 pub const CANVAS_PROPERTIES: &[&str] = &[
     "contextmenu",
@@ -178,6 +198,7 @@ pub const FLEX_STYLE_KEYS: &[&str] = &[
     "shadow",
     "stagger",
     "transform",
+    "transform_origin",
     "transition",
     "width",
 ];
@@ -226,6 +247,19 @@ pub const DECORATIONS: &[&str] = &["none", "strikethrough", "underline"];
 pub const BORDER_STYLES: &[&str] = &["dashed", "dotted", "solid"];
 pub const SPRINGS: &[&str] = &["default", "spring"];
 pub const STAGGER_ORDERS: &[&str] = &["forward", "reverse"];
+
+/// The words `TransformOrigin::from_keyword` reads.
+pub const TRANSFORM_ORIGINS: &[&str] = &[
+    "bottom",
+    "bottom_left",
+    "bottom_right",
+    "center",
+    "left",
+    "right",
+    "top",
+    "top_left",
+    "top_right",
+];
 
 pub const SPACING_KEYS: &[&str] = &["bottom", "left", "right", "top"];
 pub const COLOR_KEYS: &[&str] = &["a", "b", "g", "r"];
@@ -298,6 +332,7 @@ fn widget_vocabulary(name: &str) -> Option<(&'static [&'static str], StyleKind)>
         "portal" => Some((PORTAL_PROPERTIES, StyleKind::None)),
         "canvas" => Some((CANVAS_PROPERTIES, StyleKind::Flex)),
         "slider" => Some((SLIDER_PROPERTIES, StyleKind::Flex)),
+        "pad" => Some((PAD_PROPERTIES, StyleKind::Flex)),
         _ => None,
     }
 }
@@ -308,7 +343,7 @@ fn style_slots(name: &str) -> &'static [&'static str] {
         "flex" | "presence" => &["style", "hover_style", "initial", "exit"],
         "text" => &["style", "hover_style"],
         "textinput" => &["style", "hover_style", "focus_style"],
-        "grid" | "canvas" | "slider" => &["style"],
+        "grid" | "canvas" | "slider" | "pad" => &["style"],
         _ => &[],
     }
 }
@@ -718,6 +753,10 @@ impl<'a> Check<'a> {
             "overflow" => self.enum_value(span, path, value, OVERFLOWS, false),
             "cursor" => self.enum_value(span, path, value, CURSOR_ROLES, false),
             "transform" => self.map_keys(path, value, TRANSFORM_KEYS),
+            "transform_origin" => match value {
+                Node::Str(_) => self.enum_value(span, path, value, TRANSFORM_ORIGINS, false),
+                _ => self.map_keys(path, value, ANCHOR_OFFSET_KEYS),
+            },
             "backdrop_filter" => self.map_keys(path, value, BACKDROP_FILTER_KEYS),
             "transition" => self.transition(span, path, value),
             "stagger" => {
@@ -873,6 +912,12 @@ impl<'a> Check<'a> {
             }
             if self.widget == "slider" && SLIDER_COLOR_PROPERTIES.contains(key) {
                 self.map_keys(key, value, COLOR_KEYS);
+            }
+            if self.widget == "pad" && PAD_COLOR_PROPERTIES.contains(key) {
+                self.map_keys(key, value, COLOR_KEYS);
+            }
+            if self.widget == "pad" && *key == "rest" {
+                self.map_keys(key, value, &["x", "y"]);
             }
         }
     }

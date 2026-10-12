@@ -277,6 +277,11 @@ impl Widget for PresenceWidget {
             };
             let mut new_children = std::mem::take(&mut new_presence.inner.children);
             let inner_result = self.inner.reconcile_children(&mut new_children);
+            let (needs_layout, needs_boundary_layout) = self.inner.contain_layout(
+                own_layout_changed,
+                inner_result.needs_layout,
+                inner_result.needs_boundary_layout,
+            );
             // **Report what changed, not that something might have.** This
             // returned a flat `layout_changed()` and threw `inner_result`
             // away, so *any* rerender of a document rooted in a Presence —
@@ -291,7 +296,8 @@ impl Widget for PresenceWidget {
             // question, and the Presence's own inner style is asked above.
             let mut result = UpdateResult {
                 absorbed: true,
-                needs_layout: own_layout_changed || inner_result.needs_layout,
+                needs_boundary_layout,
+                needs_layout,
                 needs_repaint: own_layout_changed
                     || own_paint_changed
                     || inner_result.needs_repaint,
@@ -500,6 +506,13 @@ impl Widget for PresenceWidget {
 
     fn contains_point(&self, point: &Point) -> bool {
         self.inner.contains_point(point)
+    }
+
+    /// Through the inner Flex, which may itself be the boundary. Ghosts
+    /// are not visited: they lay out inside a frozen rect on every full
+    /// pass, and nothing reconciles into them.
+    fn relayout_boundaries(&mut self, ctx: &LayoutContext) {
+        self.inner.relayout_boundaries(ctx);
     }
 
     fn get_children_mut(&mut self) -> Vec<WidgetRef> {

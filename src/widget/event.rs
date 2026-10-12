@@ -39,16 +39,10 @@ impl TickContext {
     }
 }
 
-/// Phase 3 M1: per-frame drag state. The lorekeeper input
-/// pump constructs this when the dead-zone state machine
-/// (`src/client/input.rs`) detects a drag start; the dispatch
-/// path stashes it in `EventContext.drag_state` for widgets
-/// to read (e.g. for hover highlighting based on
-/// `accepts_drop`).
-///
-/// M0 declares the struct as a placeholder (`Default::default`
-/// produces an empty/sentinel value); M1 wires the actual
-/// fields and dispatch.
+/// The state of one drag, from `drag_start` to `drag_end`.
+/// [`crate::widget::drag_gesture`] seeds it when a press on a
+/// drag source travels past its dead zone, inside
+/// `UI::call_event`, and threads it through the dispatches.
 #[derive(Clone, Default)]
 pub struct DragState {
     /// The widget where the drag originated. Set when
@@ -242,6 +236,16 @@ pub struct Event {
     /// through `drag_start` / `drag_move` / `drag_end`
     /// dispatches so listener closures can read it.
     pub payload: Option<crate::runtime::value::Value>,
+    /// The modifier keys held when a **pointer** event happened — what a
+    /// widget reads to vary a press or a drag (`Pad`'s fine drag). Empty
+    /// unless the host fills it in ([`Event::with_modifiers`]). A keyboard
+    /// event carries its own in [`KeyboardData::modifiers`].
+    pub modifiers: KeyModifiers,
+    /// On a `drag_end`, the drop point in the receiving widget's own
+    /// pixels (`drag_gesture` rule 4) — handed to a two-parameter listener
+    /// as `at`. `None` on every other event, and on a `drag_end` that fell
+    /// back to the origin because nothing accepted it.
+    pub drop_at: Option<Point>,
 }
 
 impl Event {
@@ -254,6 +258,8 @@ impl Event {
             value: None,
             scroll_delta: None,
             payload: None,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -266,6 +272,8 @@ impl Event {
             value: None,
             scroll_delta: None,
             payload: None,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -287,6 +295,8 @@ impl Event {
             value: None,
             scroll_delta: None,
             payload: None,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -299,6 +309,8 @@ impl Event {
             value: Some(value),
             scroll_delta: None,
             payload: None,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -311,6 +323,8 @@ impl Event {
             value: None,
             scroll_delta: Some((dx, dy)),
             payload: None,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -326,6 +340,8 @@ impl Event {
             value: None,
             scroll_delta: None,
             payload,
+            modifiers: KeyModifiers::default(),
+            drop_at: None,
         }
     }
 
@@ -339,6 +355,12 @@ impl Event {
 
     pub fn keyup(key_code: u32, character: Option<char>, modifiers: KeyModifiers) -> Self {
         Self::with_keyboard("keyup".to_string(), key_code, character, modifiers)
+    }
+
+    /// This event with the modifier keys held when it happened.
+    pub fn with_modifiers(mut self, modifiers: KeyModifiers) -> Self {
+        self.modifiers = modifiers;
+        self
     }
 
     /// Returns a copy of this event with its point shifted by `(dx, dy)`.
@@ -357,6 +379,8 @@ impl Event {
             value: self.value.clone(),
             scroll_delta: self.scroll_delta,
             payload: self.payload.clone(),
+            modifiers: self.modifiers.clone(),
+            drop_at: self.drop_at.clone(),
         }
     }
 }

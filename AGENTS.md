@@ -99,6 +99,7 @@ Source (.ogh)
 | `src/widget/portal_widget.rs` | Portal — paints children into a per-frame layer with hit-test priority |
 | `src/widget/portal_layer.rs` | Named portal layers + per-layer backdrop / cursor policies |
 | `src/widget/slider_widget.rs` | Native horizontal `Slider` — a controlled value the pointer drags, on pointer capture (`docs/internal/SLIDER.md`) |
+| `src/widget/pad_widget.rs` | Native two-axis `Pad` — `Slider` in two dimensions: a controlled `{ x, y }`, rect or disc, Ctrl fine drag, double-click to `rest` (its header is the record) |
 | `src/widget/keys.rs` | Key chords: the names a `keydown:` map is keyed by, and the chord a host key event resolves to |
 | `src/widget/animation.rs` | Spring math + per-property animation state used by transitions |
 | `src/widget/event.rs` | Event types (`Event`, `EventContext`, `TickContext`, `DragState`) |
@@ -213,7 +214,7 @@ let add = fn (a: int, b: int): int {
 
 ### Widgets
 
-Built-in widget types: `Flex`, `Text`, `TextInput`, `Svg`, `Image`, `Grid`, `Presence`, `Portal`, `Canvas`, `Slider`. `Flex` is the workhorse — it owns the layout/style/animation/lifecycle machinery; the other containers (`Grid`, `Presence`, `Portal`) wrap or specialize it.
+Built-in widget types: `Flex`, `Text`, `TextInput`, `Svg`, `Image`, `Grid`, `Presence`, `Portal`, `Canvas`, `Slider`, `Pad`. `Flex` is the workhorse — it owns the layout/style/animation/lifecycle machinery; the other containers (`Grid`, `Presence`, `Portal`) wrap or specialize it.
 
 Sizing: `width`/`height` take `"grow"`, `"shrink"`, a number (fixed px), or a percent. One pinned interaction (`flex_widget.rs` tests): while a `shrink` parent measures itself along an axis, `grow` descendants on that axis contribute their *content* size — a shrink parent has no leftover space to grow into — and are stretched to the parent's resolved size during the real layout pass. So a full-height accent bar (`height: "grow"`, no children) inside a `height: "shrink"` row contributes nothing to the row's height and then spans it exactly.
 

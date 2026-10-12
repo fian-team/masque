@@ -31,7 +31,7 @@ FlexStyle                       Layout pass:
   text_size / text_color
   overflow                      Render:
   opacity                         render          → background, border, scroll clip
-  transform                       (children rendered by Surface walker)
+  transform / transform_origin    (children rendered by Surface walker)
   backdrop_filter                 (paint-only; opacity / transform / backdrop pushed
   transitions                      via Surface effect scopes)
 ```
@@ -469,6 +469,112 @@ parent_available_height, sibling_basis)` call:
 
 ---
 
+## Relayout boundaries
+
+A Flex whose `width` and `height` are both `Size::Fixed` reports
+the same size to its parent whatever its children do: the
+`Fixed` arm of `natural_dimensions` returns the number without
+measuring anything under it, and no parent reads past a child's
+`get_dimensions`, `get_basis`, or `get_fixed_*`. A change inside
+such a box therefore cannot move anything outside it, and the box
+can be laid out again by itself. That box is a **relayout
+boundary** (`FlexWidget::is_layout_boundary`).
+
+```
+reconcile / tick (leaves → root)          UI::layout(w, h)
+  child reports needs_layout                needs_layout or new dims
+  boundary? ── yes → subtree_dirty = true     → full pass from the root
+             │       report needs_boundary_layout   (clears every mark)
+             └─ no  → pass needs_layout up    needs_boundary_layout only
+  any ancestor of a marked boundary           → walk descendant_dirty
+    sets descendant_dirty                       → each subtree_dirty box
+                                                  re-runs layout() with
+                                                  its stored LayoutInput
+```
+
+- Every `FlexWidget::layout` call stores its arguments, including
+  the `LayoutContext`'s measuring flags, as a `LayoutInput`, and
+  clears both marks.
+- `FlexWidget::contain_layout` is the one place the rule lives.
+  `FlexWidget::update`, `FlexWidget::tick_animations`, and the two
+  wrappers that reconcile a `FlexWidget`'s children directly
+  (`PresenceWidget`, `PortalWidget`) call it.
+- `UI::layout` has three outcomes: a full pass, a boundary pass
+  (`Widget::relayout_boundaries` from the root), or nothing.
+  `UI::layout_counts` reports how many of each have run.
+
+### Tenets
+
+- **Fixed on both axes, and nothing weaker.** `Grow` resolves as
+  `Shrink` under a measuring shrink ancestor
+  (`LayoutContext::effective_width`), and a `Shrink` box is its
+  children's size, so neither is independent of what it holds.
+  A box also has to have been laid out once: with no stored
+  `LayoutInput` there is nothing to repeat, and the change goes up
+  as `needs_layout`.
+
+  *Why:* the boundary pass is sound only if nothing outside the
+  box reads anything inside it. `Fixed` is the one size for which
+  that is true by construction.
+
+  *Drift indicators:*
+  - A new `Size` variant, or `max_height` alone, admitted by
+    `is_layout_boundary`.
+  - A parent's measure starting to read a fixed child's children
+    (a cross-axis content size, a baseline) — that turns every
+    boundary unsound at once.
+
+- **A full pass owed wins, and clears every mark.** The boundary
+  pass runs only when `needs_layout` is false and the dimensions
+  are unchanged. Any full pass re-lays every box from the root,
+  and each box clears its own marks as it is reached.
+
+  *Why:* a boundary repeats the constraints its parent gave it
+  last time. Those are current only while nothing above it has
+  changed since the last full pass.
+
+  *Drift indicators:*
+  - A boundary pass run before, or as well as, an owed full pass.
+  - A `layout()` path that returns before clearing
+    `subtree_dirty` / `descendant_dirty`.
+
+- **A change to the box itself goes up whole.** `contain_layout`
+  absorbs only what the children report. The box's own
+  layout-affecting change (`own_layout_changed`, or its own
+  layout spring) is `needs_layout`, even when the box is fixed.
+
+  *Why:* a fixed box whose own margin, padding, or position moved
+  can still move its siblings, or its own content box.
+
+- **A wrapper that holds a `FlexWidget` must contain and walk
+  through it.** `PresenceWidget` and `PortalWidget` reconcile
+  their inner Flex's children themselves, so they call
+  `contain_layout` on it, and override `relayout_boundaries` to
+  reach it. The default walk, over `get_children_mut`, would step
+  past the inner Flex to its children and never find the inner
+  Flex's own mark.
+
+  *Drift indicators:*
+  - A new widget wrapping a `FlexWidget` without both overrides.
+
+- **Events still owe a full pass.** `EventContext::needs_layout`
+  (a text input's keystroke, a hover that changes size) carries no
+  record of where it happened, so `UI::mark_dirty` stays full.
+  So does `GridWidget::update`, which reports `layout_changed()`
+  on every reconcile.
+
+  *Why:* events arrive at input rate, not several times a second
+  unprompted; the case boundaries exist for is a host value that
+  changes continuously.
+
+### Fixtures
+
+`tests/relayout_boundary.rs`. Each claim of containment has a
+twin that must not be contained: a `shrink` box beside the fixed
+track, whose neighbour moves when its content changes.
+
+---
+
 ## Hit testing (`contains_point` and `handle_event`)
 
 `FlexWidget::contains_point(point)` is an axis-aligned bounds
@@ -530,7 +636,8 @@ affect layout.
 ## Tests
 
 Inline `#[cfg(test)]` modules cover keyed reordering, presence
-sequencing, and a few alignment edge cases. They're not
+sequencing, and a few alignment edge cases;
+`tests/relayout_boundary.rs` covers the boundary pass. They're not
 comprehensive layout acceptance tests — visual regressions are
 caught manually for now.
 

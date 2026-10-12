@@ -496,6 +496,7 @@ impl Widget for TextInputWidget {
                     || matches!(self.style.height, Size::Shrink));
             UpdateResult {
                 absorbed: true,
+                needs_boundary_layout: false,
                 needs_layout: style_changed || value_affects_layout,
                 needs_repaint: style_changed || value_changed || placeholder_changed,
                 cancelled_unmount_prefixes: Vec::new(),

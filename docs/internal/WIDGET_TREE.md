@@ -200,8 +200,9 @@ to drain correctly.
 If the new root is the same `Arc` as the current root,
 `UpdateResult::UNCHANGED`. Otherwise, lock the current root and
 call `Widget::update(new_root)`. The result bubbles up to
-`Ogham::update`, which calls `mark_needs_layout` /
-`mark_needs_repaint` based on the flags.
+`Ogham::update`, which calls `mark_needs_layout`,
+`mark_needs_boundary_layout`, or `mark_needs_repaint` based on
+the flags.
 
 After reconcile, the focused-widget pointer is checked: if
 nothing else holds an `Arc` to it (`Arc::strong_count == 1`), the
@@ -224,7 +225,8 @@ fn update(&mut self, new_widget: WidgetRef) -> UpdateResult {
     if let Some(new_typed) = new_widget.downcast_mut::<Self>() {
         // copy props from new_typed onto self
         // call self.reconcile_children(&mut new_typed.children) (or equivalent)
-        UpdateResult { absorbed: true, needs_layout: ..., needs_repaint: ... }
+        UpdateResult { absorbed: true, needs_layout: ..., needs_boundary_layout: ...,
+                       needs_repaint: ... }
     } else {
         UpdateResult::REPLACE
     }
@@ -339,6 +341,20 @@ fn update(&mut self, new_widget: WidgetRef) -> UpdateResult {
     listed in `layout_equal`.
   - A non-layout-affecting field added *to* `layout_equal`
     (would force relayouts on hover state changes, etc.).
+
+- **A fixed-size box absorbs its children's `needs_layout`.**
+  On the way up, a Flex fixed on both axes turns a
+  `needs_layout` from inside it into a mark on itself and
+  `needs_boundary_layout: true`. Everything above it sees only
+  the second flag, and `UI::layout` lays out the marked boxes
+  alone. `FlexWidget::contain_layout` is the rule; `FLEX.md`
+  *Relayout boundaries* has the reasoning.
+
+  *Drift indicators:*
+  - A container that builds an `UpdateResult` from a child's
+    result and drops `needs_boundary_layout`. The change is then
+    never laid out, because nothing above the boundary owes a
+    full pass.
 
 ---
 

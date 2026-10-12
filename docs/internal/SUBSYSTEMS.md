@@ -589,13 +589,13 @@ top of `mouse_down` / `mouse_move` / `mouse_up`.
 
 **Invariants:**
 
-- **The host owns the dead-zone state machine; Ogham owns the
-  hit-test and dispatch.** Ogham exposes
-  `dispatch_drag_start` / `dispatch_drag_move` / `dispatch_drag_end`
-  and `hit_test_drag_target` / `hit_test_drop_target`; the host's
-  input pump decides when the cursor has crossed the drag origin's
-  per-widget dead-zone (`drag_dead_zone:`, default 4px) and feeds
-  the dispatchers a `DragState`.
+- **Ogham runs the gesture; the host reads it.** `UI::call_event`
+  arms a press on the deepest `drag_payload` widget, starts the drag
+  past its `drag_dead_zone:` (default 4px), owns the pointer while it
+  is live, and drops on the deepest accepting target
+  (`widget::drag_gesture`). The host reads `UI::drag()` each frame
+  and may end a drag with `UI::cancel_drag()`; the `dispatch_drag_*`
+  and `hit_test_*` primitives stay public beneath it.
 
 - **Drag end resolves a drop target by walking layers
   high-to-low, then the base tree.** The deepest widget whose

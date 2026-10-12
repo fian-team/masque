@@ -45,11 +45,14 @@ pub mod portal_widget;
 pub mod presence_widget;
 /// Convenience macros for working with widgets.
 #[macro_use]
+pub mod drag_gesture;
 pub mod event;
 pub mod point;
 pub mod rect;
 /// Native horizontal slider: a controlled value the pointer drags.
 pub mod slider_widget;
+/// Native two-axis control: a controlled `{ x, y }` the pointer drags.
+pub mod pad_widget;
 pub mod style;
 /// Text input field widget.
 pub mod text_input_widget;
@@ -350,6 +353,13 @@ pub struct UI {
     /// frame regardless, so this flag is informational — it does NOT gate
     /// any rendering.  Cleared by `layout()`.
     needs_repaint: bool,
+    /// Set when the only layout owed is inside relayout boundaries
+    /// ([`UpdateResult::needs_boundary_layout`]). [`UI::layout`] then lays
+    /// out those boundaries alone. A full pass owed at the same time wins
+    /// and clears every boundary's mark on the way down.
+    needs_boundary_layout: bool,
+    /// How many passes of each kind [`UI::layout`] has run, cumulatively.
+    layout_counts: LayoutCounts,
     /// Currently-focused widget, if any.
     focused: Option<WidgetRef>,
     /// Font collection with registered custom fonts. Shared with the
@@ -417,6 +427,9 @@ pub struct UI {
     /// layer. Read by [`UI::hovered_blocks`]: the world under such a
     /// layer gets no vote, exactly as a press there is swallowed.
     hover_obstructed: bool,
+    /// The drag gesture: idle, a press armed on a drag source, or a drag
+    /// in flight (`drag_gesture`).
+    gesture: drag_gesture::Gesture,
 }
 
 /// The anchor id the runtime keeps its own drag preview at.
@@ -479,6 +492,8 @@ impl UI {
             focus_stack: Vec::new(),
             needs_layout: true,
             needs_repaint: true,
+            needs_boundary_layout: false,
+            layout_counts: LayoutCounts::default(),
             focused: None,
             font_collection: None,
             default_font: None,
@@ -498,6 +513,7 @@ impl UI {
             last_mouse: None,
             captured: None,
             hover_obstructed: false,
+            gesture: drag_gesture::Gesture::Idle,
         }
     }
 
@@ -614,6 +630,11 @@ impl UI {
     }
 
     pub fn call_event(&mut self, event: &Event) -> bool {
+        // A press armed on a drag source, or a drag in flight, sees the
+        // event first (`drag_gesture`); a live drag owns the pointer.
+        if let Some(handled) = self.pump_drag_gesture(event) {
+            return handled;
+        }
         // A captured widget owns the pointer: every pointer event goes to
         // it, translated into its own space, with no hover walk and no
         // hit test — that is what lets a slider keep tracking after the
@@ -696,6 +717,11 @@ impl UI {
                 if let Some((widget, local)) = ctx.take_capture_request() {
                     let offset = (point.x() - local.x(), point.y() - local.y());
                     self.captured = Some((widget, offset));
+                }
+                // A press nothing captured may become a drag
+                // (`drag_gesture` rule 1).
+                if self.captured.is_none() {
+                    self.arm_drag(point);
                 }
             }
 
@@ -1049,14 +1075,20 @@ impl UI {
             .clone()
             .unwrap_or(crate::runtime::value::Value::Void);
         let target = self
-            .hit_test_drop_target(&payload, &point)
-            .or_else(|| state.origin_widget.clone());
-        if let Some(target_ref) = target.clone() {
-            let event = Event::drag("drag_end", point, Some(payload));
+            .hit_test_drop_target_local(&payload, &point)
+            .map(|(widget, local)| (widget, Some(local)))
+            .or_else(|| state.origin_widget.clone().map(|w| (w, None)));
+        let target = target.map(|(target_ref, local)| {
+            // `at`: the drop point in the target's own pixels, handed to
+            // a two-parameter listener (`drag_gesture` rule 4). None on
+            // the fallback to the origin, which nothing dropped onto.
+            let mut event = Event::drag("drag_end", point.clone(), Some(payload.clone()));
+            event.drop_at = local;
             let g = target_ref.lock().expect("widget lock poisoned");
             g.fire_event_listener(&event);
             drop(g);
-        }
+            target_ref
+        });
         // Drag is over — clear the preview so the renderer
         // stops painting it. Repaint so the cursor-attached
         // entry disappears from the next frame.
@@ -1259,6 +1291,17 @@ impl UI {
         payload: &crate::runtime::value::Value,
         point: &Point,
     ) -> Option<WidgetRef> {
+        self.hit_test_drop_target_local(payload, point).map(|(widget, _)| widget)
+    }
+
+    /// [`Self::hit_test_drop_target`], with `point` re-expressed in the
+    /// target's own pixels — what a drop onto a widget standing for a
+    /// host-drawn surface needs to say *where on it*.
+    pub fn hit_test_drop_target_local(
+        &self,
+        payload: &crate::runtime::value::Value,
+        point: &Point,
+    ) -> Option<(WidgetRef, Point)> {
         let entries: Vec<PortalEntry> = self.portal_layers.iter_hit_test_order().cloned().collect();
         for entry in &entries {
             let child_point = Point::new(
@@ -1329,36 +1372,39 @@ impl UI {
     /// Recurse into `widget` looking for the deepest descendant
     /// whose `accepts_drop(payload)` is true and whose layout
     /// rect contains `point`. Returns the widget itself if it
-    /// is the only acceptor.
+    /// is the only acceptor, with `point` in the acceptor's own
+    /// pixels.
     fn deepest_drop_target(
         widget: &WidgetRef,
         point: &Point,
         payload: &crate::runtime::value::Value,
-    ) -> Option<WidgetRef> {
-        let (origin, children, self_accepts) = {
+    ) -> Option<(WidgetRef, Point)> {
+        let (origin, scroll, children, self_accepts) = {
             let g = widget.lock().expect("widget lock poisoned");
             let o = g
                 .get_layout_rect()
                 .map(|r| (r.x, r.y))
                 .unwrap_or((0.0, 0.0));
-            (o, g.get_children(), g.accepts_drop(payload))
+            (o, g.scroll_offset(), g.get_children(), g.accepts_drop(payload))
         };
         let local = Point::new(point.x() - origin.0, point.y() - origin.1);
+        // Children sit in the scrolled content, as they do for a press.
+        let content = Point::new(local.x() + scroll.0, local.y() + scroll.1);
         for child in children.iter().rev() {
             let contains = {
                 let cg = child.lock().expect("widget lock poisoned");
                 // Exiting widgets are hit-test-invisible
                 // (PRESENCE_POP.md §6).
-                !cg.is_exiting() && cg.contains_point(&local)
+                !cg.is_exiting() && cg.contains_point(&content)
             };
             if contains {
-                if let Some(deeper) = Self::deepest_drop_target(child, &local, payload) {
+                if let Some(deeper) = Self::deepest_drop_target(child, &content, payload) {
                     return Some(deeper);
                 }
             }
         }
         if self_accepts {
-            Some(widget.clone())
+            Some((widget.clone(), local))
         } else {
             None
         }
@@ -1534,11 +1580,21 @@ impl UI {
     }
 
     /// Updates the bounds of widgets in the hierarchy within the constraints provided (typically the screen size).
+    ///
+    /// Three outcomes: a full pass when the tree owes one (a change no
+    /// relayout boundary absorbed, an event, or new dimensions); a pass
+    /// over the marked boundaries alone when only they are owed; nothing
+    /// otherwise.
     pub fn layout(&mut self, width: f32, height: f32) {
         let dims_changed = self.last_layout_width != width || self.last_layout_height != height;
         if !self.needs_layout && !dims_changed {
+            if self.needs_boundary_layout {
+                self.layout_boundaries();
+            }
             return;
         }
+        self.needs_boundary_layout = false;
+        self.layout_counts.full += 1;
         #[cfg(debug_assertions)]
         let attributed_source = if dims_changed && !self.needs_layout {
             3 // dims-only
@@ -1559,9 +1615,10 @@ impl UI {
             if now.duration_since(*start).as_secs_f32() >= 1.0 {
                 if self.layout_count > 5 {
                     eprintln!(
-                        "[ogham] WARNING: layout() called {} times in the last second \
+                        "[ogham] WARNING: {} full layout passes in the last second \
                          (rerender={}, event={}, anim={}, dims={}) \
-                         — check for unnecessary dirty-marking",
+                         — check for unnecessary dirty-marking; a change inside a \
+                         fixed-size box costs a boundary pass, which is not counted",
                         self.layout_count,
                         self.dirty_sources[0],
                         self.dirty_sources[1],
@@ -1614,6 +1671,25 @@ impl UI {
             let ph = preview.get_fixed_height().unwrap_or(0.0);
             preview.layout(&ctx, 0.0, 0.0, &Direction::Column, pw, pw, ph, ph, 0.0);
         }
+    }
+
+    /// The partial pass: lay out each marked relayout boundary against the
+    /// constraints its parent last gave it. Sound only while no full pass
+    /// is owed — every input from outside a boundary is then what the last
+    /// full pass left — which [`Self::layout`] guarantees by asking first.
+    fn layout_boundaries(&mut self) {
+        self.needs_boundary_layout = false;
+        self.layout_counts.boundary += 1;
+        let ctx = LayoutContext {
+            font_collection: self.font_collection.as_ref(),
+            default_font: self.default_font.as_deref(),
+            measure_grow_width_as_shrink: false,
+            measure_grow_height_as_shrink: false,
+        };
+        self.root
+            .lock()
+            .expect("widget lock poisoned")
+            .relayout_boundaries(&ctx);
     }
 
     /// Reconcile the current hierarchy with a newly-provided hierarchy.
@@ -1677,6 +1753,13 @@ impl UI {
         }
     }
 
+    /// Mark the UI as owing a layout of its marked relayout boundaries only.
+    /// Implies a repaint: what moved inside them has to be drawn.
+    pub fn mark_needs_boundary_layout(&mut self) {
+        self.needs_boundary_layout = true;
+        self.needs_repaint = true;
+    }
+
     /// Mark the UI as needing a visual refresh only (e.g. hover state change).
     /// Does **not** trigger a layout pass.
     pub fn mark_needs_repaint(&mut self) {
@@ -1699,6 +1782,19 @@ impl UI {
     /// Whether a full layout pass is required.
     pub fn needs_layout(&self) -> bool {
         self.needs_layout
+    }
+
+    /// Whether a layout of marked relayout boundaries is owed — the partial
+    /// pass, as against [`needs_layout`](Self::needs_layout)'s full one.
+    pub fn needs_boundary_layout(&self) -> bool {
+        self.needs_boundary_layout
+    }
+
+    /// How many full and boundary passes [`layout`](Self::layout) has run
+    /// since this UI was made. What a test asserts to say a change was
+    /// contained, and what a host can sample to see its relayout rate.
+    pub fn layout_counts(&self) -> LayoutCounts {
+        self.layout_counts
     }
 
     /// Whether a visual repaint is needed (always true when layout is needed).
@@ -1976,8 +2072,13 @@ impl UI {
             {
                 self.last_dirty_source = 2; // animation
             }
-        } else if result.needs_repaint {
-            self.needs_repaint = true;
+        } else {
+            if result.needs_boundary_layout {
+                self.mark_needs_boundary_layout();
+            }
+            if result.needs_repaint {
+                self.needs_repaint = true;
+            }
         }
     }
 
@@ -2173,6 +2274,10 @@ pub struct RenderEffects {
 pub struct TickResult {
     pub needs_repaint: bool,
     pub needs_layout: bool,
+    /// A relayout boundary inside the subtree absorbed a `needs_layout`
+    /// and must be laid out again by itself — see
+    /// [`UpdateResult::needs_boundary_layout`].
+    pub needs_boundary_layout: bool,
     pub still_animating: bool,
 }
 
@@ -2180,6 +2285,7 @@ impl TickResult {
     pub const NONE: Self = Self {
         needs_repaint: false,
         needs_layout: false,
+        needs_boundary_layout: false,
         still_animating: false,
     };
 
@@ -2187,6 +2293,7 @@ impl TickResult {
         TickResult {
             needs_repaint: self.needs_repaint || other.needs_repaint,
             needs_layout: self.needs_layout || other.needs_layout,
+            needs_boundary_layout: self.needs_boundary_layout || other.needs_boundary_layout,
             still_animating: self.still_animating || other.still_animating,
         }
     }
@@ -2211,9 +2318,18 @@ pub struct UpdateResult {
     /// swap the old WidgetRef out for the new one.
     pub absorbed: bool,
     /// True if any prop that affects layout (size, content, children) is
-    /// different from the cached value. The UI relayouts the whole tree
-    /// when this bubbles up — a future change can localise this further.
+    /// different from the cached value, and no relayout boundary between
+    /// the change and here absorbed it. Reaching the root, it costs a full
+    /// layout pass of the whole tree.
     pub needs_layout: bool,
+    /// True if a **relayout boundary** in the subtree absorbed a
+    /// `needs_layout` from inside it: a Flex whose width and height are
+    /// both fixed reports the same size whatever its children do, so a
+    /// change inside it cannot move anything outside it. The boundary
+    /// marks itself, this flag carries the news to the root, and
+    /// [`UI::layout`] lays out only the marked boundaries (see
+    /// [`FlexWidget::contain_layout`](flex_widget::FlexWidget::contain_layout)).
+    pub needs_boundary_layout: bool,
     /// True if a render-only prop (color, opacity) changed. Implies a
     /// repaint without a relayout.
     pub needs_repaint: bool,
@@ -2243,6 +2359,7 @@ impl UpdateResult {
     pub fn replace() -> Self {
         Self {
             absorbed: false,
+            needs_boundary_layout: false,
             needs_layout: true,
             needs_repaint: true,
             cancelled_unmount_prefixes: Vec::new(),
@@ -2254,6 +2371,7 @@ impl UpdateResult {
     pub fn unchanged() -> Self {
         Self {
             absorbed: true,
+            needs_boundary_layout: false,
             needs_layout: false,
             needs_repaint: false,
             cancelled_unmount_prefixes: Vec::new(),
@@ -2265,6 +2383,7 @@ impl UpdateResult {
     pub fn layout_changed() -> Self {
         Self {
             absorbed: true,
+            needs_boundary_layout: false,
             needs_layout: true,
             needs_repaint: true,
             cancelled_unmount_prefixes: Vec::new(),
@@ -2284,11 +2403,21 @@ impl UpdateResult {
         UpdateResult {
             absorbed: self.absorbed,
             needs_layout: self.needs_layout || other.needs_layout,
+            needs_boundary_layout: self.needs_boundary_layout || other.needs_boundary_layout,
             needs_repaint: self.needs_repaint || other.needs_repaint,
             cancelled_unmount_prefixes: self.cancelled_unmount_prefixes,
             drained_path_prefixes: self.drained_path_prefixes,
         }
     }
+}
+
+/// Cumulative counts of [`UI::layout`]'s two kinds of pass.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LayoutCounts {
+    /// Passes that laid out the whole tree from the root.
+    pub full: u64,
+    /// Passes that laid out only the relayout boundaries a change marked.
+    pub boundary: u64,
 }
 
 /// All widgets (boxes, text inputs, etc) must implement the Widget trait.
@@ -2331,6 +2460,21 @@ pub trait Widget: Downcast {
         parent_available_height: f32,
         sibling_basis: f32,
     );
+    /// Lay out again every relayout boundary in this subtree that a
+    /// change inside it marked, each against the constraints its parent
+    /// gave it last time — the partial pass [`UI::layout`] runs instead of
+    /// a full one when only boundaries are owed. A container that holds
+    /// its children somewhere [`get_children_mut`](Self::get_children_mut)
+    /// does not reach, or wraps a `FlexWidget` that may itself be a
+    /// boundary, overrides this to reach them.
+    fn relayout_boundaries(&mut self, ctx: &LayoutContext) {
+        for child in self.get_children_mut() {
+            child
+                .lock()
+                .expect("widget lock poisoned")
+                .relayout_boundaries(ctx);
+        }
+    }
     /// Accepts a reference to a widget. If the widget is of the same type,
     /// the current widget will be updated in place. Otherwise, the current
     /// widget will be replaced along with all of its descendants. The

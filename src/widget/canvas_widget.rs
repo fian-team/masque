@@ -463,6 +463,7 @@ impl Widget for CanvasWidget {
 
         UpdateResult {
             absorbed: true,
+            needs_boundary_layout: false,
             needs_layout: layout_changed,
             needs_repaint: layout_changed || paint_changed,
             cancelled_unmount_prefixes: Vec::new(),

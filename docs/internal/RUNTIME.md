@@ -581,8 +581,10 @@ it manually:
   events into game `pressed()` / `held()` queries so typing
   into a field doesn't trigger hotkeys.
 
-For drag-and-drop, the host owns the dead-zone state machine;
-Ogham owns dispatch and hit-test:
+For drag-and-drop, `call_event` runs the gesture itself
+(`widget::drag_gesture`); a host reads it with `UI::drag()` and ends it
+with `UI::cancel_drag()`. The dispatchers below remain public for a
+host that drives a drag by hand:
 
 - `Ogham::dispatch_drag_start(origin, payload, point) -> DragState`
   — fires `drag_start` on `origin` and returns the seed state

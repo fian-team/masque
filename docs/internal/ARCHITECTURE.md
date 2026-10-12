@@ -97,21 +97,25 @@ sequenceDiagram
     alt yes
         RT->>RT: rerender() → Value::Widget
         Ogham->>UI: reconcile(new_root)
-        UI-->>Ogham: UpdateResult { needs_layout, needs_repaint }
+        UI-->>Ogham: UpdateResult { needs_layout, needs_boundary_layout, needs_repaint }
     end
     Host->>Ogham: tick_animations(dt)
     Ogham->>UI: tick_animations(dt) — springs + smooth scroll
     Host->>Ogham: layout(w, h)
-    Ogham->>UI: UI::layout(w, h) — runs only if dirty
+    Ogham->>UI: UI::layout(w, h) — full pass, boundary pass, or nothing
     Host->>SF: draw(&mut ui)
     SF->>UI: walk tree, calling Widget::render
 ```
 
 Three independent dirty signals reach the UI: rerenders
 (`mark_needs_layout`), event handling (`mark_dirty`), and
-animation ticks. Each can request a layout pass; debug builds
-attribute layout calls per source so a chronic over-marking
-regression shows up as a per-second warning.
+animation ticks. Each can request a layout pass. A rerender or a
+tick whose change stayed inside a box fixed on both axes requests
+only a **boundary pass**, which lays out the marked boxes against
+their stored constraints (`FLEX.md` *Relayout boundaries*).
+`UI::layout_counts` counts both kinds; debug builds attribute
+full passes per source, so a chronic over-marking regression
+shows up as a per-second warning.
 
 After draw the host calls `Ogham::process_drain_queues()` to
 flush any `on_unmount` / `cleanup` hooks owed by widgets that

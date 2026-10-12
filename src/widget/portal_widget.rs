@@ -242,11 +242,18 @@ impl Widget for PortalWidget {
             };
             if self.hover_open {
                 let mut incoming = incoming;
-                return self.inner.reconcile_children(&mut incoming);
+                let mut result = self.inner.reconcile_children(&mut incoming);
+                (result.needs_layout, result.needs_boundary_layout) = self.inner.contain_layout(
+                    false,
+                    result.needs_layout,
+                    result.needs_boundary_layout,
+                );
+                return result;
             }
             self.resting = incoming;
             return UpdateResult {
                 absorbed: true,
+                needs_boundary_layout: false,
                 needs_layout: false,
                 needs_repaint: false,
                 cancelled_unmount_prefixes: Vec::new(),
@@ -308,6 +315,7 @@ impl Widget for PortalWidget {
             // ghosts ticking down naturally.
             UpdateResult {
                 absorbed: true,
+                needs_boundary_layout: false,
                 needs_layout: false,
                 needs_repaint: false,
                 cancelled_unmount_prefixes: Vec::new(),
@@ -319,12 +327,15 @@ impl Widget for PortalWidget {
             let mut new_children = std::mem::take(&mut new_portal.inner.children);
             self.inner.reconcile_children(&mut new_children)
         };
+        let (needs_layout, needs_boundary_layout) = self.inner.contain_layout(
+            open_changed || trap_changed || layer_changed,
+            inner_result.needs_layout,
+            inner_result.needs_boundary_layout,
+        );
         UpdateResult {
             absorbed: true,
-            needs_layout: open_changed
-                || trap_changed
-                || layer_changed
-                || inner_result.needs_layout,
+            needs_boundary_layout,
+            needs_layout,
             needs_repaint: open_changed
                 || trap_changed
                 || layer_changed
@@ -416,6 +427,11 @@ impl Widget for PortalWidget {
         self.inner.get_children_mut()
     }
 
+    /// Through the inner Flex, which may itself be the boundary.
+    fn relayout_boundaries(&mut self, ctx: &LayoutContext) {
+        self.inner.relayout_boundaries(ctx);
+    }
+
     fn handle_event(
         &mut self,
         event: &Event,
@@ -489,6 +505,7 @@ impl Widget for PortalWidget {
             return TickResult {
                 needs_repaint: true,
                 needs_layout: true,
+                needs_boundary_layout: false,
                 still_animating: inner.still_animating,
             };
         }

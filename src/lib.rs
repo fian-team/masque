@@ -828,6 +828,7 @@ impl Ogham {
     /// originated from the outgoing UI doesn't leak across the
     /// transition. Idempotent.
     pub fn cancel_active_drag(&mut self) {
+        self.ui.cancel_drag();
         self.ui.clear_active_drag();
     }
 
@@ -871,8 +872,15 @@ impl Ogham {
         let result = self.ui.reconcile(widget_ref);
         if result.needs_layout {
             self.ui.mark_needs_layout();
-        } else if result.needs_repaint {
-            self.ui.mark_needs_repaint();
+        } else {
+            // A change a relayout boundary absorbed costs a pass over the
+            // marked boundaries alone, not the tree.
+            if result.needs_boundary_layout {
+                self.ui.mark_needs_boundary_layout();
+            }
+            if result.needs_repaint {
+                self.ui.mark_needs_repaint();
+            }
         }
         Ok(true)
     }

@@ -7,6 +7,7 @@ use crate::widget::{
     grid_widget::{GridPlacement, GridStyle, GridWidget},
     image_widget::ImageWidget,
     presence_widget::{PresenceMode, PresenceWidget},
+    pad_widget::{PadShape, PadWidget},
     slider_widget::SliderWidget,
     style::*,
     text_input_widget::TextInputWidget,
@@ -73,6 +74,10 @@ impl WidgetRegistry {
         // Native slider — `Slider { value, min, max, step, on_change,
         // on_commit, style, track_color, fill_color, thumb_color }`.
         reg.register("slider", |_reg, rt, desc| create_slider_widget(rt, desc));
+        // Native two-axis control — `Pad { x, y, x_min, x_max, y_min,
+        // y_max, shape, rest, on_change, on_commit, style, dot_color,
+        // ring_color }`.
+        reg.register("pad", |_reg, rt, desc| create_pad_widget(rt, desc));
         reg
     }
 
@@ -188,10 +193,24 @@ fn make_drag_event_listener(
             let ename = event_name.to_string();
             Some(Box::new(move |event: &Event| {
                 let arg = event.payload.clone().unwrap_or(Value::Void);
+                // A second parameter takes `drag_end`'s `at`, the drop point
+                // in this widget's pixels (`drag_gesture` rule 4). One
+                // parameter is the shape every listener had before, and
+                // still gets just the payload.
+                let args = match closure.proto.arity {
+                    2 => vec![
+                        arg,
+                        event
+                            .drop_at
+                            .as_ref()
+                            .map_or(Value::Void, crate::widget::drag_gesture::point_value),
+                    ],
+                    _ => vec![arg],
+                };
                 let result = rt
                     .lock()
                     .expect("runtime lock poisoned")
-                    .call_bytecode_closure(&closure, &[arg]);
+                    .call_bytecode_closure(&closure, &args);
                 if let Err(err) = result {
                     eprintln!("[ogham] {} handler error: {:?}", ename, err);
                 }
@@ -516,6 +535,11 @@ fn apply_flex_style_from_map(style: &mut FlexStyle, map: &HashMap<String, Value>
                     style.transform = t;
                 }
             }
+            "transform_origin" => {
+                if let Some(o) = parse_transform_origin_value(value) {
+                    style.transform_origin = o;
+                }
+            }
             "backdrop_filter" => {
                 if let Some(bf) = parse_backdrop_filter_value(value) {
                     style.backdrop_filter = Some(bf);
@@ -602,6 +626,20 @@ fn parse_transform_value(value: &Value) -> Option<Transform> {
             }
             Some(t)
         }
+        _ => None,
+    }
+}
+
+/// Parse a `transform_origin:` value: a keyword
+/// ([`TransformOrigin::from_keyword`]), or `{ x, y }` as fractions of the
+/// widget's own box, either axis defaulting to the center.
+fn parse_transform_origin_value(value: &Value) -> Option<TransformOrigin> {
+    match value {
+        Value::String(s) => TransformOrigin::from_keyword(s.trim()),
+        Value::Map(map) => Some(TransformOrigin {
+            x: map.get("x").and_then(value_to_f32).unwrap_or(0.5),
+            y: map.get("y").and_then(value_to_f32).unwrap_or(0.5),
+        }),
         _ => None,
     }
 }
@@ -990,8 +1028,13 @@ fn create_flex_widget(
     }
 
     // Phase 3 M1: drag-source / drop-target properties.
-    if let Some(payload) = descriptor.properties.get("drag_payload") {
-        flex_widget.drag_payload = Some(payload.clone());
+    // An empty string declares no source: ogham has no null literal, and a
+    // document that draws one widget for both "may be picked up" and "may
+    // not" needs a value that means *not this one* (`drag_gesture` rule 1).
+    match descriptor.properties.get("drag_payload") {
+        None | Some(Value::Void) => {}
+        Some(Value::String(s)) if s.is_empty() => {}
+        Some(payload) => flex_widget.drag_payload = Some(payload.clone()),
     }
     if let Some(Value::Float(dz)) = descriptor.properties.get("drag_dead_zone") {
         flex_widget.drag_dead_zone = Some(*dz as f32);
@@ -1786,6 +1829,106 @@ fn create_slider_widget(
     }
 
     Ok(Arc::new(Mutex::new(slider)))
+}
+
+/// Build a `Pad` ([`PadWidget`]). Recognised properties:
+/// - `x` / `y` (**required**, numbers): the controlled value.
+/// - `x_min` / `x_max` / `y_min` / `y_max` (numbers, default `-1` / `1`).
+///   `y` runs bottom to top.
+/// - `shape`: `"rect"` (default) or `"disc"`, the circle inscribed in
+///   the box.
+/// - `rest: { x, y }` (optional): where a double-click returns the value.
+/// - `on_change: fn (v: map)` — `{ x, y }` on every change while the
+///   button is held, and on a key step. `on_commit: fn (v: map)` — the
+///   release, a double-click's reset, and a key step.
+/// - `style`: the flex style map for the box. `shrink` is 160 × 160 plus
+///   insets.
+/// - `dot_color` / `ring_color`: colour maps.
+fn create_pad_widget(
+    runtime: &Arc<Mutex<Runtime>>,
+    descriptor: &WidgetDescriptor,
+) -> Result<WidgetRef, BridgeError> {
+    let mut pad = PadWidget::new();
+
+    let number = |name: &str| -> Result<Option<f32>, BridgeError> {
+        match descriptor.properties.get(name) {
+            None => Ok(None),
+            Some(v) => value_to_f32(v).map(Some).ok_or_else(|| {
+                BridgeError::InvalidPropertyType(
+                    name.to_string(),
+                    format!("Pad expects '{}' as a number; got {:?}", name, v),
+                )
+            }),
+        }
+    };
+    pad.x = number("x")?.ok_or_else(|| BridgeError::MissingProperty("x".to_string()))?;
+    pad.y = number("y")?.ok_or_else(|| BridgeError::MissingProperty("y".to_string()))?;
+    for (name, slot) in [
+        ("x_min", &mut pad.x_min),
+        ("x_max", &mut pad.x_max),
+        ("y_min", &mut pad.y_min),
+        ("y_max", &mut pad.y_max),
+    ] {
+        if let Some(v) = number(name)? {
+            *slot = v;
+        }
+    }
+    match descriptor.properties.get("shape") {
+        None => {}
+        Some(Value::String(s)) if s == "rect" => pad.shape = PadShape::Rect,
+        Some(Value::String(s)) if s == "disc" => pad.shape = PadShape::Disc,
+        Some(other) => {
+            return Err(BridgeError::InvalidPropertyType(
+                "shape".to_string(),
+                format!("Pad expects 'shape' to be \"rect\" or \"disc\"; got {:?}", other),
+            ))
+        }
+    }
+    match descriptor.properties.get("rest") {
+        None => {}
+        Some(Value::Map(map)) => {
+            let axis = |k: &str| map.get(k).and_then(value_to_f32);
+            match (axis("x"), axis("y")) {
+                (Some(x), Some(y)) => pad.rest = Some((x, y)),
+                _ => {
+                    return Err(BridgeError::InvalidPropertyType(
+                        "rest".to_string(),
+                        format!("Pad expects 'rest' as {{ x, y }} numbers; got {:?}", map),
+                    ))
+                }
+            }
+        }
+        Some(other) => {
+            return Err(BridgeError::InvalidPropertyType(
+                "rest".to_string(),
+                format!("Pad expects 'rest' as a map {{ x, y }}; got {:?}", other),
+            ))
+        }
+    }
+
+    for name in ["on_change", "on_commit"] {
+        register_drag_event_listener(&mut pad.event_listeners, &descriptor.properties, runtime, name)?;
+    }
+
+    if let Some(style_map) = optional_style_map(descriptor) {
+        apply_flex_style_from_map(&mut pad.style, style_map);
+    }
+
+    for (name, slot) in [("dot_color", &mut pad.dot_color), ("ring_color", &mut pad.ring_color)] {
+        if let Some(value) = descriptor.properties.get(name) {
+            match parse_color_value(value) {
+                Some(color) => *slot = color,
+                None => {
+                    return Err(BridgeError::InvalidPropertyType(
+                        name.to_string(),
+                        format!("Pad expects '{}' as a colour; got {:?}", name, value),
+                    ))
+                }
+            }
+        }
+    }
+
+    Ok(Arc::new(Mutex::new(pad)))
 }
 
 fn create_image_widget(

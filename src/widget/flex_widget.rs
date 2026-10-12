@@ -133,6 +133,35 @@ pub struct FlexWidget {
     /// preview subtree renders attached to the cursor in the
     /// `CursorAttached` portal layer.
     pub drag_preview: Option<WidgetRef>,
+
+    /// What this box's parent passed to its last `layout` call, so a
+    /// relayout boundary can be laid out again by itself
+    /// ([`Self::contain_layout`]). `None` until the first pass.
+    last_layout_input: Option<LayoutInput>,
+    /// This box is a relayout boundary and a change inside it is owed a
+    /// layout. Cleared by `layout`.
+    subtree_dirty: bool,
+    /// Some boundary below this box is `subtree_dirty`; the partial pass
+    /// descends through here to find it. Cleared by `layout` and by the
+    /// partial pass on its way through.
+    descendant_dirty: bool,
+}
+
+/// The arguments of one [`Widget::layout`] call, kept by a [`FlexWidget`]
+/// so the partial pass can repeat it exactly — including the measuring
+/// flags of the [`LayoutContext`] it ran under.
+#[derive(Debug, Clone)]
+struct LayoutInput {
+    cursor_x: f32,
+    cursor_y: f32,
+    parent_direction: Direction,
+    parent_width: f32,
+    parent_available_width: f32,
+    parent_height: f32,
+    parent_available_height: f32,
+    sibling_basis: f32,
+    measure_grow_width_as_shrink: bool,
+    measure_grow_height_as_shrink: bool,
 }
 
 impl FlexWidget {
@@ -532,7 +561,56 @@ impl FlexWidget {
             drag_dead_zone: None,
             accepts_drop_predicate: None,
             drag_preview: None,
+            last_layout_input: None,
+            subtree_dirty: false,
+            descendant_dirty: false,
         }
+    }
+
+    /// Whether this box is a **relayout boundary**: its width and height
+    /// are both fixed, so the size it reports to its parent is the same
+    /// whatever its children do, and it has been laid out once, so it has
+    /// the parent's constraints to repeat. A change inside a boundary
+    /// cannot move anything outside it.
+    ///
+    /// Fixed on both axes and nothing weaker. A `grow` box measures as
+    /// `shrink` under a shrinking ancestor, and a `shrink` box is its
+    /// children's size, so neither is independent of what it holds.
+    pub fn is_layout_boundary(&self) -> bool {
+        matches!(self.style.width, Size::Fixed(_))
+            && matches!(self.style.height, Size::Fixed(_))
+            && self.last_layout_input.is_some()
+    }
+
+    /// Fold what this box's children reported into what it reports upward,
+    /// returning `(needs_layout, needs_boundary_layout)`.
+    ///
+    /// A change to the box's own layout always goes up as `needs_layout`.
+    /// Otherwise a boundary absorbs its children's `needs_layout`: it marks
+    /// itself and reports only that a boundary is owed. A box that is not a
+    /// boundary passes both flags through, and remembers that a boundary
+    /// below it is marked, so the partial pass knows to descend here.
+    ///
+    /// Every container that wraps a `FlexWidget` and reconciles its
+    /// children directly (`Presence`, `Portal`) calls this too, or a
+    /// boundary that is the wrapper's own box would never absorb anything.
+    pub fn contain_layout(
+        &mut self,
+        own_layout_changed: bool,
+        children_need_layout: bool,
+        children_need_boundary_layout: bool,
+    ) -> (bool, bool) {
+        if own_layout_changed {
+            return (true, children_need_boundary_layout);
+        }
+        if children_need_layout && self.is_layout_boundary() {
+            self.subtree_dirty = true;
+            return (false, true);
+        }
+        if children_need_boundary_layout {
+            self.descendant_dirty = true;
+        }
+        (children_need_layout, children_need_boundary_layout)
     }
 
     pub fn with_style(style: FlexStyle) -> Self {
@@ -565,6 +643,9 @@ impl FlexWidget {
             drag_dead_zone: None,
             accepts_drop_predicate: None,
             drag_preview: None,
+            last_layout_input: None,
+            subtree_dirty: false,
+            descendant_dirty: false,
         }
     }
 
@@ -667,6 +748,7 @@ impl FlexWidget {
         let alpha = 1.0 - (-dt * SCROLL_DECAY).exp();
         self.scroll_y += delta * alpha;
         TickResult {
+            needs_boundary_layout: false,
             needs_repaint: true,
             needs_layout: false,
             still_animating: true,
@@ -729,6 +811,7 @@ impl FlexWidget {
         TickResult {
             needs_repaint: true,
             needs_layout: layout_effects && still_moving,
+            needs_boundary_layout: false,
             still_animating: still_moving,
         }
     }
@@ -750,6 +833,7 @@ impl FlexWidget {
     pub fn reconcile_children(&mut self, new_children: &mut Vec<WidgetRef>) -> UpdateResult {
         let mut agg = UpdateResult {
             absorbed: true,
+            needs_boundary_layout: false,
             needs_layout: false,
             needs_repaint: false,
             cancelled_unmount_prefixes: Vec::new(),
@@ -843,6 +927,7 @@ impl FlexWidget {
                         child.update(new_child.clone())
                     };
                     agg.needs_layout |= updated_in_place.needs_layout;
+                    agg.needs_boundary_layout |= updated_in_place.needs_boundary_layout;
                     agg.needs_repaint |= updated_in_place.needs_repaint;
                     agg.cancelled_unmount_prefixes
                         .append(&mut updated_in_place.cancelled_unmount_prefixes);
@@ -1125,10 +1210,16 @@ impl Widget for FlexWidget {
             }
 
             let children_result = self.reconcile_children(&mut new_flex_widget.children);
+            let (needs_layout, needs_boundary_layout) = self.contain_layout(
+                own_layout_changed,
+                children_result.needs_layout,
+                children_result.needs_boundary_layout,
+            );
 
             UpdateResult {
                 absorbed: true,
-                needs_layout: own_layout_changed || children_result.needs_layout,
+                needs_boundary_layout,
+                needs_layout,
                 needs_repaint: own_layout_changed
                     || own_paint_changed
                     || children_result.needs_repaint,
@@ -1319,6 +1410,22 @@ impl Widget for FlexWidget {
         parent_available_height: f32,
         sibling_basis: f32,
     ) {
+        self.last_layout_input = Some(LayoutInput {
+            cursor_x,
+            cursor_y,
+            parent_direction: parent_direction.clone(),
+            parent_width,
+            parent_available_width,
+            parent_height,
+            parent_available_height,
+            sibling_basis,
+            measure_grow_width_as_shrink: ctx.measure_grow_width_as_shrink,
+            measure_grow_height_as_shrink: ctx.measure_grow_height_as_shrink,
+        });
+        // Every pass that reaches this box lays out everything under it,
+        // so whatever was marked here is paid for.
+        self.subtree_dirty = false;
+        self.descendant_dirty = false;
         let (width, height) = self.get_dimensions(
             ctx,
             parent_direction,
@@ -1953,13 +2060,14 @@ impl Widget for FlexWidget {
         if !has_opacity && !has_transform {
             return None;
         }
-        // Pivot is the widget's layout center in parent-relative
-        // coordinates, so that scale/rotate feel natural. Fall back to
-        // (0, 0) when the widget hasn't been laid out yet.
+        // Pivot is the style's origin within the layout rect, in
+        // parent-relative coordinates — the center unless the document
+        // says otherwise. Fall back to (0, 0) when the widget hasn't been
+        // laid out yet.
         let (pivot_x, pivot_y) = self
             .layout
             .as_ref()
-            .map(|r| (r.x + r.width / 2.0, r.y + r.height / 2.0))
+            .map(|r| style.transform_origin.pivot_in(r))
             .unwrap_or((0.0, 0.0));
         let (width, height) = self
             .layout
@@ -1976,8 +2084,10 @@ impl Widget for FlexWidget {
 
     fn tick_animations(&mut self, ctx: &mut crate::widget::event::TickContext) -> TickResult {
         let dt = ctx.dt;
-        let mut result = self.tick_own_animations(dt);
-        result = result.merge(self.tick_smooth_scroll(dt));
+        let own = self
+            .tick_own_animations(dt)
+            .merge(self.tick_smooth_scroll(dt));
+        let mut result = TickResult::NONE;
         let children = self.children.clone();
         for child in &children {
             let child_result = {
@@ -1997,7 +2107,53 @@ impl Widget for FlexWidget {
             result.needs_layout = true;
             result.needs_repaint = true;
         }
-        result
+        // A layout spring on this box itself goes up whole; one inside it
+        // stays here if this box is a boundary.
+        let (needs_layout, needs_boundary_layout) = self.contain_layout(
+            own.needs_layout,
+            result.needs_layout,
+            result.needs_boundary_layout,
+        );
+        TickResult {
+            needs_repaint: own.needs_repaint || result.needs_repaint,
+            needs_layout,
+            needs_boundary_layout,
+            still_animating: own.still_animating || result.still_animating,
+        }
+    }
+
+    fn relayout_boundaries(&mut self, ctx: &LayoutContext) {
+        if self.subtree_dirty {
+            if let Some(input) = self.last_layout_input.clone() {
+                let ctx = LayoutContext {
+                    measure_grow_width_as_shrink: input.measure_grow_width_as_shrink,
+                    measure_grow_height_as_shrink: input.measure_grow_height_as_shrink,
+                    ..*ctx
+                };
+                self.layout(
+                    &ctx,
+                    input.cursor_x,
+                    input.cursor_y,
+                    &input.parent_direction,
+                    input.parent_width,
+                    input.parent_available_width,
+                    input.parent_height,
+                    input.parent_available_height,
+                    input.sibling_basis,
+                );
+            }
+            return;
+        }
+        if !self.descendant_dirty {
+            return;
+        }
+        self.descendant_dirty = false;
+        for child in self.children.clone() {
+            child
+                .lock()
+                .expect("widget lock poisoned")
+                .relayout_boundaries(ctx);
+        }
     }
 
     fn is_exiting(&self) -> bool {

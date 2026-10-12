@@ -262,6 +262,7 @@ fn tick_own_animations(&mut self, dt: f32) -> TickResult {
     if self.animations.is_empty() { self.style = target; }
     TickResult { needs_repaint: true,
                  needs_layout: layout_effects && still_moving,
+                 needs_boundary_layout: false,
                  still_animating: still_moving }
 }
 ```
@@ -292,7 +293,11 @@ method directly.
   `has_layout_effects()` returns `true` when any of `border,
   padding, margin, corner_radius, gap, text_size` has a spring.
   Each tick where a layout-affecting spring is still moving
-  re-runs layout.
+  re-runs layout. `FlexWidget::tick_animations` passes the
+  children's result through `contain_layout`, so a spring inside
+  a box fixed on both axes re-lays that box alone (`FLEX.md`
+  *Relayout boundaries*); a spring on the box itself still owes
+  a full pass.
 
   *Why:* a padding animation has to relayout each frame to
   produce a visible animation. Skipping the relayout would
@@ -355,8 +360,15 @@ the *paint-related* and *animatable* fields.)
 - **`opacity: Opacity`** — paint-time alpha (`[0,1]`). 1.0 means
   no layer composite; <1 triggers a Skia layer.
 - **`transform: Transform`** — affine: `translate_x/y`,
-  `scale_x/y`, `rotate` (degrees, clockwise). Pivots around the
-  widget's layout center.
+  `scale_x/y`, `rotate` (degrees, clockwise). Pivots around
+  `transform_origin`.
+- **`transform_origin: TransformOrigin`** — the pivot as
+  fractions of the widget's own box: a keyword (`center`, the
+  four edges, the four corners as `top_left` …) or `{ x, y }`.
+  Default `center`. Not animatable; a change snaps and repaints.
+  A bar that drains is a `grow` fill with `scale_x: fill` and
+  `transform_origin: "left"`: paint, where `width: track * fill`
+  is layout on every step.
 - **`backdrop_filter: Option<BackdropFilter>`** — paint-time
   blur of the canvas content already painted *under* the
   widget's border box. Triggers a `push_backdrop_blur` /
@@ -366,7 +378,7 @@ the *paint-related* and *animatable* fields.)
 
 ### Tenets — style semantics
 
-- **`opacity` and `transform` are paint-only.** They don't
+- **`opacity`, `transform`, and `transform_origin` are paint-only.** They don't
   affect layout, they don't affect hit-testing, they don't
   participate in basis arithmetic. A widget rotated 45° is laid
   out as if rotated 0°; clicks land in the un-transformed bounds.

@@ -203,6 +203,7 @@ impl Widget for TextWidget {
 
             UpdateResult {
                 absorbed: true,
+                needs_boundary_layout: false,
                 needs_layout: text_changed,
                 needs_repaint: text_changed,
                 cancelled_unmount_prefixes: Vec::new(),
@@ -408,6 +409,7 @@ impl Widget for TextWidget {
         }
         TickResult {
             needs_repaint: true,
+            needs_boundary_layout: false,
             needs_layout: false,
             still_animating: moving,
         }

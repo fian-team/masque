@@ -143,9 +143,10 @@ resolution:
   through the gesture; `EventContext.drag_state` stashes the
   per-frame `DragState` for widgets to read during dispatch.
 - `Ogham::dispatch_drag_start` / `dispatch_drag_move` /
-  `dispatch_drag_end` / `hit_test_drop_target` — the host's
-  input pump owns the dead-zone state machine; Ogham owns the
-  hit-test and event emission.
+  `dispatch_drag_end` / `hit_test_drop_target` — the primitives
+  `UI::call_event`'s drag gesture is built on (`widget::drag_gesture`,
+  2026-10-11); before then the host's input pump was meant to drive
+  them, and none ever did.
 - `drag_preview` widgets render via a synthesized
   `cursor-attached` portal entry — no manual Portal needed.
 

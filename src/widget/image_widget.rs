@@ -119,6 +119,7 @@ impl Widget for ImageWidget {
             std::mem::swap(&mut self.event_listeners, &mut new_image.event_listeners);
             UpdateResult {
                 absorbed: true,
+                needs_boundary_layout: false,
                 needs_layout: dims_changed,
                 needs_repaint: dims_changed || path_changed,
                 cancelled_unmount_prefixes: Vec::new(),
