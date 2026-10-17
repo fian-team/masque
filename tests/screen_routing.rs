@@ -7,7 +7,7 @@
 //!
 //! - **The path selects the view.** Nothing in the document decides what
 //!   is on screen, and there is no `mode` string to drift against a
-//!   router (`ROUTING.md` axiom 1).
+//!   router (`APPLICATION.md` §3.5).
 //! - **A screen's slice is its own.** Two screens may declare a field of
 //!   the same name and neither can read the other's — which is the whole
 //!   of what replaces a union state struct spanning every screen

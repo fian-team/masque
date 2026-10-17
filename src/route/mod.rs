@@ -1,6 +1,6 @@
 //! One router, one path, one arbitration rule.
 //!
-//! `lorekeeper/docs/ROUTING.md` is the record and its axioms are locked.
+//! `docs/internal/APPLICATION.md` §3 is the record and its axioms are locked.
 //! This module is the route tier's *surface-side face*: since
 //! `APPLICATION_BUILD.md` WP-1.1 the table, the walk, the outbox and the
 //! route vocabulary live in the `structure` crate (the structure
@@ -226,7 +226,7 @@ impl<T: std::any::Any> AsAny for T {
 /// So a host can get a route back **at the type that registered it**.
 /// The walk hands out `&dyn Route`, and a producer that needs a route's
 /// own state — the half-typed address on the connect screen, which is
-/// route state by `ROUTING.md` §7.1 and by §5's own scope lifetime — had
+/// route state by `APPLICATION.md` §3.9 and by the store's own scope lifetime — had
 /// no way to reach it except through [`read_state`](Route::read_state)'s
 /// map of `Value`s, which is on the deletion ledger. One consumer read it
 /// back through that shim in fourteen labelled lines; the other did not,
@@ -268,7 +268,7 @@ pub trait Route<Cx, A>: AsAny {
     /// Which of this route's children, if any, is active.
     ///
     /// Called every frame while this route is on the path: this is
-    /// `resolve` at one node (axiom 3, and `ROUTING.md` §13.3). At most
+    /// `resolve` at one node (`APPLICATION.md` §3.2 and §3.8). At most
     /// one child, structurally — which is why the walk needs no arbiter
     /// and why five independent stance booleans collapse into one
     /// `Option`.
@@ -398,7 +398,7 @@ pub trait Route<Cx, A>: AsAny {
 
     /// The id left the path. Route-owned state dies here, which is the
     /// test for what is route state at all: anything that must outlive
-    /// the route it is edited in belongs to `Cx` (`ROUTING.md` §7.1).
+    /// the route it is edited in belongs to `Cx` (`APPLICATION.md` §3.9).
     fn leave(&mut self, _cx: &mut Cx) {}
 
     /// How this route leaves the frame when the path moves to `to`.

@@ -1,4 +1,4 @@
-//! WP-3.3: two visible views stack (`lorekeeper/docs/ROUTING.md` §13.5).
+//! WP-3.3: two visible views stack (`APPLICATION.md` §6.7).
 //!
 //! The router's `visible_views` can return more than one id — an
 //! [`Occlusion::None`] prompt over the workspace it is leaving — and the

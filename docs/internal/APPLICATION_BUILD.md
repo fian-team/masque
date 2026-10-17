@@ -223,8 +223,8 @@ which would have shipped looking correct:
   pre-scanned *direct* imports for `let` names only; the schema was
   handed an empty import map by every caller in the crate, so a
   `record` could not cross an import at all; and the watcher was
-  built once at mount and never rebuilt — contradicting ROUTING.md
-  §13.4's own claim that reload rebuilds it.
+  built once at mount and never rebuilt — contradicting the routing
+  plan's own claim that reload rebuilds it.
 - **WP-2.4's hot-reload gate had a hole.** It built the candidate
   schema without imports, so a document declaring a field at an
   imported record shape produced an `Err`, the candidate became
@@ -459,7 +459,7 @@ agents were live in those crates.
 4. **No typed route access out of the walk.** `Router::get` hands
    back `&dyn Route` with no downcast, so a producer needing a
    route's own state (celia's case: the half-typed address, which
-   is the connect route's own per ROUTING.md §7.1) reads it back
+   is the connect route's own per `APPLICATION.md` §3.9) reads it back
    through the `read_state` shim.
 5. **`Route::child_popped` carries neither store nor outbox**, so a
    claim the *router* releases has no zero-lag path into a scope.
@@ -482,7 +482,7 @@ of untold_lore's two crossings**: name the front of house and
 `session → menu` becomes a cut instead. The menu↔library sweep is
 this month's deliberate work (`6215880`), so neither is acceptable,
 and both alternatives — regressing it, or demoting the library to a
-view, which contradicts CROSSING.md axiom 1 — were correctly
+view, which contradicts the untold_lore crossing record's axiom 1 — were correctly
 declined. **Gap 2 is what unblocks it.**
 
 The library cannot be an instance root today because `mounts()`
@@ -500,7 +500,7 @@ conditions the library area on WP-P6U-ED proceeding.
 **P6U's table redesign did land** (`c029e9b`): `session` is a node
 at root with `roster` and `world` as views, so **the seated
 hand-off is no longer a root change** — it is a walk within one
-instance, which is CROSSING.md axiom 2 held by the table instead of
+instance, which is the untold_lore crossing record's axiom 2 held by the table instead of
 by every reader naming both roots (amended in place, dated). It
 also resolved B.1's second deviation: `Hud` split onto
 `Scope::Node(WORLD)`, which only became sayable once a node existed
@@ -650,7 +650,7 @@ nobody had checked whether the reason would still apply.
 Landed: `lorekeeper/docs/{MP_SEAM,CANVAS_COMPOSITION,REFACTOR_PLAN,
 ROUTING}.md`, `regency/docs/history/player_client_outline.md`, the
 `front` module docs, and the `AGENTS.md`/`CLAUDE.md` of ogham,
-lorekeeper, regency and celia. untold_lore's `CROSSING.md` and
+lorekeeper, regency and celia. untold_lore's `CROSSING.md` (now `ul-client/src/crossing.rs`) and
 `ROOMS.md` took their amendments and three citations came off its lint
 allowlist before the regression above was reported; the rest of that
 repo's corpus is **held** until the regression is understood, because
@@ -712,8 +712,8 @@ answers to one question is how they diverged.
 
 **Smaller, also open:** untold_lore's `mount_for_test` collapse (check
 the `data_dir == None` error sentence, and whether `blank_document()`
-loses its last caller); untold_lore's `CROSSING.md`/`ROOMS.md` re-read
-against what the regression taught, and its `PUBLISHING.md` /
+loses its last caller); untold_lore's crossing record/`ROOMS.md` re-read
+against what the regression taught, and its `PUBLISHING.md` (since deleted) /
 `ENGINE_GAPS.md` / `PLAY_FIRST.md`, all amended before the fix was
 understood; regency's `paused` claim, still `Rc<Cell<bool>>` for a
 stated reason; `FrontOfHouse::reads` being a skippable call; ROOMS.md's
@@ -849,7 +849,7 @@ green in ogham and lorekeeper.
 
 ### WP-1.1 Extract routing from the surface framework — **landed, acceptance amended (§0.5)**
 
-Reverse the placement half of ROUTING.md phase 8c:
+Reverse the placement half of the routing plan's phase 8c:
 `ogham/src/route/{table,router,outbox}` moves to a new workspace
 crate (working name `structure`). `chrome.rs` splits three ways —
 its per-key diff/inject core (`chrome.rs:179-211`) is the seed of
@@ -1041,7 +1041,8 @@ three documents, one imported `settings_screen`.
 
 ### WP-3.3 Two visible views stack
 
-ROUTING.md §13.5, unfixed and now load-bearing: consecutive
+The routing plan's open question on two visible views, unfixed and
+now load-bearing: consecutive
 `Presence` children rendered by the outlet flow instead of
 stacking, which breaks exit-prompts-over-workspaces the moment
 `Occlusion::None` views migrate (untold_lore's `PromptRoute`,
@@ -1065,7 +1066,7 @@ document names (§6.1) and holds the one store. Keep verbatim:
 the tick order's second resolve (`host.rs:198-223`) until §5.4's
 barrier subsumes it; presses-swallowed-during-crossing
 (`host.rs:329-333`); `app/src/routing.rs` stays platform-side
-(ogham event semantics, per ROUTING.md phase 3's finding).
+(ogham event semantics, the routing plan's phase 3 finding).
 Delete: `own_ui`, `mounted_ui`, `ui_crossing`, `ui_departing`,
 `brings_own_document`, `HostCx::project_root`/`project_views`
 plumbing (§6.1). `FrontCx`'s getters dissolve in P5.
@@ -1270,7 +1271,7 @@ subscriptions → route table → crossings → deletions.
    `brings_own_document` delete (routes.rs:97-110).
    **Behavior change, say it in the commit:** the world root
    re-mounts per session instead of catching up
-   (client.rs:9997-10012; CROSSING.md §3 repeal).
+   (client.rs:9997-10012; the crossing record's §3 repeal).
 5. Pause writes: the game writes "Editing {world}" into the
    engine's pause scope (client.rs:4650-4668) — this exercises
    the P5 grants/extension mechanism; `sea_panel` exercises §4.7
@@ -1292,17 +1293,18 @@ subscriptions → route table → crossings → deletions.
 
 After P6U repoints `ul-client` (Cargo.toml:67) and WP-P6U-ED's
 minimal repoint moves `ul-editor` off `shell`: delete `shell/`
-(ROUTING.md phase 8b as scheduled). `shell-core` stays.
+(the routing plan's phase 8b, as scheduled). `shell-core` stays.
 
 ---
 
 ## Phase 7 — the docs settle
 
-- `lorekeeper/docs/ROUTING.md`: the amendment its header promises
-  (route tier leaves the engine's orbit; instance tier; the
-  store). Mark §13.4 superseded by WP-0.1/WP-2.4 and §13.5 fixed
-  by WP-3.3.
-- `untold_lore/docs/CROSSING.md`: axiom 4 half-repeal, §3 repeal
+- the routing plan: the amendment its header promised (route tier
+  leaves the engine's orbit; instance tier; the store); its two open
+  questions marked superseded by WP-0.1/WP-2.4 and fixed by WP-3.3.
+  Done, and the plan deleted 2026-10-17; `APPLICATION.md` §3.5–3.9 and
+  §6.6–6.7 hold what it still stated live.
+- untold_lore's crossing record (now `ul-client/src/crossing.rs`): axiom 4 half-repeal, §3 repeal
   (per APPLICATION.md's header).
 - `untold_lore/docs/ROOMS.md`: `Presentation` as a reading of the
   node; guards moved per §3.4.

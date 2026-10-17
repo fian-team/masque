@@ -29,7 +29,7 @@
 //! `stack: true` layers them instead — every child on the whole content
 //! box, the last one declared on top and first to be offered a press.
 //! That is what the outlet renders more than one visible view with
-//! (`lorekeeper/docs/ROUTING.md` §13.5), and it is opt-in because two
+//! (`APPLICATION.md` §6.7), and it is opt-in because two
 //! things in one generation are usually two things side by side.
 //!
 //! Design doc: `docs/internal/PRESENCE_POP.md`.

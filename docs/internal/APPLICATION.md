@@ -18,9 +18,10 @@
 > binding. It was workshopped against untold_lore's 2026-08-20
 > architecture audit and records the patched holes as axioms.
 >
-> When building starts, this document amends: `lorekeeper/docs/
-> ROUTING.md` (the route tier leaves the engine's orbit and gains
-> the instance tier and the store), `untold_lore/docs/CROSSING.md`
+> When building starts, this document amends: the routing plan
+> (`lorekeeper/docs/ROUTING.md`, deleted 2026-10-17 once every phase
+> but its editor-host one had landed; the rules it still stated live
+> are §3.5–3.9 and §6.6–6.7 here), untold_lore's crossing record (now `ul-client/src/crossing.rs`)
 > axiom 4 / §6 (the route tier *does* learn areas; the presentation
 > machinery survives) and §3 (the "world root needs no parking"
 > rule is repealed: instance roots gain teardown/mount lifetimes,
@@ -96,7 +97,9 @@ cannot, the split did not happen.
 
 ## 3. Axioms — structure
 
-**3.1 Composed, not integrated.** Two frameworks with a seam, not
+### 3.1 Composed, not integrated
+
+Two frameworks with a seam, not
 one framework with a router at its center. The decisive argument is
 the mod surface: the route table and schemas are compiled Rust the
 developer owns; documents are the hot-reloading consumer surface
@@ -105,7 +108,9 @@ modders touch. Integration would force that line to be drawn
 *Drift indicator:* a surface-framework crate importing a structure-
 framework type; a route decision made by document code.
 
-**3.2 One path space; a node is an instance root or a view.** The
+### 3.2 One path space; a node is an instance root or a view
+
+The
 application has a single route table (a DAG; a path is a walk,
 derived per frame by `resolve_child` — no push/pop stack). Every
 node declares its tier: an **instance root** mounts its own
@@ -131,11 +136,13 @@ as the router drives the first" (untold_lore's `project_root` was
 the smell); an instance-boundary fact (`side_of`) living in game
 code.
 
-**3.3 The router derives; hosts apply.** A route's only way to
+### 3.3 The router derives; hosts apply
+
+A route's only way to
 change the world is an action on the outbox, applied by the host's
 services. Transitions that boot servers or tear down sessions are
 host reactions to a path change, never route-tier behavior. (This
-is the half of CROSSING.md axiom 4 that survives; the half that
+is the half of untold_lore's crossing axiom 4 (`ul-client/src/crossing.rs`) that survives; the half that
 falls is "the route tier knows nothing of areas.")
 The converse also holds and is not a violation: some hosts react
 to facts *upstream* of the path — a server-authoritative game
@@ -145,7 +152,9 @@ itself derives (celia's fight tick must keep reconciling under
 *presentation*; it is not always the source, and re-gating such a
 host on the path would be wrong-way dataflow.
 
-**3.4 A node guards its own door.** A node may declare
+### 3.4 A node guards its own door
+
+A node may declare
 preconditions over store fields; a precondition that fails is a
 machine-readable **refusal** — a sentence, written once and read
 everywhere it surfaces (the panel row that grays, the toast that
@@ -155,10 +164,74 @@ every game keeps a shadow rooms table on its side of the seam.
 *Drift indicator:* a `can_enter_x` boolean in a scope schema; a
 consumer composing its own refusal sentence.
 
+### 3.5 The path is the only answer to what is on screen, and the session is not a route
+
+One path, one derivation, read by the UI, the music, the backdrops and
+the cursor alike. No second vocabulary stands beside it: not a `mode`
+string in a document, not a screen enum in a host, not a stance boolean
+on a game. And the connection, the snapshot pump, the hosted server and
+the autosave tick every frame whatever the path is, so "opening a screen
+stopped the client reading the wire" is unrepresentable rather than
+repeatedly fixed.
+*Drift indicator:* a field answering "what is up" that is not the path;
+a service ticked from a route's `update`.
+
+### 3.6 A surface is a route if and only if it takes input exclusively
+
+Everything else is decoration: ordinary root-scope state with no node,
+no lifetime and no exclusion, free to co-occur. A toast, a tip, a notice
+and a lightning flash are decoration; settings, pause, a journal, a
+wardrobe and an exit prompt are routes. This is the test that keeps the
+table small and keeps orthogonal overlays out of it.
+*Drift indicator:* a node for something that never takes the keyboard;
+a toast queue modelled as a stack of routes.
+
+### 3.7 A game adds routes, never lifecycle states
+
+The one enumeration a game may not extend is the session lifecycle
+(`SessionLevel`): a state that gates one player's entry on another's
+readiness is a lobby, whatever it is called. Locking a surface list was
+only ever a proxy for locking this, and it cost a string side-channel to
+work around. A game adds any route it likes.
+*Drift indicator:* a fourth session level; a "waiting" screen that holds
+a connected player.
+
+### 3.8 A node claims at most one child
+
+`resolve_child` returns an `Option`, so the walk is total and ordered
+with no arbiter above it: a node either claims one child or ends the
+path. That is the whole of "by construction": n independent booleans
+admit 2ⁿ states of which n+1 are legal, and every entry point has to
+re-assert the invariant; one `Option<RouteId>` cannot hold two values.
+Three things follow. The precedence ladder is local, about ten lines
+beside the state it reads. A prompt is resolved by the node it is a
+prompt for, where "am I leaving" already lives. And a game's root
+resolver shrinks to its lifecycle.
+*Drift indicator:* a pairwise exclusion list; a resolver that reads a
+sibling's state to decide its own.
+
+### 3.9 Route state is what dies on `leave`
+
+The test is lifetime, not ownership. Anything that must outlive the
+route it is edited in is session state and lives in `Cx`: a half-typed
+journal entry survives closing the journal, a wardrobe draft survives
+the stance, and a world view that four routes touch is nobody's route
+state. A half-typed address on the connect screen is the route's, and
+dies with it. `enter` and `leave` mean the id entered or left the path,
+not that it stopped being deepest, so a prompt raised over a workspace
+leaves the workspace's transaction standing. Reads are shared and writes
+are an outbox: `&Cx` for `update`, `event` and `escape`, so a route
+cannot mutate the session and can only ask, and interior mutability is
+ruled out as the alternative. If two routes touch it, it is not route
+state.
+*Drift indicator:* a route holding something a sibling reads; `RefCell`
+in a route; a draft that resets when a child opens over it.
+
 ## 4. Axioms — the contract (provider-owned, GraphQL-shaped)
 
-**4.1 The provider owns the schema; the consumer owns a
-selection.** Each scope's schema is a Rust type declared with the
+### 4.1 The provider owns the schema; the consumer owns a selection
+
+Each scope's schema is a Rust type declared with the
 route node that provides it. A document declares what it *consumes*
 — the `host_state {}` block survives with its meaning inverted,
 from "here is what exists" to "here is my selection." Validation
@@ -179,7 +252,9 @@ no shipped document uses. A hot-reload refusal rejects the new
 document and names the field without tearing down the running
 instance.
 
-**4.2 Selection is per-field.** Per-field selection gives the most
+### 4.2 Selection is per-field
+
+Per-field selection gives the most
 specific refusal (the failure being designed against is a modder's
 stale expectation), the finest invalidation, and per-field diffing.
 Collections (`Vec<Row>`) are one field in v1 — a row change
@@ -190,7 +265,9 @@ untold_lore hits this coarseness on day one (`entries`, the
 wardrobe tree; regency's debug rows), so keyed collections are a
 fast follow, not a someday.
 
-**4.3 One schema, derived reflection.** Typed consumers (Rust) read
+### 4.3 One schema, derived reflection
+
+Typed consumers (Rust) read
 the schema struct directly at compile time; dynamic consumers
 (documents) are validated against a *reflection* of it. The
 reflection is **derived** (a derive macro — the move
@@ -200,13 +277,16 @@ projection, guarded by `every_declared_key_is_projected`)
 unrepresentable rather than merely guarded: the struct *is* the
 schema, and the guard tests delete.
 
-**4.4 Raises are the same contract, write-side.** A scope publishes
+### 4.4 Raises are the same contract, write-side
+
+A scope publishes
 the intents it accepts exactly as it publishes the fields it
 provides; a document's raises validate at the same load. The
 two-way raise/handler guard test becomes structural and deletes.
 
-**4.5 The mod surface is the consumer side, with a provider-side
-dial.** Consumers cannot amend contracts, period. What schema a
+### 4.5 The mod surface is the consumer side, with a provider-side dial
+
+Consumers cannot amend contracts, period. What schema a
 consumer class *sees* is a provider decision (the SQL grants/views
 idea): shipped documents and third-party mods need not see the same
 schema, and the difference is declared, not an honor system. The
@@ -215,7 +295,9 @@ its evolution policy must be stated explicitly — even if the
 statement is "mods pin a game version; removals break loudly at
 load." (Open, §8.)
 
-**4.6 A selection binds top-level names.** A document's selection
+### 4.6 A selection binds top-level names
+
+A document's selection
 binds the fields it selects to top-level identifiers, so a helper
 reads `hud.clock` exactly as it did when the names were declared
 locally. This is a migration property, deliberately: with it,
@@ -223,7 +305,9 @@ regency's document split touches zero helper bodies; without it,
 the split is a three-thousand-line touch of every function in the
 file. The binding syntax is part of the contract, not sugar.
 
-**4.7 A shared module selects against more than one scope.** A
+### 4.7 A shared module selects against more than one scope
+
+A
 module mounted under two providers (untold_lore's sea panel lives
 under the world root and under the editor) states its selection
 once, as a **fragment**, and the fragment validates against each
@@ -236,7 +320,9 @@ document consumes (§8.2).
 
 ## 5. Axioms — the store
 
-**5.1 Two consumption verbs.** GraphQL has queries *and*
+### 5.1 Two consumption verbs
+
+GraphQL has queries *and*
 subscriptions; so does this protocol, from day one. **Subscribe**:
 push, sparse, per-field notification, selective rerender — the
 document idiom. **Read**: pull, per-frame, bulk, over the same
@@ -245,7 +331,9 @@ it is. "Protocol" means *contract*, not serialization: an in-process
 typed consumer pays direct field reads and a version check, not
 dispatch through a map.
 
-**5.2 The store/simulation fence.** The store carries **facts about
+### 5.2 The store/simulation fence
+
+The store carries **facts about
 what should be presented** — the path, frame parameters (camera
 config, lens, submersion, exposure, backdrop side, time of day),
 projected view rows — and **never the presentation's bulk data**.
@@ -260,7 +348,9 @@ consumer" is an attractor; this is the fence.
 pose) appearing as a schema field; a consumer reading the store
 inside a hot loop it previously read a snapshot in.
 
-**5.3 Writes are actions; sets are equality-checked.** The store is
+### 5.3 Writes are actions; sets are equality-checked
+
+The store is
 single-writer per field: producers (the host's services tier) set;
 consumers read and subscribe; everything else goes through the
 outbox. The store equality-checks every set and swallows no-ops —
@@ -273,7 +363,9 @@ survives from the audio lesson: state living *outside* the process
 of the world, because the store can only be authoritative for what
 it owns.
 
-**5.4 Frame-transactional commit.** Writes accumulate during a tick
+### 5.4 Frame-transactional commit
+
+Writes accumulate during a tick
 and commit at a frame barrier; notifications are batched and
 delivered once per frame; consumers rerender after commit. No
 consumer may observe field A new and field B old from the same
@@ -287,7 +379,9 @@ focus is the regression test for this sentence). Producers run
 inside the barrier and read working state; consumers only ever
 see committed state.
 
-**5.5 Facts, not presentation.** Eased values, glides, presences —
+### 5.5 Facts, not presentation
+
+Eased values, glides, presences —
 easing lives in consumers; the store carries the fact being eased
 toward. (The existing tick/draw and client-local-presentation
 disciplines, inherited unamended.) And producers set facts at the
@@ -297,10 +391,12 @@ equality check and wakes every subscriber every frame.
 Quantization is the producer's duty, and a schema may declare a
 field's grain.
 
-**5.6 A frozen consumer is the ghost.** A departing instance is an
+### 5.6 A frozen consumer is the ghost
+
+A departing instance is an
 unsubscribed-but-retained consumer: it keeps drawing its
 last-delivered values until the binding drops it. The crossing's
-freeze rules (CROSSING.md §3) stop being special machinery and
+freeze rules (untold_lore's `ul-client/src/crossing.rs`, section 3) stop being special machinery and
 become what unsubscription *is*. Two riders from the audit: a
 ghosted instance retains its draw slot (§6.2) until dropped — the
 world must keep painting under the departing document; and an
@@ -309,7 +405,9 @@ composite frame**, because its painter cannot re-run against
 torn-down simulation state (celia's arena; `Departure::Bleed`'s
 existing semantics, promoted to the instance tier).
 
-**5.7 Derivation is a producer.** Derived facts — view rows, joins
+### 5.7 Derivation is a producer
+
+Derived facts — view rows, joins
 over the snapshot, an item card assembled from three panes — are
 ordinary producers subscribed to the fields they derive from,
 running inside the same tick's barrier (§5.4), so no consumer ever
@@ -325,13 +423,17 @@ The §2 sentence — mounts instances, delivers frames, performs the
 crossing — unpacked, because the consumer audit found every one of
 these being hand-rolled somewhere:
 
-**6.1 The binding mounts what the table names.** An instance root
+### 6.1 The binding mounts what the table names
+
+An instance root
 names its document; the binding mounts, projects, and tears down.
 No host hand-mounts a second document (`mounted_ui`, `own_ui`,
 `brings_own_document` delete — untold_lore's workspaces held as
 `Option<EditorClient>` fields were the drift indicator realized).
 
-**6.2 One draw slot per instance root.** What paints *under* an
+### 6.2 One draw slot per instance root
+
+What paints *under* an
 instance's document is declared at the mount: an optional backdrop
 painter fed by store frame parameters (read verb) and world data —
 its signature does not pass the store's write surface, which is
@@ -341,7 +443,9 @@ is opaque or composites over its painter is mount data too
 continuously says so, because a widget tree only repaints when
 dirtied.
 
-**6.3 Side channels are named and validated.** Anchors (a host
+### 6.3 Side channels are named and validated
+
+Anchors (a host
 point positioning document content) and painter payloads
 (per-frame paint positioned by document layout) are binding-owned,
 per-instance channels — per-frame geometry that must *not* be
@@ -349,7 +453,9 @@ store fields (§5.2) but must not be stringly either. Their names
 validate at document load exactly as selections do; a typo'd
 anchor is a refusal, not a silently empty portal.
 
-**6.4 The crossing belongs to the binding.** The binding detects
+### 6.4 The crossing belongs to the binding
+
+The binding detects
 an instance-root boundary in the path delta itself (no game diffs
 `side_of` by hand), mounts the arriving instance *before* the
 sweep begins, runs a parameterized default passage (direction,
@@ -359,10 +465,47 @@ releases flow. The passage's side effects — whoosh, music,
 backdrop — are host reactions to the path change (§3.3), never
 crossing code.
 
-**6.5 Caches are shared across instances.** Images, fonts, and
+### 6.5 Caches are shared across instances
+
+Images, fonts, and
 their decode products live at the binding, not per instance — a
 crossing must never re-decode the arriving document's art on the
 crossing frame.
+
+### 6.6 Occlusion is a ladder of pixels; modality is a claim
+
+`Occlusion` is ordered — `None`, `View`, `Surface` — and `Surface`
+implies `View`: ancestors draw and their screens render behind (a
+prompt over the workspace it is leaving); ancestors draw and their
+screens do not (every ordinary child); neither (a node that brings its
+own world). One ladder rather than two bits is an empirical claim about
+every consumer — nothing wants an ancestor's 3D hidden while its HUD
+still draws — and is the line to attack first if that stops being true.
+The ladder says what draws and nothing about who reads the keyboard:
+`View` leaves an ancestor's `event` on the dispatch list, and a route
+that declines a key hands it down. A modal node therefore claims the
+whole input stream and says so; raises are already addressed and stay
+untouched. Whether a body is being driven is read off the path, never
+off a flag a route holds.
+*Drift indicator:* a fourth occlusion value; a pause that declines keys
+it means to swallow; `driving` as a field.
+
+### 6.7 Two visible views stack
+
+`visible_views` may return more than one id — an `Occlusion::None`
+prompt over the workspace it is leaving — and the outlet renders them
+as consecutive children of one `Presence` with `stack` set: each takes
+the whole content box, the deeper one paints over the shallower.
+Stacking composes with a child's own transform rather than setting one,
+so entry animations survive; the absolutely-positioned layer tried first
+set the child's paint transform and snapped every animated screen to its
+final place. Rendering two views and routing input to two views are one
+feature: a flow never has to decide who gets a press because its
+children do not overlap, stacked children overlap exactly, so the
+pointer walk is reversed when stacking and the top child is offered the
+press first.
+*Drift indicator:* a consumer wrapping a screen; a second outlet for
+prompts.
 
 ## 7. What this dissolves in the consumers
 
@@ -413,7 +556,7 @@ The same audit's ledgers for the other consumers:
   regression test, dies into node-lifetime scope state; the
   lobby → arena crossing gains the deployment ceremony the old
   machinery never allowed.
-- lorekeeper: the `shell` crate deletes (ROUTING.md phase 8b, at
+- lorekeeper: the `shell` crate deletes (the routing plan's phase 8b, at
   last); `Chrome`'s per-key diff map *is* the proto-store and
   moves down into it; `drive_menu_music`'s memo bool becomes a
   path subscription.

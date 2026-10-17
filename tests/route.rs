@@ -1,6 +1,7 @@
 //! The router, driven with no window.
 //!
-//! Every rule in `ROUTING.md` that can be stated without a GPU is stated
+//! Every rule of the structure framework (`APPLICATION.md` §3) that can be
+//! stated without a GPU is stated
 //! here, because the whole argument for the route tier is that "what is on
 //! screen" stops being a thing you have to boot a game to find out.
 //!
@@ -26,7 +27,7 @@ struct Cx {
     /// Which root the lifecycle is in: "title" or "world".
     lifecycle: &'static str,
     /// `/world`'s one authored input — the whole of what five stance
-    /// booleans collapse into (`ROUTING.md` §13.3).
+    /// booleans collapse into (`APPLICATION.md` §3.8).
     stance: Option<RouteId>,
     /// The map editor's own "am I leaving?", which is why its exit prompt
     /// is resolved by the editor and not by the game.
@@ -139,7 +140,8 @@ impl Route<Cx, Act> for Fake {
     }
 }
 
-/// The `ROUTING.md` §9 shape, shrunk to what the rules need:
+/// untold_lore's route tree as the rework drew it, shrunk to what the
+/// rules need:
 ///
 /// ```text
 /// /title
@@ -434,8 +436,8 @@ fn a_workspace_hides_both() {
 
 #[test]
 fn a_prompt_leaves_the_workspace_it_is_leaving_on_screen() {
-    // The seventh symptom bug in `ROUTING.md` §2.4: today exactly one
-    // widget tree draws, so the save-or-discard card takes the tree from
+    // The bug `APPLICATION.md` §6.7 closes: with one widget tree drawing,
+    // the save-or-discard card takes the tree from
     // the map editor and the editor's rail and toolbar vanish while its
     // canvas keeps rendering. `Occlusion::None` is what says otherwise.
     let log = Log::default();

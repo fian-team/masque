@@ -107,7 +107,7 @@ let outlet_wait = fn () { Flex { style: {} } };";
 /// other. Stacking is done by the Presence's own layout — every child on
 /// the whole content box, the deeper one last and therefore on top and
 /// first to be offered a press. Nothing wraps a screen, which is the
-/// constraint `ROUTING.md` §13.5 left behind: the absolutely-positioned
+/// constraint `APPLICATION.md` §6.7 records: the absolutely-positioned
 /// layer that was tried and reverted set its child's paint transform, and
 /// a screen whose `initial` also set one snapped to its final place while
 /// its ghost faded out.

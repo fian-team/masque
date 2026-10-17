@@ -317,7 +317,7 @@ impl Chrome {
 
     /// Push a root-scope value — chrome-global and session-global keys,
     /// the measured remainder that does not partition per route
-    /// (`ROUTING.md` §5).
+    /// (`APPLICATION.md` §5).
     pub fn project_root(&mut self, name: &str, value: Value) {
         if self.last.get(name) == Some(&value) {
             return;

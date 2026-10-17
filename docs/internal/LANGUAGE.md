@@ -167,8 +167,9 @@ screen "world" {
 ```
 
 A `screen` declares **one routable surface**: an id, the slice of host
-state that surface alone reads, and the view it renders. It is the ogham
-half of `lorekeeper/docs/ROUTING.md`; the rules that matter here:
+state that surface alone reads, and the view it renders. It is the surface
+half of the structure framework's routing (`APPLICATION.md` §3); the rules that
+matter here:
 
 - **The id is a route id, not an identifier.** `"map-edit"` is legal and
   would scan as three tokens if screens were named after it — so the
@@ -210,8 +211,8 @@ half of `lorekeeper/docs/ROUTING.md`; the rules that matter here:
   workspace it is leaving — so the outlet's `Presence` carries
   `stack: true`: every screen takes the whole content box, the deeper
   one paints over the shallower and is offered a press first. Nothing
-  wraps a screen, which is the constraint `lorekeeper/docs/ROUTING.md`
-  §13.5 left behind: the absolutely-positioned layer that was tried and
+  wraps a screen, which is the constraint `APPLICATION.md` §6.7
+  records: the absolutely-positioned layer that was tried and
   reverted set its child's paint transform, and a screen whose `initial`
   also set one snapped to its final place while its ghost faded out.
   A single-view path is unaffected — one child on the whole content box

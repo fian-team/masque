@@ -1158,7 +1158,7 @@ fn key_to_string(value: &Value) -> Option<String> {
 /// - `stack`: lay the generation's children on top of one another rather
 ///   than in a flow. The last child declared paints over the rest and is
 ///   offered a press first. What the outlet renders two visible views
-///   with (`lorekeeper/docs/ROUTING.md` §13.5); sizing still measures as
+///   with (`APPLICATION.md` §6.7); sizing still measures as
 ///   a flow, so a stacking Presence wants the default `grow` box.
 /// - `style`: optional overrides applied to the inner Flex (same shape
 ///   as `Flex { style: ... }`). Defaults are `Grow × Grow` column;

@@ -51,7 +51,7 @@ pub struct FlexWidget {
     ///
     /// Set only by [`PresenceWidget`](super::presence_widget::PresenceWidget)
     /// from its `stack` property, which is how the outlet renders more than
-    /// one visible view (`lorekeeper/docs/ROUTING.md` §13.5: an
+    /// one visible view (`APPLICATION.md` §6.7: an
     /// `Occlusion::None` prompt over the workspace it is leaving). It is
     /// *not* a `Flex` style key: sizing still measures as a flow, so a
     /// stacking container has to be `grow` or fixed, which the outlet's
@@ -1493,7 +1493,7 @@ impl Widget for FlexWidget {
         // paints over the rest. No flow, no gap, no alignment, and no
         // wrapper: the children's own transforms are untouched, which is
         // the property the reverted absolute-layer fix could not keep
-        // (`ROUTING.md` §13.5).
+        // (`APPLICATION.md` §6.7).
         if self.stack {
             let inset_left = self.style.inset_left();
             let inset_top = self.style.inset_top();
