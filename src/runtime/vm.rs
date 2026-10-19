@@ -227,13 +227,23 @@ impl VM {
         args: &[Value],
         runtime: &mut Runtime,
     ) -> Result<Value, VMError> {
-        // Push the closure, then the arguments.
-        self.push(Value::BytecodeClosure(closure.clone()))?;
-        for arg in args {
-            self.push(arg.clone())?;
-        }
-        self.call_vm_closure(closure, args.len() as u8)?;
-        self.execute(runtime)
+        // Run under the path the closure was made at, as `OpCode::Call`
+        // does: a handler's `count = count + 1` then writes the state its
+        // render declared, not a fresh root-level `:count` the next render
+        // never reads.
+        let old_call_stack =
+            std::mem::replace(&mut runtime.state.call_stack, closure.captured_path.clone());
+        let result = (|| {
+            // Push the closure, then the arguments.
+            self.push(Value::BytecodeClosure(closure.clone()))?;
+            for arg in args {
+                self.push(arg.clone())?;
+            }
+            self.call_vm_closure(closure, args.len() as u8)?;
+            self.execute(runtime)
+        })();
+        runtime.state.call_stack = old_call_stack;
+        result
     }
 
     // -- Internal call setup ------------------------------------------------
