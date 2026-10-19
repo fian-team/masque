@@ -20,6 +20,11 @@ pub struct Scanner {
     line: usize,
     /// The position of the last newline character, used to calculate column positions.
     last_newline: usize,
+    /// Where the token being scanned began, 0-indexed. Taken when it
+    /// starts: a string literal that spans a newline moves `line` and
+    /// `last_newline` past its own start before the token is made.
+    token_line: usize,
+    token_column: usize,
 }
 
 impl Scanner {
@@ -31,6 +36,8 @@ impl Scanner {
             current: 0,
             line: 0,
             last_newline: 0,
+            token_line: 0,
+            token_column: 0,
         }
     }
 
@@ -55,11 +62,11 @@ impl Scanner {
             // Important: `skip_whitespace()` may have consumed trailing newlines and advanced
             // `last_newline`. If we create EOF with an older `start` (from the previous token),
             // `start - last_newline` can underflow when computing the column.
-            self.start = self.current;
+            self.begin_token();
             return self.create_token(TokenType::EOF);
         }
 
-        self.start = self.current;
+        self.begin_token();
 
         let c = self.consume();
 
@@ -288,17 +295,23 @@ impl Scanner {
         false
     }
 
+    /// Start a token at the current position.
+    fn begin_token(&mut self) {
+        self.start = self.current;
+        self.token_line = self.line;
+        self.token_column = self.start - self.last_newline;
+    }
+
     /// Creates a token with the provided token type.
-    /// Line and column are 1-indexed for user-facing error messages.
+    /// Line and column are 1-indexed for user-facing error messages, and
+    /// are where the token began.
     fn create_token(&self, token_type: TokenType) -> Token {
-        // Calculate column as the number of characters from the last newline to the start of the token
-        let column = self.start - self.last_newline;
         Token {
             token_type,
-            line: self.line + 1,
+            line: self.token_line + 1,
             start: self.start,
             length: self.current - self.start,
-            column: column + 1, // Convert to 1-indexed
+            column: self.token_column + 1,
         }
     }
 
@@ -493,6 +506,25 @@ mod tests {
     fn scan(source: &str) -> Vec<Token> {
         let mut scanner = Scanner::new(source.to_string());
         scanner.scan()
+    }
+
+    /// A string that spans a newline is placed where it began. Its token
+    /// used to be made after the newline had moved `last_newline` past the
+    /// token's start, and the column underflowed: a panic in a debug
+    /// build, column 4294967294 in the browser stage.
+    #[test]
+    fn a_string_spanning_a_newline_is_placed_where_it_began() {
+        let tokens = scan("let a = \"one\ntwo\";\n  b");
+        let string = tokens
+            .iter()
+            .find(|t| matches!(t.token_type, TokenType::String(_)))
+            .expect("a string token");
+        assert_eq!((string.line, string.column), (1, 9));
+        let b = tokens
+            .iter()
+            .find(|t| t.token_type == TokenType::Identifier("b".into()))
+            .expect("b");
+        assert_eq!((b.line, b.column), (3, 3));
     }
 
     #[test]
