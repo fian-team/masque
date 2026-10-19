@@ -60,8 +60,8 @@ the seam is half-built and unused. This work finishes it.
   composition, newline entry / multi-line *editing* (display-wrapping of a
   single logical value is in scope; entering `\n` is not),
   undo/redo, password masking, max-length, read-only/disabled, caret blink,
-  word-wise nav (Ctrl+←/→), accessibility. (Placeholder text and the
-  `text_align`-aware caret left this list on 2026-09-07 — Stage 6.)
+  accessibility. (Placeholder text and the `text_align`-aware caret left
+  this list on 2026-09-07 — Stage 6; word-wise nav on 2026-10-17 — Stage 7.)
 
 ## 3. The measurement seam (E1) in detail
 
@@ -90,6 +90,7 @@ what `draw_text` paints (modulo sub-pixel wrap rounding — acceptable).
 | **3** | on_change fires only on real edits; Tab/Shift-Tab traversal; `on_submit` on Enter; Escape-to-blur | — | ✅ done |
 | **4** | shift+arrows extend ✅; Ctrl+A ✅; mouse drag-select via pointer capture ✅ (2026-09-07); double-click-word ☐ | E2 | ◐ (double-click pending on the host pump) |
 | **6** | `on_blur`, `align` honoured, `placeholder` | E1 | ✅ done (2026-09-07) |
+| **7** | Ctrl+←/→ word motion (Shift extends), Ctrl+Backspace/Delete word delete; `multiline:` | E1, E2 | ✅ done (2026-10-17) |
 | **5** | Ctrl+C/X/V via clipboard intent; `arboard` at host | E2 | ☐ |
 
 **As-built notes (E1/E2/1/2):**
@@ -102,6 +103,7 @@ what `draw_text` paints (modulo sub-pixel wrap rounding — acceptable).
 - Multi-line contract: `height: Shrink` ⇒ wrap + grow; any other height ⇒
   single line + horizontal scroll (`scroll_x`, kept caret-visible in
   `update_scroll`). `FontCollection` cached on the widget at `layout()`.
+  Stage 7 made this the *default* rather than the whole rule — see its notes.
 - 10 unit tests cover boundary-safe edit/movement incl. `é`/`🦀`; full suite
   (211+) green.
 
@@ -176,3 +178,25 @@ letting it reach game hotkeys. Three additions ride the same precedent:
    host, not Ogham.
 
 Confirm these three against the lorekeeper input pump during Stage 3/5.
+
+**As-built notes (Stage 7, 2026-10-17):**
+- **Word motion.** Ctrl+←/→ (Alt on macOS) move by word, Shift extends,
+  Ctrl+Backspace / Ctrl+Delete delete by word. A word run is letters, digits
+  and `_`; any other visible character is punctuation, its own run;
+  whitespace separates runs and is skipped first. ← lands at the start of the
+  previous run, → at the end of the next (the GTK / macOS stop, not
+  Windows' start-of-next-word). `text_layout::{prev,next}_word_boundary`.
+  The chord reaches the field because `UI::call_event` offers a ctrl chord
+  to the document's `keydown:` listeners first and to the tree only when
+  none claims it — a document that binds `ctrl_arrowleft` takes it from
+  every field under it.
+- **`multiline:`.** The height-coupled rule above left a fixed-height
+  "textarea" (UL's and small_mercies' `field_node.ogh`, `height: 64`)
+  scrolling one line sideways. `multiline: true` wraps at any height;
+  lines that overflow a fixed height scroll vertically (`scroll_y`, kept
+  caret-visible in `update_scroll`) and clip to the content box.
+  `multiline: false` keeps a shrink-height field to one line. Unset keeps
+  the old rule, so no existing document changes.
+- Still not here: Enter inserting `\n` (Enter is `on_submit`), ↑/↓ by
+  visual line (they still go to start / end), and wheel-scrolling an
+  overflowing multiline field.

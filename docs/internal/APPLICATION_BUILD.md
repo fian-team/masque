@@ -677,8 +677,15 @@ prints one line; `cargo tree -p contract --depth 1` is `ogham` +
 
 **Three things remain, in order.**
 
-**1. The `ogham → structure` edge — the criterion that did not come
-true.** `cargo tree -p ogham` showing no `structure` was deferred from
+**1. The `ogham → structure` edge — closed 2026-10-18.** `src/route/`
+moved whole into `lorekeeper/driver` as `driver::route` (consumers changed
+`ogham::route` to `driver::route`, and `From<&Value> for RaiseArg` became
+`driver::route::raise_arg`, an orphan otherwise). `contract/` moved to
+`lorekeeper/contract`, and `structure/` left this repo for its own at
+`../structure`, history kept. `cargo tree -p ogham` shows no `structure`.
+What follows is the record from before the move.
+
+**The criterion that did not come true.** `cargo tree -p ogham` showing no `structure` was deferred from
 the P1 gate to P4, then ruled from P4 to P6 on the reasoning that P6
 rewrites the games' `impl Route` blocks. **P6 rewrote them and the
 edge is still there; the reasoning was wrong, not the execution.**

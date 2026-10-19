@@ -1715,6 +1715,21 @@ fn create_text_input_widget(
         "mouse_up",
     )?;
 
+    // `multiline:` — whether long text wraps onto further lines. Unset, a
+    // `height: "shrink"` field wraps and any other height is one line;
+    // `true` wraps at a fixed height too, scrolling the lines to the caret.
+    if let Some(value) = descriptor.properties.get("multiline") {
+        match value {
+            Value::Boolean(b) => text_input.multiline = Some(*b),
+            other => {
+                return Err(BridgeError::InvalidPropertyType(
+                    "multiline".to_string(),
+                    format!("TextInput expects 'multiline' as a bool; got {:?}", other),
+                ));
+            }
+        }
+    }
+
     if let Some(style_map) = optional_style_map(descriptor) {
         apply_flex_style_from_map(&mut style, style_map);
         apply_text_style_from_map(&mut text_style, style_map);

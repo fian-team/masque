@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "structure", "contract"]
+members = ["."]
 resolver = "2"
 
 [package]
@@ -26,25 +26,6 @@ name = "ogham"
 path = "src/lib.rs"
 
 [dependencies]
-# APPLICATION.md §2's dependency edge, in the direction that does **not**
-# hold yet. Exactly one thing rides on it, and it is scheduled scaffolding:
-# `src/route/`, which re-exports the structure crate's route types and
-# keeps the `Route` trait, whose signatures name surface types. WP-4.1
-# moved the *mechanism* into `lorekeeper/driver`; the surface stays until
-# the three games' migrations (P6) rewrite their `impl Route` blocks and
-# their ~90 `use ogham::route::{…}` sites, which is the first moment it can
-# go. The maintainer moved that check to the P6 gate for that reason.
-#
-# The other thing that used to ride on it — the document contract — no
-# longer does: it is the `contract/` crate, which depends on this one and
-# on `structure` and on nothing else. §2 says "only the binding depends on
-# both", not "there is exactly one binding", and holding a document to its
-# scopes' contract needs the parser and the store, so by §2's own
-# definition it is a binding.
-#
-# The load-bearing half — `cargo tree -p structure` shows no ogham — holds
-# absolutely and is checked at every phase gate.
-structure = { path = "structure" }
 downcast-rs = "2.0.1"
 skia-safe = { version = "0.91.0", features = ["vulkan", "textlayout"] }
 lodepng = "3.12.1"

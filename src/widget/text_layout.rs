@@ -337,6 +337,62 @@ pub fn prev_boundary(text: &str, idx: usize) -> usize {
     i
 }
 
+/// What a word motion treats as one run: letters, digits and `_` are a
+/// word, any other visible character is punctuation, and whitespace
+/// (newlines included) is what separates runs.
+#[derive(PartialEq)]
+enum CharClass {
+    Space,
+    Word,
+    Punct,
+}
+
+fn char_class(c: char) -> CharClass {
+    if c.is_whitespace() {
+        CharClass::Space
+    } else if c.is_alphanumeric() || c == '_' {
+        CharClass::Word
+    } else {
+        CharClass::Punct
+    }
+}
+
+/// Where Ctrl+Left lands from `idx`: back over any whitespace, then over
+/// the run of one class before it — the start of the previous word.
+pub fn prev_word_boundary(text: &str, idx: usize) -> usize {
+    let idx = snap_to_boundary(text, idx);
+    let mut chars = text[..idx].char_indices().rev().peekable();
+    let mut pos = idx;
+    while let Some((i, _)) = chars.next_if(|&(_, c)| char_class(c) == CharClass::Space) {
+        pos = i;
+    }
+    if let Some(&(_, c)) = chars.peek() {
+        let class = char_class(c);
+        while let Some((i, _)) = chars.next_if(|&(_, c)| char_class(c) == class) {
+            pos = i;
+        }
+    }
+    pos
+}
+
+/// Where Ctrl+Right lands from `idx`: forward over any whitespace, then
+/// over the run of one class after it — the end of the next word.
+pub fn next_word_boundary(text: &str, idx: usize) -> usize {
+    let idx = snap_to_boundary(text, idx);
+    let mut chars = text[idx..].char_indices().peekable();
+    let mut pos = idx;
+    while let Some((i, c)) = chars.next_if(|&(_, c)| char_class(c) == CharClass::Space) {
+        pos = idx + i + c.len_utf8();
+    }
+    if let Some(&(_, c)) = chars.peek() {
+        let class = char_class(c);
+        while let Some((i, c)) = chars.next_if(|&(_, c)| char_class(c) == class) {
+            pos = idx + i + c.len_utf8();
+        }
+    }
+    pos
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -355,6 +411,30 @@ mod tests {
             widened > 4.0 * (text.len() as f32 - 1.0) - 1.0,
             "tracking should widen the line (got +{widened}px)"
         );
+    }
+
+    /// Word motion skips whitespace, then one run of a class: words and
+    /// punctuation are separate stops, and a multibyte word is one run.
+    #[test]
+    fn word_boundaries_step_over_one_run() {
+        let s = "foo.bar  baz qux";
+        assert_eq!(prev_word_boundary(s, s.len()), 13);
+        assert_eq!(prev_word_boundary(s, 13), 9);
+        assert_eq!(prev_word_boundary(s, 9), 4);
+        assert_eq!(prev_word_boundary(s, 4), 3);
+        assert_eq!(prev_word_boundary(s, 3), 0);
+        assert_eq!(prev_word_boundary(s, 0), 0);
+
+        assert_eq!(next_word_boundary(s, 0), 3);
+        assert_eq!(next_word_boundary(s, 3), 4);
+        assert_eq!(next_word_boundary(s, 4), 7);
+        assert_eq!(next_word_boundary(s, 7), 12);
+        assert_eq!(next_word_boundary(s, s.len()), s.len());
+
+        let s = "née 🦀 ok";
+        assert_eq!(next_word_boundary(s, 0), "née".len());
+        assert_eq!(prev_word_boundary(s, s.len()), s.len() - 2);
+        assert_eq!(prev_word_boundary(s, s.len() - 3), "née ".len());
     }
 }
 /// A `width: "shrink"` Text inside a centered column: its box is exactly

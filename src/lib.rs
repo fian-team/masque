@@ -40,7 +40,6 @@ pub use skia_safe;
 mod file_watcher;
 mod macros;
 pub mod parser;
-pub mod route;
 pub mod runtime;
 pub mod scanner;
 pub mod skia;
@@ -71,7 +70,7 @@ pub struct Ogham {
 /// `rerendered` is the old bare-bool return. `reloaded` exists because a
 /// hot reload used to happen silently inside `frame`, and the two answers
 /// a wrapping host caches — its projection diff and its document-vs-table
-/// validation ([`route::Chrome`]) — both die with the runtime the reload
+/// validation (`driver::route::Chrome`, in lorekeeper) — both die with the runtime the reload
 /// replaced. A host that is not told a swap happened cannot re-ask.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct FrameReport {
@@ -638,7 +637,7 @@ impl Ogham {
     /// The event names this instance has handlers registered for.
     ///
     /// The other half of what a document's `events {}` block declares —
-    /// see [`route::Chrome::validate_raises`], which is the one caller
+    /// see `driver::route::Chrome::validate_raises` in lorekeeper, which is the one caller
     /// that matters.
     pub fn registered_event_names(&self) -> Vec<String> {
         self.with_runtime_mut(|rt| rt.event_handler_names())

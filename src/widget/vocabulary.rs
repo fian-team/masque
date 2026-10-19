@@ -84,6 +84,7 @@ pub const TEXT_INPUT_PROPERTIES: &[&str] = &[
     "hover_style",
     "mouse_down",
     "mouse_up",
+    "multiline",
     "on_blur",
     "on_change",
     "on_submit",

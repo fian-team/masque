@@ -1,5 +1,6 @@
-//! `TextInput`: `on_blur`, an honoured `align`, `placeholder`, and
-//! drag-select through pointer capture.
+//! `TextInput`: `on_blur`, an honoured `align`, `placeholder`,
+//! drag-select through pointer capture, word motion and word delete, and
+//! `multiline:`.
 //!
 //! Blur is asserted through the document — a raise with the value — for
 //! each way focus can leave: a press elsewhere, Tab, Escape. The caret
@@ -337,5 +338,167 @@ let main = fn () {
         input.selection.end(),
         5,
         "dragged past the end selects to the end"
+    );
+}
+
+fn chord(o: &mut Ogham, code: u32, shift: bool) -> bool {
+    let modifiers = KeyModifiers {
+        ctrl: true,
+        shift,
+        ..KeyModifiers::default()
+    };
+    o.get_ui_mut()
+        .call_event(&Event::keydown(code, None, modifiers))
+}
+
+fn value_and_selection(o: &Ogham) -> (String, usize, usize) {
+    let input = field(o, 0);
+    let g = input.lock().unwrap();
+    let input = g.downcast_ref::<TextInputWidget>().unwrap();
+    (
+        input.get_value().to_string(),
+        input.selection.anchor,
+        input.selection.caret,
+    )
+}
+
+/// Ctrl+Left / Ctrl+Right step a word at a time, Ctrl+Shift extends by
+/// one, and Ctrl+Backspace / Ctrl+Delete delete one — through the UI, so
+/// the chord reaches the field past the document's chord listeners.
+#[test]
+fn ctrl_arrows_and_ctrl_delete_work_a_word_at_a_time() {
+    let src = r#"
+let main = fn () {
+  Flex {
+    style: { width: "grow", height: "grow" },
+    children: [
+      TextInput { value: "hello brave new world", style: { width: 400, height: 30 } },
+    ],
+  }
+};
+"#;
+    let (mut o, _log) = mounted(src);
+    press(&mut o, 100.0, 15.0);
+    keydown(&mut o, 35);
+
+    assert!(chord(&mut o, 37, false));
+    assert_eq!(
+        value_and_selection(&o).2,
+        16,
+        "back to the start of `world`"
+    );
+    chord(&mut o, 37, false);
+    assert_eq!(value_and_selection(&o).2, 12, "back to the start of `new`");
+    chord(&mut o, 39, false);
+    assert_eq!(value_and_selection(&o).2, 15, "on to the end of `new`");
+    chord(&mut o, 37, true);
+    chord(&mut o, 37, true);
+    assert_eq!(
+        value_and_selection(&o),
+        ("hello brave new world".into(), 15, 6)
+    );
+
+    keydown(&mut o, 35);
+    assert!(chord(&mut o, 8, false));
+    assert_eq!(value_and_selection(&o), ("hello brave new ".into(), 16, 16));
+    chord(&mut o, 8, false);
+    assert_eq!(value_and_selection(&o), ("hello brave ".into(), 12, 12));
+
+    keydown(&mut o, 36);
+    assert!(chord(&mut o, 46, false));
+    assert_eq!(value_and_selection(&o), (" brave ".into(), 0, 0));
+}
+
+/// `multiline: true` wraps at a fixed height: the caret at the end of a
+/// long value sits on a lower line, scrolled into the box, not off to the
+/// right of one line. Home brings the first line back.
+#[test]
+fn a_fixed_height_multiline_field_wraps_and_scrolls_to_the_caret() {
+    let src = r#"
+let main = fn () {
+  Flex {
+    style: { width: "grow", height: "grow" },
+    children: [
+      TextInput {
+        value: "the quick brown fox jumps over the lazy dog and keeps on running far away",
+        multiline: true,
+        style: { width: 160, height: 40, padding: 4, size: 14 },
+      },
+    ],
+  }
+};
+"#;
+    let (mut o, _log) = mounted(src);
+    press(&mut o, 20.0, 10.0);
+    keydown(&mut o, 35);
+    let input = field(&o, 0);
+    {
+        let g = input.lock().unwrap();
+        let input = g.downcast_ref::<TextInputWidget>().unwrap();
+        assert_eq!(
+            input.layout.as_ref().unwrap().height,
+            40.0,
+            "the height is the document's"
+        );
+        let (x, top, height) = input.caret_rect().unwrap();
+        assert!(
+            x <= 156.0,
+            "the caret wrapped rather than scrolling right: x = {x}"
+        );
+        assert!(top > 4.0, "the caret is on a lower line: top = {top}");
+        assert!(
+            top + height <= 36.5,
+            "scrolled into the content box: bottom = {}",
+            top + height
+        );
+    }
+    keydown(&mut o, 36);
+    let g = input.lock().unwrap();
+    let input = g.downcast_ref::<TextInputWidget>().unwrap();
+    let (x, top, _) = input.caret_rect().unwrap();
+    assert!(
+        (x - 4.0).abs() < 0.5 && (top - 4.0).abs() < 1.0,
+        "home: ({x}, {top})"
+    );
+}
+
+/// `multiline: false` keeps a shrink-height field to one line, scrolling
+/// sideways as a fixed-height one does.
+#[test]
+fn multiline_false_keeps_a_shrink_field_to_one_line() {
+    let src = r#"
+let main = fn () {
+  Flex {
+    style: { width: "grow", height: "grow", direction: "column" },
+    children: [
+      TextInput {
+        value: "the quick brown fox jumps over the lazy dog and keeps on running far away",
+        multiline: false,
+        style: { width: 160, height: "shrink", size: 14 },
+      },
+      TextInput {
+        value: "the quick brown fox jumps over the lazy dog and keeps on running far away",
+        style: { width: 160, height: "shrink", size: 14 },
+      },
+    ],
+  }
+};
+"#;
+    let (o, _log) = mounted(src);
+    let height = |i: usize| {
+        let input = field(&o, i);
+        let g = input.lock().unwrap();
+        g.downcast_ref::<TextInputWidget>()
+            .unwrap()
+            .layout
+            .as_ref()
+            .unwrap()
+            .height
+    };
+    assert!(
+        height(1) > 2.0 * height(0),
+        "one line ({}) against the wrapped default ({})",
+        height(0),
+        height(1)
     );
 }

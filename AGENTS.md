@@ -15,47 +15,30 @@ Ogham operates in two modes:
 1. **Library** -- embed Ogham UIs inside a Rust application (the primary use case).
 2. **Standalone browser** -- the `client` binary opens `.ogh` files directly.
 
-### The split has landed — read this before touching `src/route/`
+### Ogham depends on nothing of the router, and the router on nothing of Ogham
 
-This repo is **two composed frameworks**: a *structure*
-framework (routing fused with a scoped, schema'd state store) in the
-`structure/` workspace member, and the *surface* framework (this
-crate: the DSL, layout, reactivity) — joined by thin bindings, one
-here (`contract/`) and one in lorekeeper (`driver`). The design record
-is `docs/internal/APPLICATION.md`; the build's own account of itself,
-phase by phase, is `docs/internal/APPLICATION_BUILD.md` §0.5 — read it
-before believing any plan text further down that document, because
-several of the plan's own sentences were corrected as it ran and §0.5
-is where each correction is recorded. Where the pieces are:
-`structure/src/schema.rs` holds the
-derived reflection, `structure/src/store.rs` holds the store core —
-scoped facts, the frame barrier, the two consumption verbs —
-`structure/src/intent.rs` holds the write side: the intents a scope
-publishes, and the typed raise that lands on the outbox — and
-`structure/src/validate.rs` grades a document's selection against
-both, in §4.1's two grades. The `contract/` workspace member is the
-seam itself: it turns a `host_state {}` / `select` / `events {}`
-block into the structure framework's vocabulary, and
-`contract::Documents` is the "load every shipped document against its
-schemas" harness a consumer instantiates in one test. `lorekeeper/
-driver` holds the other binding.
+Ogham is one of two independent libraries. The other is the router and
+scoped store, which is the `structure` crate (working name) in its own
+repository at `../structure`, with an empty `[dependencies]`. Neither
+depends on the other in either direction: `cargo tree` for this crate
+shows no `structure`, and `cargo tree` there shows nothing at all. Keep
+it that way. Never add `structure` to this crate's dependencies.
 
-The rule that outranks convenience: **`structure` depends on nothing
-of the surface framework, and vice versa.** `structure/`'s empty
-`[dependencies]` is load-bearing. §2's "only the binding depends on
-both" is what makes `contract/` a crate rather than a module of this
-one — it depends on `ogham` and `structure` and nothing else, and it
-must stay reachable without a window, because its whole purpose is a
-`cargo test`-time answer. The one edge that should not exist,
-`ogham → structure`, is declared scaffolding for `src/route/`'s
-re-export. **It is still there.** The Phase 6 gate was where it was
-meant to go, on the reasoning that the games' `impl Route` blocks were
-being rewritten anyway — but rewriting them did not remove them, and
-the `Route` trait is what `front`'s six routes and every game's nodes
-still implement. Closing it means the trait itself moving into the
-driver, which is the last consumer-visible move of this split and has
-not been scheduled. The load-bearing half — `cargo tree -p structure`
-printing one line — holds absolutely and is checked at every gate.
+Everything that joins the two lives in lorekeeper:
+
+- `lorekeeper/driver` is the binding. It holds what used to be
+  `src/route/` here (`driver::route`: the `Route` trait, `RouteEvent`,
+  `Chrome` and the `Router` wrapper), alongside the instance mounting,
+  frame delivery and crossing.
+- `lorekeeper/contract` is the document contract: a document's
+  `select` / `events {}` declarations checked against the store's
+  schemas, plus the `Documents` harness a consumer runs under `cargo test`.
+
+What Ogham offers the binding is plain public API: `host_state {}`,
+`select` and `events {}` declarations readable through
+`runtime::schema`, `runtime::imports`, host state as name-to-`Value`
+maps, and the `Ogham::reload_if` gate. The design record is
+`docs/internal/APPLICATION.md`. Its paths predate the split.
 
 ## Architecture
 
@@ -112,13 +95,6 @@ Source (.ogh)
 | `src/runtime/reads.rs` | Which dotted paths a document reads off the names it binds — syntax only, shadow-aware, stopping wherever a chain stops being literal. It grades nothing; the contract crate resolves the paths against the provider's reflection |
 | `src/file_watcher.rs` | File watching for hot-reload |
 | `crates/ogham-derive/` | `#[derive(OghamState)]` / `#[derive(OghamMsg)]` proc macros |
-| `contract/` | **The document contract** (workspace member, working name): a document's declarations in the structure framework's vocabulary, the `Documents` load-validation harness, the `Checked` hot-reload gate, and the leaf-depth read check that a selection's names-only form would otherwise cost. Depends on `ogham` and `structure` and *nothing else* — it is a binding by §2's own definition, and it stays out of `lorekeeper/driver` so a consumer can ask its question with no window |
-| `src/route/` | The surface-typed remainder of the route tier: the `Route` trait, `RouteEvent`, `Chrome`, and a `Router` newtype over `structure`'s walk. Scaffolding — it moves into the driver when the games' `impl Route` blocks are rewritten (`docs/internal/APPLICATION_BUILD.md` Phase 6). **Still standing:** the
-three games' `impl Route` blocks were rewritten in P6 and this module
-outlived them, because `front`'s six routes and every game's nodes are
-still written against the `Route` trait. It is the sole rider on the
-`ogham → structure` edge |
-| `structure/` | **The structure framework** (workspace member, working name): the route table, the walk, the outbox, guards, `schema` — §4.3's derived reflection, the thing a document's selection validates against — `store` — §5's scoped facts, their frame-transactional commit, and the subscribe/read verbs — `intent` — §4.4's write side, the vocabulary a scope publishes and the typed raise that lands on the outbox — and `validate` — §4.1's two grades, where a selection that names a missing field refuses and coverage drift reports. Depends on *nothing* — that edge is the guarantee in `docs/internal/APPLICATION.md` §2, so never add a dependency here, least of all on ogham |
 
 ## LSP Server
 
@@ -311,6 +287,15 @@ reports what the pointer asked for. `docs/internal/SLIDER.md`.
 Tab, Escape, a focus trap's restoration). `placeholder: "…"` draws in
 the text style at half alpha while empty and unfocused; `align` in
 the style is honoured, caret included.
+
+Long text wraps when the field's `height` is `"shrink"` (it grows to
+fit its lines); any other height is one line that scrolls sideways.
+`multiline: true` wraps at a fixed height too, scrolling the lines to
+keep the caret in view — the textarea shape — and `multiline: false`
+keeps a shrink field to one line. Enter is still `on_submit`; there is
+no newline entry. Ctrl+←/→ move by word (Shift extends), Ctrl+Backspace
+/ Ctrl+Delete delete by word; Alt does the same, as macOS spells it. A
+document `keydown:` listener for the same chord takes it first.
 
 #### Drag events (Phase 3)
 
@@ -971,7 +956,7 @@ one and not the other turns a working property into a reported violation.
 
 ## The startup check
 
-`Chrome::validate(ids)` compares a mounted document against the host it is
+`driver::route::Chrome::validate(ids)` (in lorekeeper) compares a mounted document against the host it is
 mounted in, once, at startup: `screen` blocks against the route table's
 ids, and the document's declared `events {}` against the handlers the
 instance registered. `lorekeeper`'s `RouterHost::new` calls it, which is
@@ -1355,15 +1340,6 @@ ogham/
       main.rs               -- standalone browser binary entry point
       client.rs              -- client implementation
       app.rs                 -- application wrapper
-    route/                  -- surface-typed route remainder (Route trait, RouteEvent,
-                            --   Chrome, Router newtype); moves to the driver in Phase 6
-  structure/                 -- THE STRUCTURE FRAMEWORK (workspace member): route table,
-                            --   walk, outbox, guards, schema reflection, and the
-                            --   scoped store. Zero dependencies, by design
-  contract/                  -- THE DOCUMENT CONTRACT (workspace member): a document's
-                            --   selection in the structure framework's vocabulary, the
-                            --   `Documents` harness, and the hot-reload gate. Depends on
-                            --   ogham + structure, and on nothing else, ever
   crates/
     ogham-derive/           -- #[derive(OghamState)] / #[derive(OghamMsg)] proc macros
   examples/                  -- .ogh example files (incl. portals/components.ogh)

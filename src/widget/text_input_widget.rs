@@ -76,6 +76,14 @@ pub struct TextInputWidget {
     /// single-line input whose text overflows the box. Always 0 in the
     /// wrapping (multi-line) case.
     scroll_x: f32,
+    /// Vertical scroll offset (logical px) keeping the caret in view for a
+    /// wrapping input whose lines overflow a box of fixed height. Always 0
+    /// for a single-line input, and for a wrapping one whose height shrinks
+    /// to its lines.
+    scroll_y: f32,
+    /// `multiline:` as the document wrote it. `None` keeps the default
+    /// rule — see [`Self::is_multiline`].
+    pub multiline: Option<bool>,
 }
 
 impl TextInputWidget {
@@ -96,6 +104,8 @@ impl TextInputWidget {
             measure_fc: None,
             measure_font: None,
             scroll_x: 0.0,
+            scroll_y: 0.0,
+            multiline: None,
         }
     }
 
@@ -115,11 +125,14 @@ impl TextInputWidget {
         }
     }
 
-    /// True when this input wraps long text onto multiple lines and grows its
-    /// height to fit. The contract: `height: Shrink` is the multi-line / grow
-    /// case; any other height is a single-line input that scrolls horizontally.
+    /// True when this input wraps long text onto multiple lines. `multiline:`
+    /// decides when the document says; otherwise `height: Shrink` is the
+    /// wrapping case and any other height is a single line that scrolls
+    /// horizontally. A wrapping input with a shrink height grows to fit its
+    /// lines; one with any other height scrolls them vertically.
     fn is_multiline(&self) -> bool {
-        matches!(self.style.height, Size::Shrink)
+        self.multiline
+            .unwrap_or(matches!(self.style.height, Size::Shrink))
     }
 
     /// Returns the flex style to use for rendering. Focus wins over hover
@@ -190,8 +203,9 @@ impl TextInputWidget {
         self.replace_selection(ch.encode_utf8(&mut buf));
     }
 
-    /// Backspace. Returns whether `value` changed.
-    fn delete_backward(&mut self) -> bool {
+    /// Backspace — or, with `word`, Ctrl+Backspace, which deletes back to
+    /// the start of the previous word. Returns whether `value` changed.
+    fn delete_backward(&mut self, word: bool) -> bool {
         if !self.selection.is_collapsed() {
             self.replace_selection("");
             return true;
@@ -200,14 +214,19 @@ impl TextInputWidget {
         if caret == 0 {
             return false;
         }
-        let prev = text_layout::prev_boundary(&self.value, caret);
+        let prev = if word {
+            text_layout::prev_word_boundary(&self.value, caret)
+        } else {
+            text_layout::prev_boundary(&self.value, caret)
+        };
         self.value.replace_range(prev..caret, "");
         self.selection = Selection::collapsed(prev);
         true
     }
 
-    /// Forward delete (Delete key). Returns whether `value` changed.
-    fn delete_forward(&mut self) -> bool {
+    /// Forward delete (Delete key) — or, with `word`, Ctrl+Delete, which
+    /// deletes to the end of the next word. Returns whether `value` changed.
+    fn delete_forward(&mut self, word: bool) -> bool {
         if !self.selection.is_collapsed() {
             self.replace_selection("");
             return true;
@@ -216,7 +235,11 @@ impl TextInputWidget {
         if caret >= self.value.len() {
             return false;
         }
-        let next = text_layout::next_boundary(&self.value, caret);
+        let next = if word {
+            text_layout::next_word_boundary(&self.value, caret)
+        } else {
+            text_layout::next_boundary(&self.value, caret)
+        };
         self.value.replace_range(caret..next, "");
         true
     }
@@ -232,8 +255,12 @@ impl TextInputWidget {
         }
     }
 
-    fn move_left(&mut self, extend: bool) {
-        let pos = if !extend && !self.selection.is_collapsed() {
+    /// Left arrow; with `word`, Ctrl+Left. A bare press with a selection
+    /// collapses it to its start; a word motion steps from the caret.
+    fn move_left(&mut self, extend: bool, word: bool) {
+        let pos = if word {
+            text_layout::prev_word_boundary(&self.value, self.selection.caret)
+        } else if !extend && !self.selection.is_collapsed() {
             self.selection.start()
         } else {
             text_layout::prev_boundary(&self.value, self.selection.caret)
@@ -241,8 +268,11 @@ impl TextInputWidget {
         self.set_caret(pos, extend);
     }
 
-    fn move_right(&mut self, extend: bool) {
-        let pos = if !extend && !self.selection.is_collapsed() {
+    /// Right arrow; with `word`, Ctrl+Right, to the end of the next word.
+    fn move_right(&mut self, extend: bool, word: bool) {
+        let pos = if word {
+            text_layout::next_word_boundary(&self.value, self.selection.caret)
+        } else if !extend && !self.selection.is_collapsed() {
             self.selection.end()
         } else {
             text_layout::next_boundary(&self.value, self.selection.caret)
@@ -356,7 +386,7 @@ impl TextInputWidget {
         let dx = self.run_offset(true, &self.value, content_w);
         Some((
             text_x + dx - self.scroll_x + caret.x,
-            text_y + caret.top,
+            text_y - self.scroll_y + caret.top,
             caret.height,
         ))
     }
@@ -393,7 +423,7 @@ impl TextInputWidget {
         };
         let dx = self.run_offset(true, &self.value, content_w);
         let local_x = point.x() - text_x - dx + self.scroll_x;
-        let local_y = point.y() - text_y;
+        let local_y = point.y() - text_y + self.scroll_y;
         text_layout::glyph_index_at(
             self.measure_fc.as_ref(),
             self.measure_font.as_deref(),
@@ -404,16 +434,19 @@ impl TextInputWidget {
         )
     }
 
-    /// Recompute `scroll_x` so the caret stays inside the content box. No-op for
-    /// the multi-line (wrapping) case, which never scrolls horizontally.
+    /// Recompute the scroll so the caret stays inside the content box:
+    /// horizontally for a single line, vertically for a wrapping input whose
+    /// lines overflow its height.
     fn update_scroll(&mut self) {
-        if self.is_multiline() {
-            self.scroll_x = 0.0;
-            return;
-        }
-        let Some((_tx, _ty, content_w, _ch, wrap_w)) = self.text_geometry(true) else {
+        let Some((_tx, _ty, content_w, content_h, wrap_w)) = self.text_geometry(true) else {
             return;
         };
+        if self.is_multiline() {
+            self.scroll_x = 0.0;
+            self.update_scroll_y(content_h, wrap_w);
+            return;
+        }
+        self.scroll_y = 0.0;
         let caret = text_layout::caret_geometry(
             self.measure_fc.as_ref(),
             self.measure_font.as_deref(),
@@ -433,6 +466,31 @@ impl TextInputWidget {
         if self.scroll_x < 0.0 {
             self.scroll_x = 0.0;
         }
+    }
+
+    /// The wrapping half of [`Self::update_scroll`]: bring the caret's line
+    /// into `[scroll_y, scroll_y + content_h]`, then keep the window inside
+    /// the text, so deleting lines scrolls back rather than leaving a gap.
+    fn update_scroll_y(&mut self, content_h: f32, wrap_w: f32) {
+        let style = self.run_style(true);
+        let fc = self.measure_fc.as_ref();
+        let font = self.measure_font.as_deref();
+        let caret = text_layout::caret_geometry(
+            fc,
+            font,
+            &style,
+            &self.value,
+            wrap_w,
+            self.selection.caret,
+        );
+        if caret.top + caret.height - self.scroll_y > content_h {
+            self.scroll_y = caret.top + caret.height - content_h;
+        }
+        if caret.top - self.scroll_y < 0.0 {
+            self.scroll_y = caret.top;
+        }
+        let text_h = text_layout::measure(fc, font, &style, &self.value, wrap_w).height;
+        self.scroll_y = self.scroll_y.min(text_h - content_h).max(0.0);
     }
 }
 
@@ -463,8 +521,10 @@ impl Widget for TextInputWidget {
     fn update(&mut self, new_widget: WidgetRef) -> UpdateResult {
         let mut new_widget = new_widget.lock().expect("widget lock poisoned");
         if let Some(new_text_input_widget) = new_widget.downcast_mut::<TextInputWidget>() {
-            let style_changed = !self.style.layout_equal(&new_text_input_widget.style);
+            let style_changed = !self.style.layout_equal(&new_text_input_widget.style)
+                || self.multiline != new_text_input_widget.multiline;
             self.style = new_text_input_widget.style.clone();
+            self.multiline = new_text_input_widget.multiline;
             self.hover_style = new_text_input_widget.hover_style.clone();
             self.focus_style = new_text_input_widget.focus_style.clone();
             self.text_style = new_text_input_widget.text_style.clone();
@@ -487,6 +547,11 @@ impl Widget for TextInputWidget {
                 self.selection = Selection::collapsed(self.value.len());
             }
             let value_changed = !value_unchanged;
+            if value_changed {
+                // Keep the moved caret in view: a paint-only change gets no
+                // layout pass to do it.
+                self.update_scroll();
+            }
             // Value only feeds into layout when width is `Shrink` —
             // `get_dimensions` derives the box width from the text in that
             // case. For `Fixed` / `Grow` / `Percent` the box is unaffected and
@@ -579,9 +644,10 @@ impl Widget for TextInputWidget {
         let height = match ctx.effective_height(self.style.height) {
             Size::Fixed(h) => h,
             Size::Shrink => {
-                // Multi-line: grow to fit the text wrapped at the content width.
+                // Multi-line: grow to fit the text wrapped at the content
+                // width. Single-line: one line's height.
                 let content_w = (width - chrome_w).max(0.0);
-                let wrap_w = if content_w > 0.0 {
+                let wrap_w = if self.is_multiline() && content_w > 0.0 {
                     content_w
                 } else {
                     f32::INFINITY
@@ -671,24 +737,26 @@ impl Widget for TextInputWidget {
             if let Some(keyboard_data) = &event.keyboard_data {
                 let shift = keyboard_data.modifiers.shift;
                 let cmd = keyboard_data.modifiers.ctrl || keyboard_data.modifiers.meta;
+                // Word motion and word delete: Ctrl, or Alt as macOS spells it.
+                let word = keyboard_data.modifiers.ctrl || keyboard_data.modifiers.alt;
                 match event.name.as_str() {
                     "keydown" => {
                         if let Some(key_code) = keyboard_data.key_code {
                             match key_code {
                                 8 => {
-                                    value_mutated = self.delete_backward();
+                                    value_mutated = self.delete_backward(word);
                                     event_handled = true;
                                 }
                                 46 => {
-                                    value_mutated = self.delete_forward();
+                                    value_mutated = self.delete_forward(word);
                                     event_handled = true;
                                 }
                                 37 => {
-                                    self.move_left(shift);
+                                    self.move_left(shift, word);
                                     event_handled = true;
                                 }
                                 39 => {
-                                    self.move_right(shift);
+                                    self.move_right(shift, word);
                                     event_handled = true;
                                 }
                                 // Home / Up → start of field; End / Down → end.
@@ -856,11 +924,17 @@ impl Widget for TextInputWidget {
 
         // Clip text / caret / selection to the content box so overflow (and the
         // horizontally-scrolled single-line case) doesn't spill past the box.
-        ctx.push_clip_rect(text_x, box_y, content_w, box_height);
+        // A wrapping input clips to the content box vertically too, since its
+        // lines scroll under the padding when they overflow a fixed height.
+        if self.is_multiline() {
+            ctx.push_clip_rect(text_x, text_y, content_w, content_h);
+        } else {
+            ctx.push_clip_rect(text_x, box_y, content_w, box_height);
+        }
 
         let run_style = self.run_style(focused);
         let origin_x = text_x + self.run_offset(focused, &self.value, content_w) - self.scroll_x;
-        let origin_y = text_y;
+        let origin_y = text_y - self.scroll_y;
 
         // Selection highlight (painted under the text).
         if focused && !self.selection.is_collapsed() {
@@ -915,7 +989,7 @@ impl Widget for TextInputWidget {
         }
 
         ctx.pop_clip_rect();
-        let _ = (content_h, text_style);
+        let _ = text_style;
     }
 }
 
@@ -950,13 +1024,13 @@ mod tests {
         let mut w = input("é🦀z");
         w.move_to_start(false);
         assert_eq!(w.selection.caret, 0);
-        w.move_right(false); // past 'é'
+        w.move_right(false, false); // past 'é'
         assert_eq!(w.selection.caret, 2);
-        w.move_right(false); // past '🦀'
+        w.move_right(false, false); // past '🦀'
         assert_eq!(w.selection.caret, 6);
-        w.move_right(false); // past 'z'
+        w.move_right(false, false); // past 'z'
         assert_eq!(w.selection.caret, 7);
-        w.move_right(false); // clamp at end
+        w.move_right(false, false); // clamp at end
         assert_eq!(w.selection.caret, 7);
     }
 
@@ -964,19 +1038,19 @@ mod tests {
     fn backspace_removes_whole_codepoint() {
         let mut w = input("a🦀");
         // caret at end (byte 5). Backspace must delete the 4-byte crab cleanly.
-        assert!(w.delete_backward());
+        assert!(w.delete_backward(false));
         assert_eq!(w.value, "a");
         assert_eq!(w.selection.caret, 1);
-        assert!(w.delete_backward());
+        assert!(w.delete_backward(false));
         assert_eq!(w.value, "");
-        assert!(!w.delete_backward()); // empty → no change
+        assert!(!w.delete_backward(false)); // empty → no change
     }
 
     #[test]
     fn forward_delete_removes_whole_codepoint() {
         let mut w = input("é!");
         w.move_to_start(false);
-        assert!(w.delete_forward());
+        assert!(w.delete_forward(false));
         assert_eq!(w.value, "!");
         assert_eq!(w.selection.caret, 0);
     }
@@ -1001,7 +1075,7 @@ mod tests {
             anchor: 1,
             caret: 4,
         }; // "ell"
-        assert!(w.delete_backward());
+        assert!(w.delete_backward(false));
         assert_eq!(w.value, "ho");
         assert_eq!(w.selection.caret, 1);
     }
@@ -1010,12 +1084,12 @@ mod tests {
     fn shift_arrow_extends_then_unshifted_collapses() {
         let mut w = input("hello");
         w.move_to_start(false);
-        w.move_right(true); // extend over 'h'
-        w.move_right(true); // extend over 'e'
+        w.move_right(true, false); // extend over 'h'
+        w.move_right(true, false); // extend over 'e'
         assert_eq!(w.selection.anchor, 0);
         assert_eq!(w.selection.caret, 2);
         // Unshifted left collapses to the selection start, not caret-1.
-        w.move_left(false);
+        w.move_left(false, false);
         assert!(w.selection.is_collapsed());
         assert_eq!(w.selection.caret, 0);
     }
