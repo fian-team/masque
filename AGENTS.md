@@ -10,10 +10,16 @@ Ogham is a UI language and framework for Rust applications. It provides:
 - A Flexbox-based widget tree with reconciliation (React-style diffing).
 - A Skia rendering backend, with a `Surface` trait for custom backends.
 
-Ogham operates in two modes:
+Ogham operates in three modes:
 
 1. **Library** -- embed Ogham UIs inside a Rust application (the primary use case).
 2. **Standalone browser** -- the `client` binary opens `.ogh` files directly.
+3. **Web stage** -- `web/` compiles the VM and Skia raster renderer to
+   `wasm32-unknown-emscripten` for the website's live demo
+   (`docs/internal/WEB_STAGE.md`). Not a user-facing feature yet. Build
+   with `web/build.sh` (sources `web/env.sh`: emsdk 4.0.7, Skia from
+   source), gate with `web/test.sh`, which compares the wasm render with
+   the native one pixel for pixel.
 
 ### Ogham depends on nothing of the router, and the router on nothing of Ogham
 
@@ -95,6 +101,7 @@ Source (.ogh)
 | `src/runtime/reads.rs` | Which dotted paths a document reads off the names it binds — syntax only, shadow-aware, stopping wherever a chain stops being literal. It grades nothing; the contract crate resolves the paths against the provider's reflection |
 | `src/file_watcher.rs` | File watching for hot-reload |
 | `crates/ogham-derive/` | `#[derive(OghamState)]` / `#[derive(OghamMsg)]` proc macros |
+| `web/` | The browser stage: `Stage` (one document in a CPU raster surface, native-tested) behind `extern "C"` exports for emscripten; `build.sh`, `test.sh`, `env.sh`; embeds Geist |
 
 ## LSP Server
 

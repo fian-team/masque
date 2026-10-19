@@ -1,6 +1,6 @@
 # Web stage: Ogham in a browser
 
-Status: **approved 2026-10-18; in progress** on the `web` worktree.
+Status: **complete 2026-10-19.** Phases 0–4 merged to main from the `web` worktree (since removed); Phases 5–6 are in `masque-website` (`apps/masque`).
 
 ## Progress
 
@@ -11,8 +11,8 @@ Status: **approved 2026-10-18; in progress** on the `web` worktree.
 | 2 | done | Target tables; native `cargo tree` identical to main's; `register_font_data`. |
 | 3 | done | `cargo build --lib --target wasm32-unknown-emscripten` builds. The fallback font collection needed no change: layout and paint both use the UI's collection once fonts are registered. |
 | 4 | done | `web/` host, `build.sh`, `test.sh`. The wasm render of the hero is **pixel-identical** to the native one (0 channels differ). Stage: 6.4 MB, **2.0 MB brotli**. |
-| 5 | next | — |
-| 6 | — | — |
+| 5 | done | `apps/masque`: `LiveStage` / `LiveDemo` / `stage-module.ts`, `pnpm stage:sync`. Checked in headless Firefox over WebDriver BiDi: draws, counts per button, phone width at 3×, no-JS fallback in the server HTML. 2.5 MB over gzip (`next start`); a brotli host serves 2.0 MB. |
+| 6 | done | `SourceEditor`: textarea over Shiki, re-highlighted in the browser by `shiki/core` + the JavaScript engine (tokens identical to the server's on every example), 250 ms rebuild, error line, Reset. |
 
 What Phase 1 found that the plan did not expect:
 
@@ -46,7 +46,28 @@ What Phase 4 found:
   redraw-on-demand host must read `needs_repaint()` / `needs_layout()`
   *before* `layout`. `Stage::frame` does.
 - The size budget (decision 7) is still open. 2.0 MB brotli is the
-  number to set it against. Dropping `pdf` has not been tried.
+  number to set it against. Dropping `pdf` changed nothing (the linker
+  already discards it); the module is 4.8 MB code and 1.6 MB data, most
+  of the data ICU's tables, which SkParagraph needs.
+
+What Phases 5–6 found:
+
+- **A scanner bug on main.** A string literal spanning a newline made
+  its token after the newline had moved `last_newline` past the token's
+  start, so the column underflowed: an overflow panic in a native debug
+  build (the LSP included), column 4294967294 in the stage's error line.
+  Fixed in `60389cf`; the scanner takes a token's position when it
+  starts.
+- The shared theme sets `code { font-size: 0.875em }`, so the text in a
+  Shiki `<pre>` is smaller than the pre and the pre's strut sets the
+  line pitch. The editor's textarea matches both
+  (`masque.css`, *The editable source*).
+- Firefox does not dispatch `focus` to a headless window that does not
+  have it; the editor also starts its highlighter on the first edit, so
+  no path depends on the focus event.
+
+Refreshing the site's module: `web/build.sh && web/test.sh` here, then
+`pnpm stage:sync` in `apps/masque`, and commit `public/stage/`.
 
 Goal: the stage on the website's home page (`masque-website`,
 `src/components/StageDemo.tsx`) runs the real scanner, compiler, VM,
