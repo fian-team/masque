@@ -1,17 +1,29 @@
+//! Hot-reload file watching.
+//!
+//! Under emscripten there is no OS to watch: files live in the in-memory
+//! filesystem and change only when the host writes them, so the watcher
+//! keeps the same interface and never reports a change. `Ogham::watch`
+//! there is load-from-file; a browser host reloads by building again.
+
+#[cfg(not(target_os = "emscripten"))]
+use std::sync::mpsc;
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    sync::mpsc,
 };
 
+#[cfg(not(target_os = "emscripten"))]
 use notify::{Event as NotifyEvent, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::runtime::error::RuntimeError;
 
 pub struct FileWatcher {
+    #[cfg(not(target_os = "emscripten"))]
     _watcher: RecommendedWatcher,
+    #[cfg(not(target_os = "emscripten"))]
     receiver: mpsc::Receiver<Result<NotifyEvent, notify::Error>>,
     /// Canonical paths of all files we care about (main file + every imported file).
+    #[cfg_attr(target_os = "emscripten", allow(dead_code))]
     watched_paths: HashSet<PathBuf>,
 }
 
@@ -50,6 +62,20 @@ impl FileWatcher {
             }
         }
 
+        #[cfg(target_os = "emscripten")]
+        {
+            let _ = parents_to_watch;
+            Ok(Self { watched_paths })
+        }
+        #[cfg(not(target_os = "emscripten"))]
+        Self::watch_parents(watched_paths, parents_to_watch)
+    }
+
+    #[cfg(not(target_os = "emscripten"))]
+    fn watch_parents(
+        watched_paths: HashSet<PathBuf>,
+        parents_to_watch: HashSet<PathBuf>,
+    ) -> Result<Self, RuntimeError> {
         let (tx, rx) = mpsc::channel();
         let mut watcher = notify::recommended_watcher(tx).map_err(|e| {
             RuntimeError::IoError(std::io::Error::new(
@@ -76,6 +102,12 @@ impl FileWatcher {
         })
     }
 
+    #[cfg(target_os = "emscripten")]
+    pub fn check_for_changes(&self) -> bool {
+        false
+    }
+
+    #[cfg(not(target_os = "emscripten"))]
     pub fn check_for_changes(&self) -> bool {
         let mut file_changed = false;
 

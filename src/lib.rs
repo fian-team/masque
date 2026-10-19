@@ -672,13 +672,31 @@ impl Ogham {
     ///
     /// Panics if a file cannot be read or does not contain a valid font.
     pub fn register_font(&mut self, family: &str, paths: &[impl AsRef<Path>]) {
+        let files: Vec<Vec<u8>> = paths
+            .iter()
+            .map(|path| {
+                std::fs::read(path.as_ref()).unwrap_or_else(|e| {
+                    panic!("failed to read font file {:?}: {}", path.as_ref(), e)
+                })
+            })
+            .collect();
+        let data: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+        self.register_font_data(family, &data);
+    }
+
+    /// [`Self::register_font`] from bytes already in memory: a host that
+    /// carries its fonts with `include_bytes!`, such as the browser stage,
+    /// which has no font files to read.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an entry does not contain a valid font.
+    pub fn register_font_data(&mut self, family: &str, fonts: &[&[u8]]) {
         let font_mgr = FontMgr::new();
-        for path in paths {
-            let bytes = std::fs::read(path.as_ref())
-                .unwrap_or_else(|e| panic!("failed to read font file {:?}: {}", path.as_ref(), e));
+        for (i, bytes) in fonts.iter().enumerate() {
             let typeface = font_mgr
-                .new_from_data(&bytes, None)
-                .unwrap_or_else(|| panic!("invalid font file: {:?}", path.as_ref()));
+                .new_from_data(bytes, None)
+                .unwrap_or_else(|| panic!("invalid font data for {family:?} (entry {i})"));
             self.registered_typefaces
                 .push((family.to_string(), typeface));
         }

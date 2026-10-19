@@ -27,11 +27,18 @@ path = "src/lib.rs"
 
 [dependencies]
 downcast-rs = "2.0.1"
-skia-safe = { version = "0.91.0", features = ["vulkan", "textlayout"] }
 lodepng = "3.12.1"
 nalgebra-glm = "0.19.0"
+
+# The browser build (`web/`, docs/internal/WEB_STAGE.md) is emscripten:
+# Skia without Vulkan, and none of the watcher or the LSP's runtime.
+[target.'cfg(not(target_os = "emscripten"))'.dependencies]
+skia-safe = { version = "0.91.0", features = ["vulkan", "textlayout"] }
 notify = "6.1"
 tower-lsp = "0.20"
 tokio = { version = "1", features = ["io-std", "macros", "rt-multi-thread"] }
+
+[target.'cfg(target_os = "emscripten")'.dependencies]
+skia-safe = { version = "0.91.0", features = ["textlayout"] }
 
 [dev-dependencies]
