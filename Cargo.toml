@@ -1,5 +1,8 @@
 [workspace]
-members = ["."]
+members = [".", "web"]
+# `web/` is the browser stage (docs/internal/WEB_STAGE.md); a bare
+# `cargo build` / `cargo test` here stays this crate alone.
+default-members = ["."]
 resolver = "2"
 
 [package]
@@ -42,3 +45,9 @@ tokio = { version = "1", features = ["io-std", "macros", "rt-multi-thread"] }
 skia-safe = { version = "0.91.0", features = ["textlayout"] }
 
 [dev-dependencies]
+# The browser stage's build (`web/build.sh`): size over compile time.
+[profile.stage]
+inherits = "release"
+lto = true
+codegen-units = 1
+panic = "abort"

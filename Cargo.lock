@@ -781,6 +781,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ogham-web"
+version = "0.0.0"
+dependencies = [
+ "ogham",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

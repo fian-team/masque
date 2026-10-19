@@ -1,0 +1,20 @@
+[package]
+name = "ogham-web"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The browser stage: Ogham's VM and Skia raster renderer behind a C-shaped API for emscripten"
+
+[lib]
+name = "ogham_web"
+path = "src/lib.rs"
+
+# The emscripten build of this binary is the stage: `ogham_stage.js` +
+# `ogham_stage.wasm` (`web/build.sh`). Natively it does nothing; the
+# library's tests are the native half.
+[[bin]]
+name = "ogham_stage"
+path = "src/main.rs"
+
+[dependencies]
+ogham = { path = ".." }

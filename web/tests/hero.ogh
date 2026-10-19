@@ -1,0 +1,41 @@
+let ink = { r: 33, g: 30, b: 25, a: 255 };
+let paper = { r: 255, g: 255, b: 255, a: 170 };
+let rule = { r: 134, g: 134, b: 145, a: 255 };
+let stage = { r: 30, g: 30, b: 30, a: 255 };
+
+let button = fn (label: String) {
+  state count = 0;
+  Flex {
+    mouse_down: fn () { count = count + 1; },
+    style: {
+      width: 220, height: 44, padding: 12,
+      cross_alignment: "center",
+      corner_radius: 10,
+      background_color: paper,
+      border: { width: 2, color: rule },
+    },
+    children: [
+      Text {
+        text: label + " " + count,
+        style: { size: 18, color: ink },
+      },
+    ],
+  }
+};
+
+let main = fn () {
+  Flex {
+    style: {
+      width: "grow", height: "grow", gap: 12,
+      direction: "column",
+      main_alignment: "center",
+      cross_alignment: "center",
+      background_color: stage,
+    },
+    children: [
+      button("Counter 1"),
+      button("Counter 2"),
+      button("Counter 3"),
+    ],
+  }
+};

@@ -2,6 +2,52 @@
 
 Status: **approved 2026-10-18; in progress** on the `web` worktree.
 
+## Progress
+
+| Phase | State | Result |
+|---|---|---|
+| 0 | done | emsdk **4.0.7** (Skia 0.91's pin, `skia/bin/activate-emsdk`), Rust 1.95, `wasm32-unknown-emscripten`. Clippy baseline on main: 256 diagnostics. `masque-website` git-initialised. |
+| 1 | **go** | Skia alone draws text into a PNG under node. Raw 5.4 MB, brotli 1.7 MB (with `pdf`). |
+| 2 | done | Target tables; native `cargo tree` identical to main's; `register_font_data`. |
+| 3 | done | `cargo build --lib --target wasm32-unknown-emscripten` builds. The fallback font collection needed no change: layout and paint both use the UI's collection once fonts are registered. |
+| 4 | done | `web/` host, `build.sh`, `test.sh`. The wasm render of the hero is **pixel-identical** to the native one (0 channels differ). Stage: 6.4 MB, **2.0 MB brotli**. |
+| 5 | next | — |
+| 6 | — | — |
+
+What Phase 1 found that the plan did not expect:
+
+- **rust-skia's prebuilt emscripten archive is unusable with current
+  Rust.** It was compiled with emscripten's JS setjmp/longjmp; Rust's
+  emscripten target now links with native wasm exceptions
+  (`-fwasm-exceptions`), and emcc refuses the mix (`SUPPORT_LONGJMP=emscripten
+  is not compatible with -fwasm-exceptions`). An aborting
+  `emscripten_longjmp` stub does not get past it either: the JS-SJLJ
+  objects import `invoke_*` wrappers emcc will not generate. Skia is
+  built from source with `extra_cflags+=["-fwasm-exceptions",
+  "-sSUPPORT_LONGJMP=wasm"]`. With all cores that is about 1½ minutes.
+- **bindgen needs emsdk's compat headers** (`xlocale.h`, under
+  `system/include/compat`).
+- **Skia's dependency sync re-fetches `gn` on every build script run**
+  and failed twice on a flaky connection. Once synced, `SKIA_SOURCE_DIR`
+  makes the build offline.
+
+All three live in `web/env.sh`.
+
+What Phase 4 found:
+
+- **A runtime bug on main, unrelated to the web.** `VM::call_closure`,
+  the path event handlers run through, did not restore the closure's
+  captured call-stack path. A handler's `count = count + 1` wrote a
+  root-level `:count`, and the next render read the component's own,
+  still 0, so every counter stopped at 1. It had been broken since the
+  bytecode VM replaced the tree walk (`be0e945`). Fixed on `web` with
+  `tests/handler_state.rs`.
+- `UI::layout` clears the repaint flag when it runs a full pass, so a
+  redraw-on-demand host must read `needs_repaint()` / `needs_layout()`
+  *before* `layout`. `Stage::frame` does.
+- The size budget (decision 7) is still open. 2.0 MB brotli is the
+  number to set it against. Dropping `pdf` has not been tried.
+
 Goal: the stage on the website's home page (`masque-website`,
 `src/components/StageDemo.tsx`) runs the real scanner, compiler, VM,
 widget tree, layout and Skia renderer in the browser. The source pane
