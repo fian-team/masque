@@ -728,6 +728,11 @@ impl UI {
             if handled {
                 self.mark_after_event(&ctx);
             }
+            // Every blocking box under the pointer handles a wheel for
+            // routing; the host is told whether it scrolled anything.
+            if event.name == "scroll" {
+                return ctx.scrolled || ctx.listener_fired;
+            }
             handled
         } else {
             // Focus-traversal keys are handled at the UI level, but only while

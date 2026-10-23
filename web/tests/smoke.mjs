@@ -21,6 +21,7 @@ const api = {
   outPtr: fn("stage_out_ptr", "number", []),
   resize: fn("stage_resize", null, ["number", "number", "number"]),
   pointer: fn("stage_pointer", null, ["number", "number", "number", "number"]),
+  wheel: fn("stage_wheel", "number", ["number", "number", "number", "number"]),
   frame: fn("stage_frame", "number", ["number"]),
   pixels: fn("stage_pixels_ptr", "number", []),
   width: fn("stage_pixel_width", "number", []),
@@ -83,6 +84,22 @@ api.frame(16);
 const after = pixels();
 check(changed(first, after, 190, 122, 220, 44) > 0, "the clicked button redraws");
 check(changed(first, after, 190, 178, 220, 44) === 0, "its neighbours do not");
+
+// The wheel is the document's only while a scroll container moves;
+// otherwise the page scrolls. Positive dy is towards the top.
+const list = `let main = fn () {
+  Flex {
+    style: { width: 300, height: 100, direction: "column", overflow: "scroll" },
+    children: [Flex { style: { width: "grow", height: 250 } }],
+  }
+};`;
+check(withString(list, api.setSource) === 0, "a scroll list builds");
+api.frame(16);
+check(api.wheel(50, 50, 0, 40) === 0, "at its top, a wheel up is the page's");
+check(api.wheel(50, 50, 0, -40) === 1, "a wheel down is the list's");
+check(api.wheel(50, 50, 0, -400) === 1, "to its end");
+check(api.wheel(50, 50, 0, -40) === 0, "past which the page's again");
+check(api.wheel(350, 50, 0, -40) === 0, "and outside it, always the page's");
 
 check(withString("let main = fn () { Flex {", api.setSource) === 1, "a bad edit is refused");
 check(out(api.error()).length > 0, "and says why");

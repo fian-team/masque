@@ -109,9 +109,10 @@ pub extern "C" fn stage_pointer(kind: u32, x: f32, y: f32, mods: u32) {
     with_stage(|s| s.pointer(kind, x, y, modifiers(mods)));
 }
 
+/// 1 when the document took the wheel, 0 when the page should scroll.
 #[no_mangle]
-pub extern "C" fn stage_wheel(x: f32, y: f32, dx: f32, dy: f32) {
-    with_stage(|s| s.wheel(x, y, dx, dy));
+pub extern "C" fn stage_wheel(x: f32, y: f32, dx: f32, dy: f32) -> u32 {
+    with_stage(|s| s.wheel(x, y, dx, dy) as u32).unwrap_or(0)
 }
 
 /// `kind`: 0 down, 1 up. `character`: a Unicode scalar, 0 for none.

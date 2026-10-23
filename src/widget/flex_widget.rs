@@ -1310,8 +1310,16 @@ impl Widget for FlexWidget {
                 if let Some((_, dy)) = event.scroll_delta {
                     if self.style.overflow == Overflow::Scroll {
                         let max_scroll = (self.content_height - self.viewport_height).max(0.0);
-                        self.scroll_y_target = (self.scroll_y_target - dy).clamp(0.0, max_scroll);
-                        return true;
+                        let target = (self.scroll_y_target - dy).clamp(0.0, max_scroll);
+                        // A container already at the end the wheel pushes
+                        // toward lets the wheel on to its children, and
+                        // `ctx.scrolled` stays false so a host can scroll
+                        // what surrounds it (a browser page).
+                        if target != self.scroll_y_target {
+                            self.scroll_y_target = target;
+                            ctx.scrolled = true;
+                            return true;
+                        }
                     }
                 }
 
@@ -4455,6 +4463,33 @@ mod tests {
         let list = list.downcast_ref::<FlexWidget>().expect("FlexWidget list");
         assert!((opacity_delay(&list.children[0]) - 0.1).abs() < 1e-6);
         assert!((opacity_delay(&list.children[1]) - 0.2).abs() < 1e-6);
+    }
+
+    /// A wheel is reported handled only while a scroll container can
+    /// move that way: at an end it is not, so a host (the browser
+    /// stage) scrolls the page around it instead.
+    #[test]
+    fn scroll_container_releases_the_wheel_at_its_ends() {
+        let src = r##"
+            let main = fn () {
+              Flex {
+                style: { width: 300, height: 100, direction: "column", overflow: "scroll" },
+                children: [Flex { style: { width: "grow", height: 250 } }],
+              }
+            };
+        "##;
+        let mut o =
+            crate::Ogham::from_source(src, crate::runtime::config::RuntimeConfig::default())
+                .expect("from_source");
+        o.get_ui_mut().layout(300.0, 100.0);
+        let ui = o.get_ui_mut();
+        let wheel = |dy: f32| Event::scroll(Point::new(50.0, 50.0), 0.0, dy);
+        // Positive dy is towards the top: at the top there is nowhere to go.
+        assert!(!ui.call_event(&wheel(40.0)), "at the top, a wheel up passes");
+        assert!(ui.call_event(&wheel(-100.0)), "a wheel down scrolls");
+        assert!(ui.call_event(&wheel(-100.0)), "to the end, clamped");
+        assert!(!ui.call_event(&wheel(-40.0)), "at the bottom, a wheel down passes");
+        assert!(ui.call_event(&wheel(40.0)), "and a wheel up scrolls again");
     }
 
     /// A scroll column offers its children an unbounded main axis: a

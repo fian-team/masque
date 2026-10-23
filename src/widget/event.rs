@@ -111,6 +111,12 @@ pub struct EventContext {
     /// handled events to choose between `mark_needs_layout` and
     /// the cheaper `mark_needs_repaint`.
     pub needs_layout: bool,
+    /// Set true by a scroll container that moved for this `scroll`
+    /// event. A wheel over any blocking box counts as handled for
+    /// routing; this says whether it scrolled something, which is
+    /// what `UI::call_event` reports for a wheel, so a host (the
+    /// browser stage) knows whether to scroll what surrounds it.
+    pub scrolled: bool,
 }
 
 impl EventContext {
@@ -124,6 +130,7 @@ impl EventContext {
             listener_fired: false,
             drag_state: None,
             needs_layout: false,
+            scrolled: false,
         }
     }
 
@@ -138,6 +145,7 @@ impl EventContext {
             listener_fired: false,
             drag_state: None,
             needs_layout: false,
+            scrolled: false,
         }
     }
 

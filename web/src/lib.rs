@@ -192,8 +192,10 @@ impl Stage {
         self.call(&Event::with_point(name.to_string(), point).with_modifiers(mods));
     }
 
-    pub fn wheel(&mut self, x: f32, y: f32, dx: f32, dy: f32) {
-        self.call(&Event::scroll(Point::new(x, y), dx, dy));
+    /// True when the document took the wheel (a scroll container moved);
+    /// otherwise the page should scroll instead.
+    pub fn wheel(&mut self, x: f32, y: f32, dx: f32, dy: f32) -> bool {
+        self.call(&Event::scroll(Point::new(x, y), dx, dy))
     }
 
     /// `key_code` is the DOM's `keyCode`, which is the code
@@ -209,13 +211,16 @@ impl Stage {
                     self.call(&Event::keypress(key_code, Some(c), mods));
                 }
             }
-            Key::Up => self.call(&Event::keyup(key_code, character, mods)),
+            Key::Up => {
+                self.call(&Event::keyup(key_code, character, mods));
+            }
         }
     }
 
-    fn call(&mut self, event: &Event) {
-        if let Some(ogham) = &mut self.ogham {
-            ogham.get_ui_mut().call_event(event);
+    fn call(&mut self, event: &Event) -> bool {
+        match &mut self.ogham {
+            Some(ogham) => ogham.get_ui_mut().call_event(event),
+            None => false,
         }
     }
 
