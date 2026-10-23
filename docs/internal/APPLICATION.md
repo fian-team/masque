@@ -1,18 +1,18 @@
-# Ogham — The Application Model
+# Masque — The Application Model
 
 > **Status: Design record — agreed direction, being built.**
-> 2026-08-20. Phases 0 and 1 have landed: the structure framework
-> exists as the `structure` crate (routing's table, walk and outbox,
+> 2026-08-20. Phases 0 and 1 have landed: Carte
+> exists as the `carte` crate (routing's table, walk and outbox,
 > with §3.2's tiers and areas and §3.4's guard form as table data),
 > and §2's dependency edge holds in the direction that matters —
-> `structure` depends on nothing. The store (§5), the selection
+> `carte` depends on nothing. The store (§5), the selection
 > contract (§4) and the binding (§6) are not built. Build status,
 > including the one amended acceptance criterion, is
 > `APPLICATION_BUILD.md` §0.5. This header flips to "built" when the
 > last phase gate passes.
 >
-> This document states what Ogham is becoming: **two composed
-> frameworks and a contract between them** — a structure framework
+> This document states what Masque is becoming: **two composed
+> frameworks and a contract between them** — a Carte
 > (routing fused with a scoped, schema'd state store) and a surface
 > framework (the DSL, layout, and reactivity), joined by a thin
 > binding. It was workshopped against untold_lore's 2026-08-20
@@ -42,7 +42,7 @@
 
 ## 1. Why: the history this resolves
 
-Ogham began as a React replacement for Rust applications. The parts
+Masque began as a React replacement for Rust applications. The parts
 of that thesis that hold up are load-bearing today: retained
 reactive trees (the crossing's ghost works *because* an unprojected
 tree keeps drawing), CSS-like layout, a hot-reloading DSL whose
@@ -64,7 +64,7 @@ empirically within a week:
 - **The `host_state {}` block has the contract inverted.** The
   consumer's document declares what the provider supplies. No
   serious contract system works that way, and the failure mode is
-  sharpest exactly where Ogham is strongest: a modder edits the
+  sharpest exactly where Masque is strongest: a modder edits the
   declaration and manufactures the false impression that data
   should exist.
 
@@ -75,7 +75,7 @@ So: the view layer stays a view layer, and the things that crept in
 
 One sentence each, per the single-responsibility rule:
 
-- **The structure framework** (routing + store): what exists, what
+- **Carte** (routing + store): what exists, what
   is true about it, and who is told when it changes.
 - **The surface framework** (the DSL: documents, widgets, layout,
   reactivity, hot reload): how named surfaces look, given validated
@@ -86,16 +86,16 @@ One sentence each, per the single-responsibility rule:
   application brings a minimal host trait implementation (§8.1,
   resolved).
 
-The engineering guarantee is a dependency edge: **the structure
-framework depends on nothing of the surface framework, and vice
+The engineering guarantee is a dependency edge: **Carte
+depends on nothing of the surface framework, and vice
 versa; only the binding depends on both.** Cargo enforces it. The
 surface framework's route-facing constructs (`screen`, `outlet()`,
 selections) take *names* — strings and validated field paths —
-never the structure framework's types. A single-document tool must
+never Carte's types. A single-document tool must
 be able to use the surface framework with no router at all; if it
 cannot, the split did not happen.
 
-## 3. Axioms — structure
+## 3. Axioms — Carte
 
 ### 3.1 Composed, not integrated
 
@@ -105,8 +105,8 @@ the mod surface: the route table and schemas are compiled Rust the
 developer owns; documents are the hot-reloading consumer surface
 modders touch. Integration would force that line to be drawn
 *inside* one framework, where it will smear.
-*Drift indicator:* a surface-framework crate importing a structure-
-framework type; a route decision made by document code.
+*Drift indicator:* a surface-framework crate importing a Carte
+type; a route decision made by document code.
 
 ### 3.2 One path space; a node is an instance root or a view
 
@@ -272,7 +272,7 @@ the schema struct directly at compile time; dynamic consumers
 (documents) are validated against a *reflection* of it. The
 reflection is **derived** (a derive macro — the move
 `#[derive(Editable)]` already proved), never hand-maintained. This
-is what makes the untold_lore triple-list (struct ↔ `.ogh` ↔
+is what makes the untold_lore triple-list (struct ↔ `.masque` ↔
 projection, guarded by `every_declared_key_is_projected`)
 unrepresentable rather than merely guarded: the struct *is* the
 schema, and the guard tests delete.
@@ -567,7 +567,7 @@ The same audit's ledgers for the other consumers:
    already exists in embryo. The minimal host trait is `HostCx`
    minus its game-flavored methods — render context ready, window
    controls, tick producers, gesture stream — with the engine's
-   `app` as one implementation and `ogham_preview` (which already
+   `app` as one implementation and `masque_preview` (which already
    hand-drives a single instance) as the free second one that
    proves the trait. What it must not include: anything naming a
    session, a save, or a capability — those are a game
@@ -587,13 +587,13 @@ The same audit's ledgers for the other consumers:
    dress and regency's engraving survive.
 3. **Mod-facing stability policy** (§4.5): stated the day
    third-party documents exist, not after.
-4. **Naming.** The split is the moment to retire the "ogham"
-   name (pronunciation). Criteria fixed now: name the pair as a
+4. **Naming — resolved.** The surface framework is **Masque** (it was
+   Ogham, retired for its pronunciation) and the structure framework is
+   **Carte** (it was the working name `structure`). The criteria were: name the pair as a
    family; unambiguous English pronunciation on sight; one–two
    syllables; crates.io/GitHub availability; no collision with
    established Rust projects. The pair should read as *structure*
-   vs *surface*. Candidate generation waits until the seam is
-   settled, then runs with an availability check.
+   vs *surface*: a map and a mask.
 
 ## 9. Precedents consulted
 

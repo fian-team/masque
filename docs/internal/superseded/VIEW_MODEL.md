@@ -1,4 +1,4 @@
-# Ogham — The View Model: Applications, Views, and Instances
+# Masque — The View Model: Applications, Views, and Instances
 
 > **Status: SUPERSEDED — built in full, never adopted, code deleted 2026-08.**
 >
@@ -12,12 +12,12 @@
 > a second, more capable composition model that new code would half-adopt.
 >
 > **Two things overtook it.** The consumer it was modelled on —
-> Untold Lore's host-side `OghamPresence`, cited throughout this document
+> Untold Lore's host-side `MasquePresence`, cited throughout this document
 > — no longer exists. What replaced it is the in-language `Presence`
 > widget, keyed on a mode string, which does the exit-then-mount
 > single-occupancy that `StackPolicy::Strict` was designed to generalise.
 > That half of the problem was solved one layer *down* rather than one
-> layer up. The remaining half — several separate `Ogham` instances
+> layer up. The remaining half — several separate `Masque` instances
 > arbitrated by a host — is real, but its live instance is a handful of
 > booleans in one game's client, and an enum fixes it far more cheaply
 > than adopting this model would.
@@ -33,8 +33,8 @@
 
 ---
 
-> This document specifies Ogham's *composition and embedding* contract:
-> how a host assembles many `.ogh` sources into one running UI, how
+> This document specifies Masque's *composition and embedding* contract:
+> how a host assembles many `.masque` sources into one running UI, how
 > state flows across them, and what the framework owns versus what the
 > embedder owns.
 >
@@ -58,19 +58,19 @@
 
 ## The gap this fills
 
-INTENT specifies Ogham exquisitely *below* the instance boundary and is
+INTENT specifies Masque exquisitely *below* the instance boundary and is
 silent *at and above* it. There is no tenet for "how does a host hold
 many instances," "what is the unit of isolation," "how does state reach
 nested UI," or "who owns focus, input, the frame clock, and the surface
-when there is more than one instance." The `Ogham` struct was therefore
+when there is more than one instance." The `Masque` struct was therefore
 overloaded: it was simultaneously a **unit** (one source's runtime +
 tree) and a **root** (owner of the watcher, clock, input, and surface).
 Those roles only fuse cleanly when there is exactly one instance. This
 document splits them.
 
 The overload is visible in Untold Lore: most instances live in the
-keyed overlay registry, but the root-adjacent ones (`MenuState.ogham`,
-`escape_ogham: Option<Ogham>`) leak out as hand-placed one-off fields on
+keyed overlay registry, but the root-adjacent ones (`MenuState.masque`,
+`escape_masque: Option<Masque>`) leak out as hand-placed one-off fields on
 the client, because the orchestrator has no concept of an instance that
 *is* the root rather than an overlay within it. Splitting unit from root
 gives those a home (a leaf in the application branch) instead of a
@@ -83,7 +83,7 @@ special case.
 ```
 application            root scope: always-live shell state + host services
   └─ view              recursive scope: a state slice + (a leaf OR child views)
-       └─ instance     the live rendering of ONE .ogh source (the engine)
+       └─ instance     the live rendering of ONE .masque source (the engine)
             └─ widgets  the reconciled tree inside an instance
 ```
 
@@ -98,9 +98,9 @@ application            root scope: always-live shell state + host services
   lifecycle hierarchy (`application → view<campaign> → view<map> →
   view<inventory>`); the framework supplies the recursion, the embedder
   supplies the tree.
-- **`instance`** — the live rendering of one `.ogh` source: its runtime
+- **`instance`** — the live rendering of one `.masque` source: its runtime
   (VM + local state), its reconciled widget tree, and the source id for
-  hot-reload routing. This is the type called `Ogham` today, **renamed**
+  hot-reload routing. This is the type called `Masque` today, **renamed**
   (struct only, not the project) to reflect its narrowed role. Every
   INTENT §1–§9 invariant lives here, unchanged.
 - **widgets** — the reconciled tree inside an instance, governed by the
@@ -127,9 +127,9 @@ does not leak between them.
 | host services: surface, frame clock, input, watcher pool | **application** |
 
 **Why:** focus, input arbitration, frame scheduling, and compositing are
-inherently *cross-instance* concerns. The single-instance `Ogham` had no
+inherently *cross-instance* concerns. The single-instance `Masque` had no
 home for them, so every embedder reinvents them (Untold Lore's
-`OghamPresence` + `ui.rs` are exactly this). Naming `application` as
+`MasquePresence` + `ui.rs` are exactly this). Naming `application` as
 their owner removes the embedder's obligation to be the root.
 
 **Drift indicators:**
@@ -185,7 +185,7 @@ exits with its instance; a branch exits when its children drain.
 **Drift indicators:**
 - A view type that holds both an `instance` and a child collection.
 - A "frame" branch that grows its own layout description instead of
-  being a leaf whose `.ogh` does the layout.
+  being a leaf whose `.masque` does the layout.
 - Spatial, non-overlapping placement of one view *inside* another's tree
   (that is the deferred slot feature — see Deferred, below; it must
   arrive as a new explicit variant, not by re-merging leaf and branch).
@@ -194,7 +194,7 @@ exits with its instance; a branch exits when its children drain.
 
 State is organized into nested **lifecycle scopes** that mirror the view
 tree: the always-live application/shell scope, then `session`, `map`,
-combat, etc. — each owned and written by the host, read-only to `.ogh`
+combat, etc. — each owned and written by the host, read-only to `.masque`
 (§2 preserved). A value belongs to a scope by *when it exists and who
 writes it*, never by what feature it concerns. The authority half of
 that test also draws the boundary of host state itself: state the UI
@@ -275,7 +275,7 @@ to be reachable in scope* — not a struct pushed into it by its immediate
 owner. The framework resolves each requirement against the nearest
 ancestor scope that provides a matching, type-checked value;
 nearest-ancestor shadows farther ones. Providers are the host populating
-a scope with a derived (`OghamState`/`OghamRecord`) struct; the
+a scope with a derived (`MasqueState`/`MasqueRecord`) struct; the
 requirement↔provision match is verified when the view mounts.
 
 **Why:** this is the unification that makes typed bindings
@@ -352,8 +352,8 @@ theme in scope (one) and list rows in props (many).
 ### 8. Reuse is by import; isolation is by view; events flow out, view-local.
 
 Sharing presentation is *source-level composition* — `import` pulls
-widget functions/records from another `.ogh` into one instance, with no
-runtime boundary (this already carries Untold Lore: `colors.ogh` is
+widget functions/records from another `.masque` into one instance, with no
+runtime boundary (this already carries Untold Lore: `colors.masque` is
 imported by 40 of 41 files). A separate `view`/`instance` exists **only**
 for isolation: an independent scope, lifecycle, or hot-reload unit.
 Events leave a view's instance (§2) and are handled by that view's
@@ -362,7 +362,7 @@ writes, not a global event bus.
 
 Outbound is a **single typed event channel** — the exact mirror of
 inbound `host_state` (§6), carrying the view's declared `events` /
-`OghamMsg` shape. There is no second return path: a host-side "outcome"
+`MasqueMsg` shape. There is no second return path: a host-side "outcome"
 *is* a typed event the owner matches, not a separate value channel. This
 collapses what an embedder otherwise grows two of — in Untold Lore,
 construction-time handler closures that capture senders *and* six
@@ -413,7 +413,7 @@ stack: `StackPolicy::Layered` for coexisting z-ordered layers (a HUD with
 a modal above it; both live, exits fade in place) and `StackPolicy::Strict`
 for single-occupancy where the incoming view does not mount until the
 outgoing one's exit settles (fullscreen screen swaps — the exact semantics
-UL's hand-rolled `OghamPresence` defined). A strict stack is one logical
+UL's hand-rolled `MasquePresence` defined). A strict stack is one logical
 slot; the application's top stack is strict (screens), with layered
 branches above for overlays. (Multiple *independent* strict slots within
 one stack is the deferred "slot" refinement, not this; see Deferred.)
@@ -436,7 +436,7 @@ rather than forking the reconciler.
 - A bespoke "active screen" swap that bypasses exit sequencing.
 - The set of "kinds of active UI" enumerated in more than one place —
   worse, in places that *disagree*. (Untold Lore encodes it four times,
-  keyed by the same kinds: an `OghamKey` enum of 23 variants, a
+  keyed by the same kinds: an `MasqueKey` enum of 23 variants, a
   `SessionOverlays` struct of 23 `Option<…UI>` fields, two mirror match
   tables of 23 arms each routing key→field, and an `OverlayState` enum of
   *13* variants — the 23-vs-13 mismatch is itself a drift bug surface
@@ -459,7 +459,7 @@ is acceptable": a missing *required* provider is a caught error; a
 *legitimately* optional value is an optional-typed requirement (`T?`)
 the author destructures. Nothing renders against a silent default.
 
-**Why:** Ogham's contract is predictable failure, one way to do any
+**Why:** Masque's contract is predictable failure, one way to do any
 task. A silent default — a label quietly stuck on a fallback value — is
 the opposite: the author debugging "why is this wrong" gets no signal. A
 boundary makes the failure loud and *located*. The model adds almost
@@ -468,7 +468,7 @@ reconcile-by-key (Tenet 9), the fallback is an ordinary child (Tenet 3 —
 not a privileged field), and a boundary is just a branch that owns a
 fallback child — there is no new `ViewBody` variant. It is also more
 deterministic than its peers: React boundaries catch render-time throws,
-whereas Ogham's failures are structural and resolved at *mount*, and
+whereas Masque's failures are structural and resolved at *mount*, and
 lifetime-nesting (Tenet 4) guarantees a requirement that resolved once
 stays resolved for the view's whole life — a caught failure cannot
 reappear mid-session. Folding instance runtime faults into the same
@@ -519,7 +519,7 @@ impl Application {
 // A recursive scope. Leaf XOR branch (Tenet 3).
 pub struct View {
     key:   ViewKey,    // stable identity among siblings (reconcile-by-key, §5)
-    scope: Scope,      // this view's typed state slice; read-only to .ogh (§2)
+    scope: Scope,      // this view's typed state slice; read-only to .masque (§2)
     body:  ViewBody,
 }
 
@@ -553,8 +553,8 @@ enum Placement { Overlay { z: u32 /*, box */ } }   // layered; spatial slots are
 enum Gating    { Modal, PassThrough }
 enum Role      { Normal, Fallback }                // a branch with a Fallback child IS an error boundary (Tenet 10)
 
-// ── instance (the type named `Ogham` today) ──────────────────────────
-// The live rendering of one .ogh source. All of INTENT §1–§9 live here.
+// ── instance (the type named `Masque` today) ──────────────────────────
+// The live rendering of one .masque source. All of INTENT §1–§9 live here.
 pub struct Instance {
     runtime: Runtime,        // compiled module + VM + this source's LOCAL state slice
     ui:      UI,             // reconciled widget tree (anim/hover/scroll/focus, §3)
@@ -563,7 +563,7 @@ pub struct Instance {
 }
 
 // ── scope + the chain assembled during traversal (Tenet 5) ────────────
-struct Scope { state: HostState }   // host-written (Rust); read-only to .ogh (§2)
+struct Scope { state: HostState }   // host-written (Rust); read-only to .masque (§2)
 
 struct ScopeChain<'a> { scope: &'a Scope, parent: Option<&'a ScopeChain<'a>> }
 
@@ -603,8 +603,8 @@ resolved.)
 Inventory is a **component**, not a view. The contexts (tab menu, shop,
 DM tools, trade) are the views.
 
-```ogh
-// inventory.ogh — shared component; requires nothing from scope, takes data + behavior
+```masque
+// inventory.masque — shared component; requires nothing from scope, takes data + behavior
 record Item { name: string, count: int, icon: string? };
 let inventory_grid = fn (inv, on_activate) {
   grid { children: inv.items.map(fn (it) {
@@ -614,9 +614,9 @@ let inventory_grid = fn (inv, on_activate) {
 };
 ```
 
-```ogh
-// trade.ogh — one leaf view, TWO inventories (Tenet 7: multiplicity → props)
-import "./inventory.ogh";
+```masque
+// trade.masque — one leaf view, TWO inventories (Tenet 7: multiplicity → props)
+import "./inventory.masque";
 host_state { my_inventory: Inventory, their_inventory: Inventory };  // two named fields, same type
 
 inventory_grid(my_inventory,    fn (id) { event("offer",   id); })
@@ -624,12 +624,12 @@ inventory_grid(their_inventory, fn (id) { event("request", id); })
 ```
 
 ```rust
-#[derive(OghamRecord)] struct Item { name: String, count: i32, icon: Option<String> }
-#[derive(OghamRecord)] struct Inventory { items: Vec<Item>, weight: f32, capacity: f32 }
-#[derive(OghamState)]  struct TradeState { my_inventory: Inventory, their_inventory: Inventory }
+#[derive(MasqueRecord)] struct Item { name: String, count: i32, icon: Option<String> }
+#[derive(MasqueRecord)] struct Inventory { items: Vec<Item>, weight: f32, capacity: f32 }
+#[derive(MasqueState)]  struct TradeState { my_inventory: Inventory, their_inventory: Inventory }
 ```
 
-- The Rust `Inventory` struct is the single source of truth; the `.ogh`
+- The Rust `Inventory` struct is the single source of truth; the `.masque`
   `record` mirrors it and is **imported**, never re-declared per context
   (Tenet 8).
 - The solo inventory menu instead reads the player's one inventory from
@@ -679,12 +679,12 @@ changes the shape above.
    expected a provider at? — and whether the fallback differs between
    debug and release (Flutter's red-screen vs. grey-box precedent).
 2. **How a provider declares its typed shape.** A branch renders no
-   `.ogh`, so its provided scope shape is declared Rust-side (the
+   `.masque`, so its provided scope shape is declared Rust-side (the
    derived struct the host puts in the scope). Confirm that requirement↔
    provision matching reads the schema off those structs, and define
    what happens when a scope provides an *untyped* (loose) value a typed
    requirement asks for.
-3. **`TypedOgham<S, M>` → typed view.** The existing typed handle maps
+3. **`TypedMasque<S, M>` → typed view.** The existing typed handle maps
    onto a leaf view (`S` = its required scope shape, `M` = its emitted
    events). Settle whether the typed surface lives on `View`, on
    `Instance`, or on a `TypedView` wrapper, and confirm `M` is the
@@ -717,8 +717,8 @@ changes the shape above.
 - It does **not** modify any INTENT §1–§9 invariant; the engine
   (`instance`) is unchanged and the whole model is additive (Tenet 2).
 - It does **not** bring the 3D world/scene render into the tree as a
-  layer. The world is composited outside Ogham (GL framebuffer → Skia
-  overlays → UI) and stays there. Admitting non-`.ogh` content as a leaf
+  layer. The world is composited outside Masque (GL framebuffer → Skia
+  overlays → UI) and stays there. Admitting non-`.masque` content as a leaf
   would reopen Tenet 3, so this is avoided until a concrete need — e.g.
   an upper layer sampling the world for a backdrop — genuinely cannot be
   met otherwise.

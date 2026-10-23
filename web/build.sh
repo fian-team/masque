@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the browser stage: web/dist/ogham_stage.{js,wasm} + manifest.json.
+# Build the browser stage: web/dist/masque_stage.{js,wasm} + manifest.json.
 # See docs/internal/WEB_STAGE.md, Phase 4.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -24,17 +24,17 @@ rustflags=""
 for arg in "${link[@]}"; do rustflags+=" -C link-arg=$arg"; done
 
 cd "$root"
-RUSTFLAGS="$rustflags" cargo build -p ogham-web --bin ogham_stage \
+RUSTFLAGS="$rustflags" cargo build -p masque-web --bin masque_stage \
     --profile stage --target wasm32-unknown-emscripten
 
 out="$root/target/wasm32-unknown-emscripten/stage"
 dist="$here/dist"
 mkdir -p "$dist"
-cp "$out/ogham_stage.js" "$dist/"
-"$EMSDK/upstream/bin/wasm-opt" -Oz --all-features "$out/ogham_stage.wasm" -o "$dist/ogham_stage.wasm"
+cp "$out/masque_stage.js" "$dist/"
+"$EMSDK/upstream/bin/wasm-opt" -Oz --all-features "$out/masque_stage.wasm" -o "$dist/masque_stage.wasm"
 
-wasm_bytes=$(stat -c %s "$dist/ogham_stage.wasm")
-brotli_bytes=$(brotli -q 11 -c "$dist/ogham_stage.wasm" | wc -c)
+wasm_bytes=$(stat -c %s "$dist/masque_stage.wasm")
+brotli_bytes=$(brotli -q 11 -c "$dist/masque_stage.wasm" | wc -c)
 cat > "$dist/manifest.json" <<JSON
 {
   "commit": "$(git -C "$root" rev-parse --short HEAD)$(git -C "$root" diff --quiet HEAD || echo -dirty)",

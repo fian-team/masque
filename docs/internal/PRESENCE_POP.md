@@ -1,4 +1,4 @@
-# Ogham — Presence `mode: pop`: overlapped generation transitions
+# Masque — Presence `mode: pop`: overlapped generation transitions
 
 > **Status: complete.** Drafted and shipped 2026-08-12 — M0/M1/M3
 > landed together (mode plumbing, pop machinery, and pop-time prefix
@@ -20,7 +20,7 @@
 > Design provenance: examined against the React ecosystem's
 > `AnimatePresence` modes (`sync` / `wait` / `popLayout`),
 > react-transition-group's `SwitchTransition`, and the View Transitions
-> API. `pop` is Framer Motion's `popLayout` transplanted onto ogham's
+> API. `pop` is Framer Motion's `popLayout` transplanted onto masque's
 > layout model, with **live ghosts, not snapshots** — a snapshot
 > flattens the exiting subtree to a texture and caps the exit
 > vocabulary at whole-image transforms; live ghosts keep per-descendant

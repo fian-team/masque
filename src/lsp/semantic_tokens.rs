@@ -1,5 +1,5 @@
-use ogham::parser::*;
-use ogham::scanner::{Token, TokenType};
+use masque::parser::*;
+use masque::scanner::{Token, TokenType};
 use tower_lsp::lsp_types::*;
 
 pub const TOKEN_TYPES: &[SemanticTokenType] = &[

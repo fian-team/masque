@@ -1,6 +1,6 @@
 # Schema Diagnostics — Implementation Plan
 
-> **Status: Phase 0 Ogham-side complete; UL adoption pending.**
+> **Status: Phase 0 Masque-side complete; UL adoption pending.**
 >
 > Concrete, merge-by-merge implementation plan for the
 > Schema-Diagnostic Surface design. Builds on
@@ -18,12 +18,12 @@
 > - P0-M2 — Manifest types + TypeRef canonical-string. ✅ Shipped.
 > - P0-M3 — Proc-macro emit. ✅ Shipped.
 > - P0-M4 — Diagnostic backend. ✅ Shipped.
-> - P0-M5 — `ogham check` CLI. ✅ Shipped.
+> - P0-M5 — `masque check` CLI. ✅ Shipped.
 > - P0-M6 — UL validation gate. ⏳ Consumer-side; not started.
 > - P1-M1..M6 — Phase 1 LSP integration. ⏳ Not started.
 >
 > **Test posture (Phase 0 complete):** 207 lib unit tests, 17
-> ogham-derive unit tests, 8 cli_check integration tests, 10
+> masque-derive unit tests, 8 cli_check integration tests, 10
 > binding_module_attr integration tests, plus all pre-existing
 > tests — workspace runs clean.
 
@@ -32,25 +32,25 @@
 ## At a glance
 
 ```
-P0-M1  Attribute parser — accepts #[ogham(binding_module = "...")]
-       └── crates/ogham-derive/src/attrs.rs; mechanical; ~½ day; low risk
+P0-M1  Attribute parser — accepts #[masque(binding_module = "...")]
+       └── crates/masque-derive/src/attrs.rs; mechanical; ~½ day; low risk
 
 P0-M2  Manifest types + TypeRef ↔ canonical-string round-trip
        └── src/diagnostics/manifest.rs (new); foundational; ~1 day; low risk
 
-P0-M3  Proc-macro emits target/ogham/<binding-id>.json
-       └── crates/ogham-derive emit path; ~1-2 days; medium risk (FS write from macro)
+P0-M3  Proc-macro emits target/masque/<binding-id>.json
+       └── crates/masque-derive emit path; ~1-2 days; medium risk (FS write from macro)
 
-P0-M4  ogham::diagnostics::check_against_manifest backend
+P0-M4  masque::diagnostics::check_against_manifest backend
        └── lift check_schemas_match into data shape; ~1 day; low risk
 
-P0-M5  `ogham check` CLI subcommand
+P0-M5  `masque check` CLI subcommand
        └── new bin; workspace discovery; staleness; ~2-3 days; medium risk
 
 P0-M6  Untold Lore validation
        └── consumer-side annotate + verify drift caught; ~½ day; low risk
 
-P1-M1  ogham-lsp manifest discovery + caching
+P1-M1  masque-lsp manifest discovery + caching
        └── src/lsp/manifests.rs; FS watcher; ~1-2 days; low risk
 
 P1-M2  Stage 5 binding diagnostics in collect_diagnostics
@@ -86,12 +86,12 @@ binary. Nothing destabilizes the existing build.
 
 The one exception is P0-M4 (lifting `check_schemas_match` into a
 shared backend); that's a refactor of the runtime path. Validate
-with the existing TypedOgham tests before merge.
+with the existing TypedMasque tests before merge.
 
 ### Test posture
 
 Mirror the existing distribution. New tests live in:
-- `crates/ogham-derive/tests/` for derive-attribute / emit tests.
+- `crates/masque-derive/tests/` for derive-attribute / emit tests.
 - `tests/diagnostics_*.rs` for backend tests.
 - `tests/cli_check.rs` for CLI integration tests.
 - `tests/lsp_binding_*.rs` for Phase 1 LSP integration tests.
@@ -104,9 +104,9 @@ fixtures.
 - **Proc-macro filesystem write** (P0-M3). Not the conventional
   pattern — proc-macros usually emit code, not files. Precedent:
   sqlx, diesel, askama. Mitigation: skip emit when env var
-  `OGHAM_SKIP_MANIFEST_EMIT=1` is set, for hostile sandboxed
+  `MASQUE_SKIP_MANIFEST_EMIT=1` is set, for hostile sandboxed
   environments. Default behaviour writes; opt-out is explicit.
-- **Manifest staleness across cargo profiles.** `target/ogham/`
+- **Manifest staleness across cargo profiles.** `target/masque/`
   lives outside `target/debug/` vs `target/release/`, so the
   manifest is profile-invariant. No action needed.
 - **TypeRef canonical-string drift.** When TypeRef gains a new
@@ -116,7 +116,7 @@ fixtures.
   isn't covered.
 - **Multi-binding diagnostic noise.** With the all-must-agree rule
   (R2), a misconfigured second binding emits a parallel set of
-  diagnostics for the same `.ogh` line. Acceptable — the `binding_id`
+  diagnostics for the same `.masque` line. Acceptable — the `binding_id`
   prefix tells the user which side disagrees.
 
 ---
@@ -125,42 +125,42 @@ fixtures.
 
 ### P0-M1 — Attribute parser
 
-**Goal:** the `#[ogham(binding_module = "...")]` attribute parses
-without error on `OghamState` and `OghamMsg` derives. No emit yet —
+**Goal:** the `#[masque(binding_module = "...")]` attribute parses
+without error on `MasqueState` and `MasqueMsg` derives. No emit yet —
 the value is collected and discarded. This unblocks consumer-side
 annotation work without changing build behaviour.
 
 **Files touched:**
-- `crates/ogham-derive/src/attrs.rs` — add a parser sibling to
+- `crates/masque-derive/src/attrs.rs` — add a parser sibling to
   `record_name_override`.
-- `crates/ogham-derive/src/lib.rs` — call the parser in
-  `expand_ogham_state` and `expand_ogham_msg`; store the result in
+- `crates/masque-derive/src/lib.rs` — call the parser in
+  `expand_masque_state` and `expand_masque_msg`; store the result in
   a temp variable for now (P0-M3 will use it).
 
 **New shape:**
 
 ```rust
-// crates/ogham-derive/src/attrs.rs
+// crates/masque-derive/src/attrs.rs
 
-/// Parse `#[ogham(binding_module = "path/to/file.ogh")]` from a
+/// Parse `#[masque(binding_module = "path/to/file.masque")]` from a
 /// list of attributes on a struct or enum. Returns `None` if no
 /// such attribute is present. Errors only on malformed values
 /// (non-string, missing equals, etc.).
 pub fn binding_module_path(attrs: &[syn::Attribute]) -> syn::Result<Option<String>>;
 ```
 
-The parser walks `#[ogham(...)]` items, matches `binding_module = LIT`,
+The parser walks `#[masque(...)]` items, matches `binding_module = LIT`,
 emits `syn::Error` on shape violations. Co-existence with the existing
 `record_name_override` parser is by inspection — both walk the same
 attribute list and ignore non-matching keys.
 
-**Tests** (`crates/ogham-derive/tests/binding_module_attr.rs`):
+**Tests** (`crates/masque-derive/tests/binding_module_attr.rs`):
 - absent → `Ok(None)`.
 - present with valid string → `Ok(Some(path))`.
 - non-string value → `Err`.
-- combined with other `#[ogham(...)]` keys (e.g. `record = "..."`) →
+- combined with other `#[masque(...)]` keys (e.g. `record = "..."`) →
   parses both correctly.
-- bad shape (`#[ogham(binding_module)]` no `=`) → `Err`.
+- bad shape (`#[masque(binding_module)]` no `=`) → `Err`.
 
 **Validation gate:**
 - `cargo test --workspace` clean.
@@ -186,9 +186,9 @@ representation of `TypeRef` that round-trips through it.
   rendering already exists implicitly in error formatting; this
   centralizes it.)
 - `Cargo.toml` — add `serde = { version = "1", features = ["derive"] }`
-  and `serde_json = "1"` to the `ogham` crate. (Already in the
+  and `serde_json = "1"` to the `masque` crate. (Already in the
   transitive graph via `tower-lsp`; making it direct is cheap.)
-  **Not added to `ogham-derive`** — the macro side writes JSON by
+  **Not added to `masque-derive`** — the macro side writes JSON by
   hand to keep its compile time minimal.
 
 **New shape:**
@@ -206,7 +206,7 @@ pub enum Manifest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StateManifest {
     pub binding: String,           // FQ Rust path, e.g. "untold_lore::ui::ChestUiState"
-    pub ogh_module: String,        // crate-relative path, e.g. "data/ui/chest.ogh"
+    pub masque_module: String,        // crate-relative path, e.g. "data/ui/chest.masque"
     pub rust_source: RustSourceLoc,
     pub host_state: ManifestRecord,
 }
@@ -214,7 +214,7 @@ pub struct StateManifest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EventsManifest {
     pub binding: String,
-    pub ogh_module: String,
+    pub masque_module: String,
     pub rust_source: RustSourceLoc,
     pub events: BTreeMap<String, ManifestEvent>,
 }
@@ -228,7 +228,7 @@ pub struct ManifestRecord {
 pub struct ManifestField {
     /// TypeRef in canonical-string form; e.g. "array<Item>",
     /// "map<string, int>", "int?". Matches the exact surface
-    /// syntax used in `.ogh` source.
+    /// syntax used in `.masque` source.
     pub ty: String,
 }
 
@@ -246,7 +246,7 @@ pub struct RustSourceLoc {
 }
 
 impl Manifest {
-    pub fn ogh_module(&self) -> &str { /* ... */ }
+    pub fn masque_module(&self) -> &str { /* ... */ }
     pub fn binding(&self) -> &str    { /* ... */ }
     pub fn read(path: &Path) -> std::io::Result<Self>;
     pub fn write(&self, path: &Path) -> std::io::Result<()>;
@@ -286,16 +286,16 @@ only mildly tricky piece — recursive-descent over a small grammar.
 
 ### P0-M3 — Proc-macro emit
 
-**Goal:** when `#[ogham(binding_module = "...")]` is set on an
-`OghamState` or `OghamMsg` derive, the macro writes the corresponding
-manifest JSON to `<target>/ogham/<binding-id>.json` at expansion
+**Goal:** when `#[masque(binding_module = "...")]` is set on an
+`MasqueState` or `MasqueMsg` derive, the macro writes the corresponding
+manifest JSON to `<target>/masque/<binding-id>.json` at expansion
 time.
 
 **Files touched:**
-- `crates/ogham-derive/src/lib.rs` — call new emit helper from
-  `expand_ogham_state` and `expand_ogham_msg` after building the
+- `crates/masque-derive/src/lib.rs` — call new emit helper from
+  `expand_masque_state` and `expand_masque_msg` after building the
   field/event metadata.
-- `crates/ogham-derive/src/manifest_emit.rs` (new) — the emit
+- `crates/masque-derive/src/manifest_emit.rs` (new) — the emit
   helper. Hand-written JSON serialization; no serde dep.
 
 **Target dir resolution:**
@@ -311,7 +311,7 @@ fn target_dir() -> PathBuf {
 }
 
 fn manifest_path(binding_id: &str) -> PathBuf {
-    target_dir().join("ogham").join(format!("{binding_id}.json"))
+    target_dir().join("masque").join(format!("{binding_id}.json"))
 }
 ```
 
@@ -325,8 +325,8 @@ where `kind` is `state` or `events`, and `sanitized-binding-module`
 replaces `/`, `\`, and `.` with `_`. Example:
 
 ```
-state-data_engine_ui_chest_ui_ogh-ChestUiState.json
-events-data_engine_ui_chest_ui_ogh-ChestUiMsg.json
+state-data_engine_ui_chest_ui_masque-ChestUiState.json
+events-data_engine_ui_chest_ui_masque-ChestUiMsg.json
 ```
 
 The full Rust binding path goes in the manifest body, so the
@@ -341,7 +341,7 @@ output. Roughly:
 ```rust
 fn write_state_manifest(
     binding: &str,
-    ogh_module: &str,
+    masque_module: &str,
     rust_src: &RustSourceLoc,
     fields: &[(String, String)],          // (name, canonical-typeref)
 ) -> String {
@@ -350,11 +350,11 @@ fn write_state_manifest(
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        r#"{{"kind":"state","binding":"{}","ogh_module":"{}",\
+        r#"{{"kind":"state","binding":"{}","masque_module":"{}",\
 "rust_source":{{"file":"{}","line":{},"column":{}}},\
 "host_state":{{"fields":{{{}}}}}}}"#,
         json_escape(binding),
-        json_escape(ogh_module),
+        json_escape(masque_module),
         json_escape(&rust_src.file),
         rust_src.line, rust_src.column,
         fields_json,
@@ -368,7 +368,7 @@ the round-trip test in P0-M4 catches any drift.
 **Skip mechanism:**
 
 ```rust
-if std::env::var_os("OGHAM_SKIP_MANIFEST_EMIT").is_some() { return; }
+if std::env::var_os("MASQUE_SKIP_MANIFEST_EMIT").is_some() { return; }
 ```
 
 For sandboxed CI / read-only filesystems.
@@ -379,18 +379,18 @@ For sandboxed CI / read-only filesystems.
   a half-written file during a watch event). Standard pattern:
   write to `<path>.tmp`, fsync, rename to `<path>`.
 
-**Tests** (`crates/ogham-derive/tests/manifest_emit.rs`):
+**Tests** (`crates/masque-derive/tests/manifest_emit.rs`):
 - Macro fixture with `binding_module` set → invoke compilation in
   a tempdir → assert manifest file appears at expected path with
   expected content (parsed via the P0-M2 reader).
 - Without `binding_module` → no manifest written.
-- With `OGHAM_SKIP_MANIFEST_EMIT=1` → no manifest written.
+- With `MASQUE_SKIP_MANIFEST_EMIT=1` → no manifest written.
 - Two derives in the same file with different `binding_module`
   values → two distinct manifests.
 
 **Validation gate:**
 - `cargo build --workspace` clean.
-- An end-to-end smoke test in `tests/typed_ogham_e2e.rs` (existing
+- An end-to-end smoke test in `tests/typed_masque_e2e.rs` (existing
   file) gains an assertion that manifest files materialize when
   the test crate uses `binding_module`.
 
@@ -404,8 +404,8 @@ half-day buffer for sandbox-edge cases.
 ### P0-M4 — Diagnostic backend
 
 **Goal:** lift `check_schemas_match` (`src/typed.rs:246`) into
-`ogham::diagnostics::check_against_manifest`, operating on data
-rather than `S: OghamState, M: OghamMsg` generics. Keep
+`masque::diagnostics::check_against_manifest`, operating on data
+rather than `S: MasqueState, M: MasqueMsg` generics. Keep
 `check_schemas_match` as a thin wrapper that derives schemas from
 the generic types and calls the new function.
 
@@ -424,9 +424,9 @@ the generic types and calls the new function.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     pub severity: Severity,
-    pub code: String,                // e.g. "ogham:binding"
+    pub code: String,                // e.g. "masque:binding"
     pub message: String,
-    pub primary: Span,               // location in the .ogh file
+    pub primary: Span,               // location in the .masque file
     pub related: Vec<RelatedSpan>,   // typically the Rust source loc
     pub binding_id: Option<String>,  // for multi-binding output
 }
@@ -455,7 +455,7 @@ pub fn check_against_manifest(
 ```
 
 The body is the existing `check_schemas_match` logic, with diff
-strings replaced by `Diagnostic` constructions that carry the .ogh
+strings replaced by `Diagnostic` constructions that carry the .masque
 span (from `parsed.host_state.decl_span` or the field's `decl_span`)
 and a `RelatedSpan` pointing at the manifest's `rust_source`.
 
@@ -464,12 +464,12 @@ and a `RelatedSpan` pointing at the manifest's `rust_source`.
 ```rust
 // src/typed.rs
 
-fn check_schemas_match<S: OghamState, M: OghamMsg>(parsed: &ModuleSchema)
+fn check_schemas_match<S: MasqueState, M: MasqueMsg>(parsed: &ModuleSchema)
     -> Result<(), RuntimeError>
 {
     let state_manifest = StateManifest::synthesize::<S>(parsed.module_path());
     let events_manifest = EventsManifest::synthesize::<M>(parsed.module_path());
-    let diags = ogham::diagnostics::check_against_manifest(
+    let diags = masque::diagnostics::check_against_manifest(
         parsed,
         Some(&state_manifest),
         Some(&events_manifest),
@@ -484,7 +484,7 @@ fn check_schemas_match<S: OghamState, M: OghamMsg>(parsed: &ModuleSchema)
 ```
 
 `StateManifest::synthesize::<S>` is a constructor that builds a
-manifest from a generic `S: OghamState` — same data the macro emits
+manifest from a generic `S: MasqueState` — same data the macro emits
 to disk, just produced at runtime from the trait methods. Lets the
 runtime reuse the same backend.
 
@@ -500,7 +500,7 @@ runtime reuse the same backend.
 
 **Validation gate:**
 - `cargo build --workspace` clean.
-- The existing TypedOgham tests in `tests/typed_ogham.rs` still
+- The existing TypedMasque tests in `tests/typed_masque.rs` still
   pass — they exercise `check_schemas_match` end-to-end and would
   catch any regression in the refactor.
 - New backend tests pass.
@@ -510,14 +510,14 @@ of an existing function plus type-shuffling.
 
 ---
 
-### P0-M5 — `ogham check` CLI
+### P0-M5 — `masque check` CLI
 
-**Goal:** ship the `ogham check` subcommand that runs the diagnostic
-backend against a `.ogh` file and prints results in `cargo`-shaped
+**Goal:** ship the `masque check` subcommand that runs the diagnostic
+backend against a `.masque` file and prints results in `cargo`-shaped
 text. Exits non-zero on ERROR diagnostics.
 
 **Files touched:**
-- `Cargo.toml` — new `[[bin]]` entry: `name = "ogham"`,
+- `Cargo.toml` — new `[[bin]]` entry: `name = "masque"`,
   `path = "src/cli/main.rs"`.
 - `src/cli/main.rs` (new) — entry point, subcommand dispatch.
 - `src/cli/check.rs` (new) — the `check` subcommand body.
@@ -527,28 +527,28 @@ text. Exits non-zero on ERROR diagnostics.
 **CLI shape:**
 
 ```
-ogham check <path-to-ogh-file>
-ogham check --all                        # walk cwd for .ogh files
-ogham check <path> --workspace <dir>     # override workspace root
-ogham check <path> --no-staleness-check  # suppress staleness warnings
+masque check <path-to-masque-file>
+masque check --all                        # walk cwd for .masque files
+masque check <path> --workspace <dir>     # override workspace root
+masque check <path> --no-staleness-check  # suppress staleness warnings
 ```
 
 **Workspace discovery:**
 
 1. Resolve workspace root: `--workspace` arg if given; otherwise
-   walk up from the .ogh file's directory looking for a `Cargo.toml`
+   walk up from the .masque file's directory looking for a `Cargo.toml`
    with `[workspace]`, then for any `Cargo.toml` (single-crate
    case).
 2. Enumerate workspace members from the discovered Cargo.toml
    (using `cargo_metadata` crate — adds one dep, but it's the
    right tool).
-3. For each member, glob `<member>/target/ogham/*.json` and load
+3. For each member, glob `<member>/target/masque/*.json` and load
    each manifest.
-4. Group manifests by absolute `ogh_module` path.
+4. Group manifests by absolute `masque_module` path.
 
 **Match + run:**
 
-For the requested `.ogh` file (or each file under `--all`):
+For the requested `.masque` file (or each file under `--all`):
 1. Parse → `ModuleSchema`.
 2. Look up manifests by absolute path.
 3. For each `(state, events)` pair (or singleton) sharing a
@@ -560,15 +560,15 @@ For the requested `.ogh` file (or each file under `--all`):
 **Text rendering** mirrors `cargo --message-format=short`:
 
 ```
-data/engine/ui/chest_ui.ogh:14:5: error[ogham:binding]: host_state field
-  `selecte` declared in .ogh but missing from Rust struct
+data/engine/ui/chest_ui.masque:14:5: error[masque:binding]: host_state field
+  `selecte` declared in .masque but missing from Rust struct
   `untold_lore::ui::chest::ChestUiState`
   --> src/ui/chest_ui.rs:42:10
   help: did you mean `selected`?
 ```
 
 ERROR / WARNING / INFO color via `nu-ansi-term` or `colored`
-(either fine; pick whichever ogham already uses if any). Falls back
+(either fine; pick whichever masque already uses if any). Falls back
 to plain text when stdout isn't a TTY.
 
 **Exit codes:**
@@ -578,9 +578,9 @@ to plain text when stdout isn't a TTY.
 
 **Tests** (`tests/cli_check.rs`):
 - Fixture: a small `tests/fixtures/cli_check_workspace/` tree with
-  one `.ogh`, one Rust crate, one pre-baked `target/ogham/*.json`
+  one `.masque`, one Rust crate, one pre-baked `target/masque/*.json`
   manifest pair.
-- Run `ogham check fixture.ogh` → expect clean exit, no output.
+- Run `masque check fixture.masque` → expect clean exit, no output.
 - Mutate the fixture manifest to disagree → expect exit 1, expect
   text output containing the binding ID and the offending field.
 - `--all` walks cwd correctly.
@@ -588,10 +588,10 @@ to plain text when stdout isn't a TTY.
   WARNING in output.
 
 **Validation gate:**
-- `cargo build --workspace --bin ogham` clean.
+- `cargo build --workspace --bin masque` clean.
 - All CLI tests pass.
-- Manual smoke: in untold_lore, `ogham check
-  data/engine/ui/chest_ui.ogh` runs without crashing (full
+- Manual smoke: in untold_lore, `masque check
+  data/engine/ui/chest_ui.masque` runs without crashing (full
   validation comes in P0-M6).
 
 **Estimated complexity: medium.** ~2-3 days. Bulk of the work is
@@ -602,39 +602,39 @@ workspace discovery + cargo-metadata wrangling + text rendering.
 ### P0-M6 — Untold Lore validation
 
 **Goal:** prove the round-trip works against a real consumer.
-Lives in the `untold_lore` repo, not in `ogham`.
+Lives in the `untold_lore` repo, not in `masque`.
 
 **Steps (consumer-side):**
 
 1. Annotate the chest_ui binding pair:
    ```rust
-   #[derive(OghamState)]
-   #[ogham(binding_module = "data/engine/ui/chest_ui.ogh")]
+   #[derive(MasqueState)]
+   #[masque(binding_module = "data/engine/ui/chest_ui.masque")]
    pub struct ChestUiState { /* ... */ }
 
-   #[derive(OghamMsg)]
-   #[ogham(binding_module = "data/engine/ui/chest_ui.ogh")]
+   #[derive(MasqueMsg)]
+   #[masque(binding_module = "data/engine/ui/chest_ui.masque")]
    pub enum ChestUiMsg { /* ... */ }
    ```
 2. Run `cargo build` in untold_lore.
-3. Verify `target/ogham/state-data_engine_ui_chest_ui_ogh-ChestUiState.json`
+3. Verify `target/masque/state-data_engine_ui_chest_ui_masque-ChestUiState.json`
    and `events-…-ChestUiMsg.json` exist with the expected content.
-4. Run `ogham check data/engine/ui/chest_ui.ogh` from the untold
+4. Run `masque check data/engine/ui/chest_ui.masque` from the untold
    lore root — expect clean exit, no output.
 5. Synthetic drift test: rename a field in `ChestUiState`. Run
-   `cargo build`. Run `ogham check`. Expect ERROR diagnostic
-   pointing at the .ogh field that no longer matches.
-6. Wire `ogham check --all` into untold lore's validation pipeline:
+   `cargo build`. Run `masque check`. Expect ERROR diagnostic
+   pointing at the .masque field that no longer matches.
+6. Wire `masque check --all` into untold lore's validation pipeline:
    either as a `cargo test` step (run from a small Rust integration
    test that shells out) or as a pre-commit hook.
 
 **Validation gate** for declaring Phase 0 done:
-- The drift in step 5 is caught by `ogham check` *before*
+- The drift in step 5 is caught by `masque check` *before*
   launching the binary.
 - The pre-commit / CI integration in step 6 fails red on the same
   drift.
 
-This isn't a code change in `ogham`; it's the smoke test that
+This isn't a code change in `masque`; it's the smoke test that
 proves Phase 0 delivered the agent-ergonomics promise. Document the
 result on `MEMORY.md`'s schema-diagnostics entry once it lands.
 
@@ -646,24 +646,24 @@ result on `MEMORY.md`'s schema-diagnostics entry once it lands.
 
 ### P1-M1 — Manifest discovery + caching
 
-**Goal:** `ogham-lsp` learns to find and cache binding manifests at
+**Goal:** `masque-lsp` learns to find and cache binding manifests at
 startup and refresh them when they change on disk.
 
 **Files touched:**
 - `src/lsp/manifests.rs` (new) — `ManifestRegistry` with
   `discover()`, `get_for_module(path)`, `refresh_one(path)`.
-- `src/lsp/server.rs` — `OghamLanguageServer` gains a
+- `src/lsp/server.rs` — `MasqueLanguageServer` gains a
   `manifests: Mutex<ManifestRegistry>` field; `initialize()`
   populates it.
 - File-watch wiring — extend the existing `notify` crate usage
   (already used for hot-reload) to also watch each
-  `target/ogham/` directory found at discovery.
+  `target/masque/` directory found at discovery.
 
 **`ManifestRegistry` shape:**
 
 ```rust
 pub struct ManifestRegistry {
-    /// Keyed by absolute path of the .ogh module.
+    /// Keyed by absolute path of the .masque module.
     by_module: HashMap<PathBuf, Vec<Manifest>>,
     /// Watched directories (for cleanup on shutdown).
     watched_dirs: Vec<PathBuf>,
@@ -680,8 +680,8 @@ impl ManifestRegistry {
 1. For each workspace folder URL, convert to filesystem path.
 2. Walk the directory tree; for each `Cargo.toml`, resolve via
    `cargo_metadata` and find the target dir.
-3. Glob `<target>/ogham/*.json`; load each via the P0-M2 reader.
-4. Insert into `by_module` keyed on absolute path of `ogh_module`
+3. Glob `<target>/masque/*.json`; load each via the P0-M2 reader.
+4. Insert into `by_module` keyed on absolute path of `masque_module`
    (joined relative to the manifest's owning crate root).
 
 **Tests** (`tests/lsp_manifest_registry.rs`):
@@ -698,7 +698,7 @@ impl ManifestRegistry {
 ### P1-M2 — Stage 5 binding diagnostics
 
 **Goal:** wire the diagnostic backend through `collect_diagnostics`
-in `ogham-lsp`. Schema mismatches show up in the editor's problems
+in `masque-lsp`. Schema mismatches show up in the editor's problems
 pane.
 
 **Files touched:**
@@ -706,7 +706,7 @@ pane.
   that runs after the existing four when manifests exist for the
   open file.
 - `src/lsp/diagnostic_convert.rs` (new) — convert
-  `ogham::diagnostics::Diagnostic` to `tower_lsp::Diagnostic`,
+  `masque::diagnostics::Diagnostic` to `tower_lsp::Diagnostic`,
   including `related_information` for Rust source spans.
 
 **Stage 5 in `collect_diagnostics`:**
@@ -718,7 +718,7 @@ let manifests = registry.get_for_module(&module_path);
 if !manifests.is_empty() {
     let by_binding = group_by_binding_id(manifests);
     for (binding_id, (state, events)) in by_binding {
-        let backend_diags = ogham::diagnostics::check_against_manifest(
+        let backend_diags = masque::diagnostics::check_against_manifest(
             &doc.schema, state, events, &binding_id,
         );
         for d in backend_diags {
@@ -733,9 +733,9 @@ binding-module + crate context (the manifest filename's binding-id
 is identity here).
 
 **Tests** (`tests/lsp_binding_diagnostics.rs`):
-- Open a `.ogh` file with a known mismatching manifest fixture in
+- Open a `.masque` file with a known mismatching manifest fixture in
   the test workspace → assert diagnostic appears with expected
-  `code = "ogham:binding"`, expected message, expected related-
+  `code = "masque:binding"`, expected message, expected related-
   information location.
 - Match: no diagnostic emitted.
 - Multi-binding mismatch: diagnostic per binding with `binding_id`
@@ -749,7 +749,7 @@ is identity here).
 
 **Goal:** when a binding manifest's `rust_source.file` mtime is
 newer than the manifest file's mtime, emit a single WARNING-severity
-diagnostic at line 1 of the `.ogh` file.
+diagnostic at line 1 of the `.masque` file.
 
 **Files touched:**
 - `src/diagnostics/check.rs` — staleness check (already added in
@@ -764,7 +764,7 @@ fn check_staleness(manifest_path: &Path, manifest: &Manifest) -> Option<Diagnost
     let rust_path = Path::new(&manifest.rust_source().file);
     let rust_mtime = std::fs::metadata(rust_path).ok()?.modified().ok()?;
     if rust_mtime > manifest_mtime {
-        Some(Diagnostic { severity: Warning, code: "ogham:stale-manifest".into(), /* ... */ })
+        Some(Diagnostic { severity: Warning, code: "masque:stale-manifest".into(), /* ... */ })
     } else {
         None
     }
@@ -786,7 +786,7 @@ them. The warning is a side-channel cue.
 
 ### P1-M4 — "No manifest found" INFO hint
 
-**Goal:** if a `.ogh` module declares `host_state {}` but no
+**Goal:** if a `.masque` module declares `host_state {}` but no
 manifest matches it, emit a single INFO diagnostic on line 1
 suggesting the user build the consumer crate.
 
@@ -797,7 +797,7 @@ suggesting the user build the consumer crate.
 **Message:**
 
 ```
-info[ogham:no-binding]: no Rust binding manifest found for this module
+info[masque:no-binding]: no Rust binding manifest found for this module
   help: this is fine for loose-mode modules, but if you expect typed
   bindings, run `cargo build` in the consumer crate to generate one
 ```
@@ -828,7 +828,7 @@ globally per LSP session or per-file via a magic comment.
 
 ```jsonc
 {
-  "oghamBinding": {
+  "masqueBinding": {
     "checkEnabled": true,           // default
     "showStalenessWarnings": true,  // default
     "showNoManifestHint": true      // default
@@ -838,8 +838,8 @@ globally per LSP session or per-file via a magic comment.
 
 **Per-document pragma:**
 
-```ogh
-// @ogham:binding-check off
+```masque
+// @masque:binding-check off
 
 host_state { … }
 ```
@@ -909,7 +909,7 @@ When multiple bindings target the module, list all of them.
 - Multi-binding → all variants listed.
 
 **Validation gate** for Phase 1 done:
-- Open a `.ogh` file in any LSP-aware editor.
+- Open a `.masque` file in any LSP-aware editor.
 - Edit a host_state field name to a typo → ERROR diagnostic appears
   in the problems pane within one keystroke debounce.
 - Hover a valid field → hover shows bound Rust type and a clickable
@@ -924,12 +924,12 @@ When multiple bindings target the module, list all of them.
 The whole stack lands at twelve merges. Beyond that, two natural
 follow-ups (not in this plan, but called out so they're not lost):
 
-- **Cross-module record validation against `OghamRecord` derives.**
+- **Cross-module record validation against `MasqueRecord` derives.**
   The schema resolver already validates `import` chains within the
-  `.ogh` ecosystem; checking that an imported record matches the
-  Rust `OghamRecord` it pairs with is a clean extension. Reuses the
+  `.masque` ecosystem; checking that an imported record matches the
+  Rust `MasqueRecord` it pairs with is a clean extension. Reuses the
   manifest format with a `record` kind.
-- **`ogham init-binding`** — generate a `.ogh` skeleton from a Rust
+- **`masque init-binding`** — generate a `.masque` skeleton from a Rust
   state struct, or vice versa. Mostly authoring affordance; punt
   until pain demands it.
 

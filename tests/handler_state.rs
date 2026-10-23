@@ -8,17 +8,17 @@
 //! the component's own `main@1:count` — still 0. Every click counted to 1
 //! and no further.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::{event::Event, point::Point};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::{event::Event, point::Point};
+use masque::Masque;
 
-fn click(ogham: &mut Ogham, x: f32, y: f32) {
-    ogham
+fn click(masque: &mut Masque, x: f32, y: f32) {
+    masque
         .get_ui_mut()
         .call_event(&Event::with_point("mouse_down".into(), Point::new(x, y)));
-    ogham.update().expect("rerender");
-    ogham.get_ui_mut().layout(200.0, 100.0);
+    masque.update().expect("rerender");
+    masque.get_ui_mut().layout(200.0, 100.0);
 }
 
 /// What the counter's label says, read back through a host event the
@@ -32,11 +32,11 @@ fn counting(source: &str) -> Vec<i32> {
         }
         Ok(Value::Void)
     });
-    let mut ogham = Ogham::from_source(source, config).expect("builds");
-    ogham.update().expect("first update");
-    ogham.get_ui_mut().layout(200.0, 100.0);
+    let mut masque = Masque::from_source(source, config).expect("builds");
+    masque.update().expect("first update");
+    masque.get_ui_mut().layout(200.0, 100.0);
     for _ in 0..3 {
-        click(&mut ogham, 50.0, 50.0);
+        click(&mut masque, 50.0, 50.0);
     }
     let seen = seen.lock().unwrap().clone();
     seen

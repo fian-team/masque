@@ -2,7 +2,7 @@
 //!
 //! Under emscripten there is no OS to watch: files live in the in-memory
 //! filesystem and change only when the host writes them, so the watcher
-//! keeps the same interface and never reports a change. `Ogham::watch`
+//! keeps the same interface and never reports a change. `Masque::watch`
 //! there is load-from-file; a browser host reloads by building again.
 
 #[cfg(not(target_os = "emscripten"))]

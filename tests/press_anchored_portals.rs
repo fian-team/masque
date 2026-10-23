@@ -4,7 +4,7 @@
 //! A context menu is the consumer: a row's `contextmenu:` listener flips
 //! host state, the document re-renders with the menu's Portal open, and
 //! the menu has to stand where the hand was — a frame *after* the press,
-//! with no host coordinates in the `.ogh`. The runtime records every
+//! with no host coordinates in the `.masque`. The runtime records every
 //! `mouse_down` and `contextmenu` point under `PRESS_ANCHOR`, and the
 //! builder spells it `"press"`.
 //!
@@ -16,13 +16,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::skia::SkiaEnv;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::{PortalEntry, Surface, PRESS_ANCHOR};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::{PortalEntry, Surface, PRESS_ANCHOR};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -86,29 +86,29 @@ fn config(open: bool, log: &Log) -> RuntimeConfig {
     config.with_host_state([("menu".to_string(), Value::Map(menu.into()))].into_iter().collect())
 }
 
-fn mounted(open: bool) -> (Ogham, Log) {
+fn mounted(open: bool) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
-    let mut o = Ogham::from_source(SRC, config(open, &log)).expect("the document mounts");
+    let mut o = Masque::from_source(SRC, config(open, &log)).expect("the document mounts");
     frame(&mut o);
     (o, log)
 }
 
-fn frame(o: &mut Ogham) {
+fn frame(o: &mut Masque) {
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     env.draw(o.get_ui_mut());
 }
 
-fn send(o: &mut Ogham, name: &str, x: f32, y: f32) -> bool {
+fn send(o: &mut Masque, name: &str, x: f32, y: f32) -> bool {
     o.get_ui_mut()
         .call_event(&Event::with_point(name.to_string(), Point::new(x, y)))
 }
 
-fn set_open(o: &mut Ogham, open: bool) {
+fn set_open(o: &mut Masque, open: bool) {
     o.with_runtime_mut(|rt| {
         let mut menu = std::collections::HashMap::new();
         menu.insert("open".to_string(), Value::Boolean(open));
@@ -117,11 +117,11 @@ fn set_open(o: &mut Ogham, open: bool) {
     frame(o);
 }
 
-fn press_at(o: &Ogham) -> Option<(f32, f32)> {
+fn press_at(o: &Masque) -> Option<(f32, f32)> {
     o.get_ui().anchor(PRESS_ANCHOR).map(|p| (p.x(), p.y()))
 }
 
-fn only_entry(o: &Ogham) -> Option<PortalEntry> {
+fn only_entry(o: &Masque) -> Option<PortalEntry> {
     let entries: Vec<PortalEntry> = o.get_ui().portal_layers.iter_hit_test_order().cloned().collect();
     assert!(entries.len() <= 1, "one entry at most");
     entries.into_iter().next()
@@ -213,6 +213,6 @@ fn a_right_click_on_the_page_closes_the_menu() {
 fn a_press_anchor_cannot_trap_focus() {
     let src = SRC.replace(r#"anchor: "press","#, r#"anchor: "press", focus_trap: true,"#);
     let log: Log = Arc::new(Mutex::new(Vec::new()));
-    let err = Ogham::from_source(&src, config(true, &log)).err().expect("refused");
+    let err = Masque::from_source(&src, config(true, &log)).err().expect("refused");
     assert!(format!("{err:?}").contains("focus_trap"), "{err:?}");
 }

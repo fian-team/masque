@@ -29,7 +29,7 @@
 
 Phase 2 shipped a minimal Portal:
 
-```ogh
+```masque
 Portal { open: true, focus_trap: true, children: [...] }
 ```
 
@@ -149,7 +149,7 @@ impl PortalLayer {
         }
     }
 
-    /// String name as it appears in `.ogh` source. Used by
+    /// String name as it appears in `.masque` source. Used by
     /// LSP hover and error messages.
     pub fn source_name(self) -> &'static str {
         match self {
@@ -306,7 +306,7 @@ usize` is a u32→usize cast.
 
 ### Portal widget property
 
-```ogh
+```masque
 Portal {
   layer: "tooltip",       // NEW: defaults to "overlay-modal"
   open: true,
@@ -595,7 +595,7 @@ Sub-step ordering within M0. ~3 person-days; budget shape:
 15. **Write new tests** per the matrix below.
 16. **Workspace test gate**: green.
 17. **UL build check**: green.
-18. **Manual smoke**: layer-mixing scenario in a test `.ogh`
+18. **Manual smoke**: layer-mixing scenario in a test `.masque`
     paints in the right order (tooltip above modal).
 
 ---
@@ -694,7 +694,7 @@ Total: 15 tests. The Phase 2.5 plan estimated ~15 — matches.
 - `cd ../untold_lore && cargo build` clean.
 - Manual smoke: `Portal { layer: "tooltip", ... }` paints
   above `Portal { layer: "overlay-modal", ... }` in a test
-  `.ogh`; click on the tooltip doesn't dismiss the modal
+  `.masque`; click on the tooltip doesn't dismiss the modal
   beneath it (per Block + None policies); click on the
   modal's backdrop dismisses (per consumer-defined click
   handler in the Modal() example fn).
@@ -716,7 +716,7 @@ When the gate passes:
   mount order.
 - Hit-test walks layers high-priority-to-low; backdrop policy
   Block gates fall-through to base tree.
-- `Ogham::has_input_blocking_portal()` only walks
+- `Masque::has_input_blocking_portal()` only walks
   `OverlayModal`.
 - 15 new tests; all Phase 2 tests still pass.
 - Documented limitations: Dim policy not implemented; LSP

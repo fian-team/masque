@@ -1,4 +1,4 @@
-// regency's in-manor HUD family, verbatim from `data/ui/client.ogh`
+// regency's in-manor HUD family, verbatim from `data/ui/client.masque`
 // (lines 1661-1857 at 2026-08-21) — five helpers and twenty unqualified
 // reads of `hud`.
 //

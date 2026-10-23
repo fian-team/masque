@@ -1,5 +1,5 @@
 //! The drag gesture, driven the way a host drives it: pointer events into
-//! `UI::call_event` and nothing else (`ogham::widget::drag_gesture`).
+//! `UI::call_event` and nothing else (`masque::widget::drag_gesture`).
 //!
 //! Every test builds a real document, lays it out, and presses on it. No
 //! test calls `dispatch_drag_*` — the point of the gesture is that no host
@@ -7,11 +7,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::event::{Event, KeyModifiers};
-use ogham::widget::point::Point;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::event::{Event, KeyModifiers};
+use masque::widget::point::Point;
+use masque::Masque;
 
 const DT: f32 = 1.0 / 60.0;
 const W: f32 = 800.0;
@@ -50,8 +50,8 @@ let main = fn () {
 /// Everything the document raised, in order, as `name(args…)`.
 type Log = Arc<Mutex<Vec<String>>>;
 
-fn settled(src: &str) -> (Ogham, Log) {
-    let mut o = Ogham::from_source(src, RuntimeConfig::new()).expect("from_source");
+fn settled(src: &str) -> (Masque, Log) {
+    let mut o = Masque::from_source(src, RuntimeConfig::new()).expect("from_source");
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     for name in ["pressed", "dropped"] {
         let log = log.clone();
@@ -73,7 +73,7 @@ fn at(name: &str, x: f32, y: f32) -> Event {
     Event::with_point(name.to_string(), Point::new(x, y))
 }
 
-fn send(o: &mut Ogham, e: Event) -> bool {
+fn send(o: &mut Masque, e: Event) -> bool {
     o.get_ui_mut().call_event(&e)
 }
 
@@ -187,7 +187,7 @@ let main = fn () {
         "shown".to_string(),
         Value::Boolean(true),
     )]));
-    let mut o = Ogham::from_source(src, config).expect("from_source");
+    let mut o = Masque::from_source(src, config).expect("from_source");
     for _ in 0..4 {
         o.frame(W, H, DT).unwrap();
     }

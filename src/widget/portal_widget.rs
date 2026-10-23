@@ -36,7 +36,7 @@
 //! Escape-to-dismiss is still the host's or a `keydown:` listener's.
 //! **Anchoring is the exception** to "positioning is composition",
 //! and only because the policies need the subtree's measured size:
-//! `.ogh` cannot see it, so an author cannot express "flip above
+//! `.masque` cannot see it, so an author cannot express "flip above
 //! the pointer when the card would overrun the bottom" no matter
 //! how the tree is composed. Outside-press dismissal joined it for
 //! a neighbouring reason: the full-viewport catch child it used to
@@ -538,7 +538,7 @@ impl Widget for PortalWidget {
 
     fn restart_entry_animation(&mut self) {
         // Delegate so the portal's contents re-play entry alongside the
-        // rest of the tree when the host re-promotes this Ogham.
+        // rest of the tree when the host re-promotes this Masque.
         self.inner.restart_entry_animation();
     }
 

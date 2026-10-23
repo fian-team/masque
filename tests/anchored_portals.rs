@@ -7,7 +7,7 @@
 //!   seating policies are driven directly. Edge arithmetic is where this
 //!   feature is most likely to be quietly wrong, and none of it needs a
 //!   window.
-//! - The builder tests pin the `.ogh` surface, including the rejections —
+//! - The builder tests pin the `.masque` surface, including the rejections —
 //!   an unknown `anchor_policy` must be a *loud* error, not a silent
 //!   fallback to the default.
 //! - The end-to-end tests drive a real `SkiaEnv` over an offscreen raster
@@ -19,19 +19,19 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::skia::SkiaEnv;
-use ogham::widget::event::Event;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::point::Point;
-use ogham::widget::portal_layer::{
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::skia::SkiaEnv;
+use masque::widget::event::Event;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::point::Point;
+use masque::widget::portal_layer::{
     resolve_anchor, AnchorPolicy, PortalLayer, ANCHOR_VIEWPORT_INSET,
 };
-use ogham::widget::rect::Rect;
-use ogham::widget::{builder, PortalEntry, Surface, WidgetRef, DRAG_PREVIEW_ANCHOR, UI};
-use ogham::Ogham;
+use masque::widget::rect::Rect;
+use masque::widget::{builder, PortalEntry, Surface, WidgetRef, DRAG_PREVIEW_ANCHOR, UI};
+use masque::Masque;
 
 const DT: f32 = 1.0 / 60.0;
 const W: f32 = 800.0;
@@ -80,9 +80,9 @@ fn build_error(src: &str) -> String {
     }
 }
 
-/// An `Ogham` run for enough frames to lay out and settle.
-fn settled(src: &str) -> Ogham {
-    let mut o = Ogham::from_source(src, RuntimeConfig::new()).expect("from_source");
+/// An `Masque` run for enough frames to lay out and settle.
+fn settled(src: &str) -> Masque {
+    let mut o = Masque::from_source(src, RuntimeConfig::new()).expect("from_source");
     for _ in 0..4 {
         o.frame(W, H, DT).expect("frame");
     }
@@ -93,26 +93,26 @@ fn settled(src: &str) -> Ogham {
 /// resolves anchors and populates `portal_layers`.
 fn raster_env() -> SkiaEnv {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     SkiaEnv::new_with_dpi_scale(surface, 1.0)
 }
 
 /// Run the render walk so `portal_layers` reflects this frame.
-fn draw(o: &mut Ogham) {
+fn draw(o: &mut Masque) {
     let mut env = raster_env();
     env.draw(o.get_ui_mut());
 }
 
 /// The single portal entry the walk produced, or `None` if it produced
 /// none. Anchoring is per-entry, so every test declares exactly one.
-fn only_entry(o: &Ogham) -> Option<PortalEntry> {
+fn only_entry(o: &Masque) -> Option<PortalEntry> {
     let layers = &o.get_ui().portal_layers;
     assert!(layers.len() <= 1, "tests declare a single portal");
     layers.iter_paint_order().next().cloned()
 }
 
 /// The resolved viewport origin of the tree's single portal entry.
-fn entry_origin(o: &Ogham) -> (f32, f32) {
+fn entry_origin(o: &Masque) -> (f32, f32) {
     let e = only_entry(o).expect("a portal entry was pushed");
     (e.viewport_rect.x, e.viewport_rect.y)
 }
@@ -370,7 +370,7 @@ fn a_zero_viewport_disables_clamping() {
     }
 }
 
-// ── M0 — anchor storage on `UI` / `Ogham` ──────────────────────────────
+// ── M0 — anchor storage on `UI` / `Masque` ──────────────────────────────
 
 #[test]
 fn set_read_and_clear_an_anchor() {
@@ -425,9 +425,9 @@ let main = fn () {
 /// hosts that set per frame never notice.
 #[test]
 fn a_hot_reload_drops_anchors() {
-    let dir = std::env::temp_dir().join(format!("ogham_anchor_reload_{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("masque_anchor_reload_{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("scratch dir");
-    let path = dir.join("anchored.ogh");
+    let path = dir.join("anchored.masque");
     std::fs::write(
         &path,
         "let main = fn () { Flex { style: { width: \"grow\" }, children: [] } };\n",
@@ -435,7 +435,7 @@ fn a_hot_reload_drops_anchors() {
     .expect("write source");
 
     let mut o =
-        Ogham::watch(path.to_str().unwrap().to_string(), RuntimeConfig::new()).expect("watch");
+        Masque::watch(path.to_str().unwrap().to_string(), RuntimeConfig::new()).expect("watch");
     o.frame(W, H, DT).expect("frame");
     o.set_anchor("nameplate", Point::new(10.0, 20.0));
     assert!(o.anchor("nameplate").is_some());
@@ -449,7 +449,7 @@ fn a_hot_reload_drops_anchors() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-// ── M1 — the `.ogh` surface ────────────────────────────────────────────
+// ── M1 — the `.masque` surface ────────────────────────────────────────────
 
 #[test]
 fn anchor_properties_round_trip_from_source() {
@@ -660,7 +660,7 @@ fn an_unset_anchor_renders_nothing() {
 
 /// `clamp` against the real measured card, end to end. The size has to
 /// come from the layout pass that already ran this frame for this to work
-/// at all — that is the piece `.ogh` cannot reach.
+/// at all — that is the piece `.masque` cannot reach.
 #[test]
 fn clamp_pulls_an_edge_hugging_card_back_inside() {
     let mut o = settled(&anchored_src("", 200.0, 60.0));
@@ -978,7 +978,7 @@ fn clearing_an_active_drag_drops_the_reserved_anchor() {
 }
 
 /// End to end: the preview reaches the `CursorAttached` layer at the
-/// cursor, through the same `AnchorContext::resolve` an `.ogh` Portal
+/// cursor, through the same `AnchorContext::resolve` an `.masque` Portal
 /// uses. `Raw` policy — a preview pinned to a pointer at the window edge
 /// must not be yanked back inside.
 #[test]
@@ -1024,14 +1024,14 @@ let main = fn () {
 
 // ── M5 — the shipped example ───────────────────────────────────────────
 
-/// `examples/portals/anchored_tooltip.ogh` plus the `client` previewer's
+/// `examples/portals/anchored_tooltip.masque` plus the `client` previewer's
 /// `"cursor"` anchor are the two routes by which anyone discovers this
 /// feature. A broken example is a feature nobody finds, so keep it
 /// building — and keep it seated at the anchor the previewer publishes.
 #[test]
 fn the_shipped_example_builds_and_anchors_to_the_cursor() {
-    let src = std::fs::read_to_string("examples/portals/anchored_tooltip.ogh")
-        .expect("examples/portals/anchored_tooltip.ogh");
+    let src = std::fs::read_to_string("examples/portals/anchored_tooltip.masque")
+        .expect("examples/portals/anchored_tooltip.masque");
     let root = build_root(&src);
 
     fn anchors_in(node: &WidgetRef, out: &mut Vec<(String, AnchorPolicy)>) {

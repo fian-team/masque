@@ -1,6 +1,6 @@
-//! Ogham runtime: bytecode compiler, VM, and supporting infrastructure.
+//! Masque runtime: bytecode compiler, VM, and supporting infrastructure.
 //!
-//! The primary execution path compiles Ogham source to bytecode
+//! The primary execution path compiles Masque source to bytecode
 //! ([`compiler`]) and runs it in a stack-based VM ([`vm`]).
 //! Shared arithmetic and comparison operations live in [`ops`].
 
@@ -165,7 +165,7 @@ impl StateManager {
 pub(crate) struct ImportResolver {
     pub(crate) project_root: Option<PathBuf>,
     pub(crate) import_paths: HashMap<String, PathBuf>,
-    /// In-memory sources keyed by the import path string (e.g. `"./chrome.ogh"`),
+    /// In-memory sources keyed by the import path string (e.g. `"./chrome.masque"`),
     /// consulted before the filesystem so an embedded UI library needs no files.
     pub(crate) embedded: HashMap<PathBuf, String>,
     loading_stack: Vec<PathBuf>,
@@ -243,7 +243,7 @@ impl ImportResolver {
     }
 }
 
-/// The Ogham runtime: holds module state, component state, import caches,
+/// The Masque runtime: holds module state, component state, import caches,
 /// and the environment used during execution.
 /// A declared literal default, as a runtime value.
 fn schema_literal_value(lit: &schema::SchemaLiteral) -> Value {
@@ -320,7 +320,7 @@ pub struct Runtime {
     /// built-in types by default; host applications can add custom widgets
     /// via [`RuntimeConfig::with_widget`].
     pub widget_registry: WidgetRegistry,
-    /// Host paint routines keyed by the name a `.ogh` file writes in
+    /// Host paint routines keyed by the name a `.masque` file writes in
     /// `Canvas { painter: "name" }`. Populated from
     /// [`RuntimeConfig::painters`] on creation — never mutated afterwards,
     /// because a painter registered on a live runtime would silently
@@ -329,7 +329,7 @@ pub struct Runtime {
     ///
     /// `create_canvas_widget` reads this at build time and clones the
     /// matching `Arc` onto the widget, the same shape as
-    /// `widget_registry.clone()` in `Ogham::update`.
+    /// `widget_registry.clone()` in `Masque::update`.
     pub painters: HashMap<String, CanvasPainter>,
     /// Stack of `(name, value)` entries used by the `Context` primitive. The
     /// compiler emits `PushContext` / `PopContext` around a Context widget's
@@ -386,7 +386,7 @@ impl Runtime {
         self.screen_height = height;
     }
 
-    /// Read an Ogham state variable by name. Returns `None` if the variable
+    /// Read a Masque state variable by name. Returns `None` if the variable
     /// doesn't exist in the component state.
     pub fn get_state(&self, name: &str) -> Option<Value> {
         self.state.get_state_value(name)
@@ -463,7 +463,7 @@ impl Runtime {
     /// over a shallower one.
     ///
     /// Injecting a path is the only way a screen is ever selected. There
-    /// is no navigation inside a document (`ogham INTENT §10`).
+    /// is no navigation inside a document (`masque INTENT §10`).
     pub fn set_route_path<S: AsRef<str>>(&mut self, path: &[S]) {
         let value = Value::Array(
             path.iter()
@@ -548,7 +548,7 @@ impl Runtime {
         match self.event_handlers.get(name) {
             Some(handler) => handler(args),
             None => {
-                eprintln!("[ogham] event '{name}' has no registered handler; dropped");
+                eprintln!("[masque] event '{name}' has no registered handler; dropped");
                 Ok(Value::Void)
             }
         }
@@ -579,7 +579,7 @@ impl Runtime {
     /// value of the declared shape, which is empty rather than absent.
     ///
     /// Never clobbers a value the host has already set, so a hot reload
-    /// carries live state across (`Ogham::reload` restores the snapshot
+    /// carries live state across (`Masque::reload` restores the snapshot
     /// before the new module is executed).
     fn seed_screen_defaults(&mut self, module: &Function) {
         let crossing = self.crossing(module);
@@ -926,7 +926,7 @@ impl Runtime {
         let source = fs::read_to_string(&path_buf)?;
         let mut runtime = Self::from_source(&source, config)?;
         // What the ROOT document's own relative imports resolve against.
-        // Without this a mounted file's `./sibling.ogh` would fall back to
+        // Without this a mounted file's `./sibling.masque` would fall back to
         // the flat lookup and could be answered by an embedded source of
         // the same spelling — which is the whole defect, at the one place
         // it is most likely to bite.
@@ -959,7 +959,7 @@ impl Runtime {
         let mut runtime = Runtime::new();
 
         if let Err(e) = runtime.execute_prelude() {
-            eprintln!("[ogham] prelude error: {:?}", e);
+            eprintln!("[masque] prelude error: {:?}", e);
         }
 
         if let Some(config) = config.as_ref() {

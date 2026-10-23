@@ -1,6 +1,6 @@
 //! `screen` declarations and scoped host state.
 //!
-//! Routing's ogham half: a document declares its routable surfaces, the
+//! Routing's masque half: a document declares its routable surfaces, the
 //! host injects a path, and the document renders that path and nothing
 //! else. The three claims worth testing are the three that make it worth
 //! having at all:
@@ -20,13 +20,13 @@
 //! widget tree: routing decides *which* view is built, and that decision
 //! is visible in the descriptor. Layout is not part of the claim.
 
-use ogham::parser::Parser;
-use ogham::runtime::compiler::Compiler;
-use ogham::runtime::error::VMError;
-use ogham::runtime::schema::ModuleSchema;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::scanner::Scanner;
+use masque::parser::Parser;
+use masque::runtime::compiler::Compiler;
+use masque::runtime::error::VMError;
+use masque::runtime::schema::ModuleSchema;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::scanner::Scanner;
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -340,7 +340,7 @@ let main = fn () { outlet() };"#
 
 #[test]
 fn a_screen_id_may_contain_characters_an_identifier_may_not() {
-    // Route ids are route ids, not ogham identifiers: `map-edit` is a
+    // Route ids are route ids, not masque identifiers: `map-edit` is a
     // legal id and would scan as three tokens if screens were named by
     // their id rather than by index.
     let mut rt = runtime(

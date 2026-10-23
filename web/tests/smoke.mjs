@@ -6,11 +6,11 @@
 // Run through web/test.sh, which writes the golden first.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import createStage from "../dist/ogham_stage.js";
+import createStage from "../dist/masque_stage.js";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const golden = process.argv[2] ? readFileSync(process.argv[2]) : null;
-const hero = readFileSync(here + "hero.ogh", "utf8");
+const hero = readFileSync(here + "hero.masque", "utf8");
 
 const m = await createStage();
 const fn = (name, ret, args) => m.cwrap(name, ret, args);

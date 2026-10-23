@@ -11,13 +11,13 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::skia::SkiaEnv;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::{Surface, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::{Surface, WidgetRef};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -82,17 +82,17 @@ let main = fn () {{
     )
 }
 
-fn draw(o: &mut Ogham) {
+fn draw(o: &mut Masque) {
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     env.draw(o.get_ui_mut());
 }
 
-fn mounted(src: &str) -> (Ogham, Log) {
+fn mounted(src: &str) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let mut config = RuntimeConfig::new()
         .with_host_state(HashMap::from([("open".to_string(), Value::Boolean(true))]));
@@ -103,17 +103,17 @@ fn mounted(src: &str) -> (Ogham, Log) {
             Ok(Value::Void)
         });
     }
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     draw(&mut o);
     (o, log)
 }
 
-fn set_open(o: &mut Ogham, open: bool) {
+fn set_open(o: &mut Masque, open: bool) {
     o.with_runtime_mut(|rt| rt.set_host_state("open", open));
     draw(o);
 }
 
-fn hover(o: &mut Ogham, x: f32, y: f32) -> bool {
+fn hover(o: &mut Masque, x: f32, y: f32) -> bool {
     o.get_ui_mut().call_event(&Event::with_point(
         "mouse_move".to_string(),
         Point::new(x, y),
@@ -124,15 +124,15 @@ fn child(w: &WidgetRef, i: usize) -> WidgetRef {
     w.lock().unwrap().get_children()[i].clone()
 }
 
-fn bar(o: &Ogham) -> WidgetRef {
+fn bar(o: &Masque) -> WidgetRef {
     child(&o.get_ui().root, 0)
 }
 
-fn below(o: &Ogham) -> WidgetRef {
+fn below(o: &Masque) -> WidgetRef {
     child(&o.get_ui().root, 1)
 }
 
-fn inner(o: &Ogham) -> WidgetRef {
+fn inner(o: &Masque) -> WidgetRef {
     child(&child(&bar(o), 0), 0)
 }
 

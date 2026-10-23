@@ -11,7 +11,7 @@
 
 use std::cell::RefCell;
 
-use ogham_web::{modifiers, Key, Pointer, Stage};
+use masque_web::{modifiers, Key, Pointer, Stage};
 
 thread_local! {
     static STAGE: RefCell<Option<Stage>> = const { RefCell::new(None) };

@@ -4,25 +4,25 @@
 //! schemas in `docs/internal/TYPED_BINDINGS_UL_AUDIT.md` so the
 //! grammar stays validated against real-world shapes.
 
-use ogham::parser::typed_bindings::{KeyType, PrimType, TypeRef};
-use ogham::parser::{Parser, Statement};
-use ogham::scanner::Scanner;
+use masque::parser::typed_bindings::{KeyType, PrimType, TypeRef};
+use masque::parser::{Parser, Statement};
+use masque::scanner::Scanner;
 
-fn parse(source: &str) -> Result<ogham::parser::Function, ogham::parser::SyntaxError> {
+fn parse(source: &str) -> Result<masque::parser::Function, masque::parser::SyntaxError> {
     let mut scanner = Scanner::new(source.to_string());
     let tokens = scanner.scan();
     let mut parser = Parser::new(tokens);
     parser.parse()
 }
 
-fn parse_ok(source: &str) -> ogham::parser::Function {
+fn parse_ok(source: &str) -> masque::parser::Function {
     match parse(source) {
         Ok(f) => f,
         Err(err) => panic!("expected source to parse, got error: {:?}", err),
     }
 }
 
-fn parse_err(source: &str) -> ogham::parser::SyntaxError {
+fn parse_err(source: &str) -> masque::parser::SyntaxError {
     match parse(source) {
         Ok(_) => panic!("expected parse error, got success for source:\n{}", source),
         Err(e) => e,
@@ -239,7 +239,7 @@ fn self_in_host_state_errors() {
 
 #[test]
 fn integer_default_parses() {
-    use ogham::parser::typed_bindings::SchemaLiteral;
+    use masque::parser::typed_bindings::SchemaLiteral;
     let module = parse_ok("host_state { count: int = 42 };");
     let Statement::HostStateDeclaration(decl) = &module.body.statement_list[0] else {
         panic!()
@@ -249,7 +249,7 @@ fn integer_default_parses() {
 
 #[test]
 fn negative_integer_default_parses() {
-    use ogham::parser::typed_bindings::SchemaLiteral;
+    use masque::parser::typed_bindings::SchemaLiteral;
     let module = parse_ok("host_state { offset: int = -7 };");
     let Statement::HostStateDeclaration(decl) = &module.body.statement_list[0] else {
         panic!()
@@ -259,7 +259,7 @@ fn negative_integer_default_parses() {
 
 #[test]
 fn float_string_bool_defaults_parse() {
-    use ogham::parser::typed_bindings::SchemaLiteral;
+    use masque::parser::typed_bindings::SchemaLiteral;
     let module = parse_ok(
         r#"host_state {
               x: float = 1.5,

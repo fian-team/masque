@@ -15,17 +15,17 @@
 
 use std::collections::HashMap;
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::event::Event;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::point::Point;
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::style::Color;
-use ogham::widget::text_widget::TextWidget;
-use ogham::widget::vocabulary::scan_source;
-use ogham::widget::{Widget, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::event::Event;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::point::Point;
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::style::Color;
+use masque::widget::text_widget::TextWidget;
+use masque::widget::vocabulary::scan_source;
+use masque::widget::{Widget, WidgetRef};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -53,36 +53,36 @@ fn find_keyed(node: &WidgetRef, key: &str) -> Option<WidgetRef> {
     children.iter().find_map(|c| find_keyed(c, key))
 }
 
-fn mounted(src: &str, state: &[(&str, Value)]) -> Ogham {
+fn mounted(src: &str, state: &[(&str, Value)]) -> Masque {
     let config = RuntimeConfig::new().with_host_state(
         state
             .iter()
             .map(|(k, v)| (k.to_string(), v.clone()))
             .collect::<HashMap<_, _>>(),
     );
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     frames(&mut o, 3);
     o
 }
 
-fn frames(o: &mut Ogham, n: usize) {
+fn frames(o: &mut Masque, n: usize) {
     for _ in 0..n {
         o.frame(W, H, DT).expect("frame");
     }
 }
 
-fn hover(o: &mut Ogham, x: f32, y: f32) {
+fn hover(o: &mut Masque, x: f32, y: f32) {
     o.get_ui_mut()
         .call_event(&Event::with_point("mouse_move".to_string(), Point::new(x, y)));
 }
 
-fn text_color(o: &Ogham) -> Color {
+fn text_color(o: &Masque) -> Color {
     let text = find::<TextWidget>(&o.get_ui().root).expect("a Text in the tree");
     let g = text.lock().unwrap();
     g.downcast_ref::<TextWidget>().unwrap().shown_color()
 }
 
-fn text_hovered(o: &Ogham) -> bool {
+fn text_hovered(o: &Masque) -> bool {
     let text = find::<TextWidget>(&o.get_ui().root).expect("a Text in the tree");
     let g = text.lock().unwrap();
     g.is_hovered()
@@ -198,7 +198,7 @@ let main = fn () {
 };
 "#;
 
-fn row_fill(o: &Ogham) -> Option<Color> {
+fn row_fill(o: &Masque) -> Option<Color> {
     let row = find_keyed(&o.get_ui().root, "row").expect("the row");
     let g = row.lock().unwrap();
     g.downcast_ref::<FlexWidget>().unwrap().style.background_color
@@ -307,13 +307,13 @@ let main = fn () {
 };
 "#;
 
-fn portal_open(o: &Ogham) -> bool {
+fn portal_open(o: &Masque) -> bool {
     let p = find::<PortalWidget>(&o.get_ui().root).expect("the portal");
     let g = p.lock().unwrap();
     g.downcast_ref::<PortalWidget>().unwrap().is_open()
 }
 
-fn tip_opacity(o: &Ogham) -> Option<f32> {
+fn tip_opacity(o: &Masque) -> Option<f32> {
     let tip = find_keyed(&o.get_ui().root, "tip")?;
     let g = tip.lock().unwrap();
     Some(g.downcast_ref::<FlexWidget>().unwrap().style.opacity.value())
@@ -359,7 +359,7 @@ fn a_hover_portal_replays_its_entry_every_time_it_opens() {
 #[test]
 fn the_vocabulary_knows_the_new_keys() {
     let found = scan_source(
-        "motion.ogh",
+        "motion.masque",
         r#"
 let main = fn () {
   Flex {
@@ -379,7 +379,7 @@ let main = fn () {
 #[test]
 fn a_text_transition_names_only_colour() {
     let found = scan_source(
-        "motion.ogh",
+        "motion.masque",
         r#"let main = fn () { Text { text: "x", style: { transition: { size: "spring" } } } };"#,
     );
     assert_eq!(found.len(), 1, "{found:#?}");

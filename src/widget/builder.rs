@@ -39,7 +39,7 @@ pub struct WidgetRegistry {
     /// as it has always behaved: drop what is not recognised, silently.
     ///
     /// Held by the registry rather than the runtime because the registry
-    /// is what a factory already has in hand, and because `Ogham::update`
+    /// is what a factory already has in hand, and because `Masque::update`
     /// clones it out of the runtime once per frame: a lock per widget to
     /// read a flag is a cost the default mode should not pay.
     pub(crate) vocabulary: Option<crate::widget::vocabulary::SinkHandle>,
@@ -63,12 +63,12 @@ impl WidgetRegistry {
         reg.register("presence", |reg, rt, desc| {
             create_presence_widget(reg, rt, desc)
         });
-        // Phase 2 Portal — built-in widget; consumer .ogh writes
+        // Phase 2 Portal — built-in widget; consumer .masque writes
         // `Portal { open, focus_trap, children }`.
         reg.register("portal", |reg, rt, desc| {
             create_portal_widget(reg, rt, desc)
         });
-        // Host-painted leaf — consumer .ogh writes
+        // Host-painted leaf — consumer .masque writes
         // `Canvas { painter: "name", props: { … }, style: { … } }`.
         reg.register("canvas", |_reg, rt, desc| create_canvas_widget(rt, desc));
         // Native slider — `Slider { value, min, max, step, on_change,
@@ -141,7 +141,7 @@ fn make_event_listener(
                     .expect("runtime lock poisoned")
                     .call_bytecode_closure(&closure, &[]);
                 if let Err(err) = result {
-                    eprintln!("[ogham] {} handler error: {:?}", ename, err);
+                    eprintln!("[masque] {} handler error: {:?}", ename, err);
                 }
             }))
         }
@@ -168,7 +168,7 @@ fn make_event_listener_with_arg(
                     .expect("runtime lock poisoned")
                     .call_bytecode_closure(&closure, &[arg]);
                 if let Err(err) = result {
-                    eprintln!("[ogham] {} handler error: {:?}", ename, err);
+                    eprintln!("[masque] {} handler error: {:?}", ename, err);
                 }
             }))
         }
@@ -212,7 +212,7 @@ fn make_drag_event_listener(
                     .expect("runtime lock poisoned")
                     .call_bytecode_closure(&closure, &args);
                 if let Err(err) = result {
-                    eprintln!("[ogham] {} handler error: {:?}", ename, err);
+                    eprintln!("[masque] {} handler error: {:?}", ename, err);
                 }
             }))
         }
@@ -265,7 +265,7 @@ fn make_accepts_drop_predicate(
                     Ok(Value::Boolean(b)) => b,
                     Ok(_) => false,
                     Err(err) => {
-                        eprintln!("[ogham] accepts_drop predicate error: {:?}", err);
+                        eprintln!("[masque] accepts_drop predicate error: {:?}", err);
                         false
                     }
                 }
@@ -333,7 +333,7 @@ pub fn widget_value_to_widget_ref(
     if let Value::Widget(runtime_widget) = widget_value {
         let identifier = runtime_widget.identifier.get().to_lowercase();
         // Every widget in the tree is built through here — the root from
-        // `Ogham::update`, every child from its parent's factory — so
+        // `Masque::update`, every child from its parent's factory — so
         // this is the one place the check has to sit to be complete.
         // Diagnostics only: what the builder does with the descriptor
         // below is byte for byte what it did before.
@@ -1028,7 +1028,7 @@ fn create_flex_widget(
     }
 
     // Phase 3 M1: drag-source / drop-target properties.
-    // An empty string declares no source: ogham has no null literal, and a
+    // An empty string declares no source: masque has no null literal, and a
     // document that draws one widget for both "may be picked up" and "may
     // not" needs a value that means *not this one* (`drag_gesture` rule 1).
     match descriptor.properties.get("drag_payload") {

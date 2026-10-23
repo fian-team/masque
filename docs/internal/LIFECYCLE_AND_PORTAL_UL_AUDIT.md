@@ -2,7 +2,7 @@
 
 > Companion to [`LIFECYCLE_AND_PORTAL.md`](LIFECYCLE_AND_PORTAL.md)
 > (the design contract). This document grounds the design in
-> Untold Lore's actual UI surface — 20 `.ogh` files plus their
+> Untold Lore's actual UI surface — 20 `.masque` files plus their
 > Rust wrappers across `src/client/` and `src/`. The goal is to
 > verify the Phase 2 surfaces (lifecycle hooks, Portal,
 > `has_input_blocking_portal`) cover real consumer needs without
@@ -47,7 +47,7 @@ The Phase 2 design covers UL well. Five concrete findings:
 5. **The push-driven state model composes naturally with
    hooks.** Hook bodies read host state via the existing
    `GetHostState` opcode; nothing in the Phase 2 design
-   collides with how UL drives Ogham. Migration is
+   collides with how UL drives Masque. Migration is
    incremental — every UI can adopt at its own pace.
 
 **M5 deliverables this audit recommends:**
@@ -117,7 +117,7 @@ formatting strings, building grids) runs unconditionally.
 UL has two explicit save-on-close paths today:
 
 - **Settings**: `CloseSettings` action at `actions.rs:2646`
-  calls `client_settings.save()`. The Ogham UI dispatches
+  calls `client_settings.save()`. The Masque UI dispatches
   the close action; the action handler does the I/O.
 - **Ruleset / LifeStages editors**:
   `SaveAndExitRulesetEditor` action saves to disk before
@@ -138,7 +138,7 @@ Five implicit candidates:
 
 **Migration shape:**
 
-```ogh
+```masque
 on_unmount {
   if was_modified {
     event("save_settings", form);
@@ -148,7 +148,7 @@ on_unmount {
 
 The Rust handler for `save_settings` does what
 `actions.rs:2646` does today; the routing through
-`CloseSettings` becomes implicit (Ogham closes the UI;
+`CloseSettings` becomes implicit (Masque closes the UI;
 on_unmount fires; event dispatches; handler saves).
 
 **Important constraint from the design:** state writes from
@@ -168,7 +168,7 @@ hardcoded-backdrop pattern would benefit from Portal:
 |---|---|---|
 | Escape menu | Full-screen Flex with `background_color: colors.backdrop`, alpha-160 black; `overlay_state` Rust bool gates input (`update.rs:347, 1469`); confirm-disconnect inline subtree swap | Focus trap; backdrop as ordinary child; `has_input_blocking_portal` collapses overlay_state; nested confirm escapes parent panel bounds |
 | Inventory HUD shop overlay | Inline subtree swap based on shop context | Focus trap during transactions; backdrop dismiss-on-outside |
-| Settings keybind capture | `rebinding: String` flag mirrored to Ogham; no visual popover, just a highlight | Centered modal showing "Press a key…" with focus trap |
+| Settings keybind capture | `rebinding: String` flag mirrored to Masque; no visual popover, just a highlight | Centered modal showing "Press a key…" with focus trap |
 | Social create-faction form | `show_create_faction_form: bool` toggles form visibility inline | Centered modal-style form; backdrop dismiss |
 | Character Creation review panel | `review_*` state-driven inline subtree | Modal-style review confirmation before commit |
 
@@ -183,14 +183,14 @@ Plus three "doesn't exist yet" categories:
   editors would benefit from real dropdowns for type
   selection.
 - **Context menus**: zero in UL. DM HUD comment at
-  `dm_hud.ogh:16–20` explicitly notes this absence. Right-
+  `dm_hud.masque:16–20` explicitly notes this absence. Right-
   click menus on map entities, inventory items, NPC pills
   all become trivial.
 
 ### Finding 4 — Zero `Drop` impls means cleanup is silent
 
 Across 20 UI wrapper structs in UL, **none implement
-`Drop`**. Cleanup happens implicitly: the Ogham runtime
+`Drop`**. Cleanup happens implicitly: the Masque runtime
 unmounts, `overlay_state` clears, in-flight server requests
 complete or are abandoned, no explicit teardown runs.
 
@@ -205,7 +205,7 @@ wrapper drops, file handles aren't held). But it does mean:
 - Cached snapshot state in form structures is discarded
   without flushing.
 
-`on_unmount` makes cleanup *visible* in the `.ogh`. The
+`on_unmount` makes cleanup *visible* in the `.masque`. The
 audit recommends a per-UI cleanup pass during M5 — not
 because anything's broken, but because the explicit
 declaration surfaces invariants that today live in the
@@ -220,8 +220,8 @@ way. **It doesn't.**
 
 UL's higher-level state transitions (login → character
 select → in-game → escape menu) are managed at the
-client/mod.rs level by swapping which Ogham instance is
-active. From the Ogham runtime's perspective, this is just
+client/mod.rs level by swapping which Masque instance is
+active. From the Masque runtime's perspective, this is just
 "a different module loaded" — the previous module's state
 gets cleaned up by the standard runtime teardown when its
 runtime is dropped.
@@ -259,21 +259,21 @@ UL UI today:
 // Rust update() called every tick
 fn update(&mut self) {
     let snapshot = server_snapshot();
-    self.ogham.set_host_state("player_health", snapshot.player.health);
-    self.ogham.set_host_state("player_mana", snapshot.player.mana);
+    self.masque.set_host_state("player_health", snapshot.player.health);
+    self.masque.set_host_state("player_mana", snapshot.player.mana);
     // ... 17 more
 }
 ```
 
 After Phase 2, the UI declares which fields it cares about:
 
-```ogh
+```masque
 effect (host_state.player_health) { /* react */ };
 effect (host_state.player_mana)   { /* react */ };
 ```
 
-The Rust side still pushes the snapshot (Ogham doesn't pull
-from Rust), but reactive logic moves into `.ogh` where it
+The Rust side still pushes the snapshot (Masque doesn't pull
+from Rust), but reactive logic moves into `.masque` where it
 belongs. This is a meaningful shift in where logic lives,
 not just a syntactic cleanup.
 
@@ -283,7 +283,7 @@ Every save-on-close candidate in UL is naturally an
 `event(...)` dispatch (Rust handler does the I/O). But the
 "intuitive" temptation for someone migrating would be:
 
-```ogh
+```masque
 on_unmount {
   // WRONG — writes are discarded
   state.committed_form = compute_committed_form(form);
@@ -303,7 +303,7 @@ registers different event handlers than the audio tab.
 Today this is all done in Rust at construction. In a
 naive `on_mount` migration:
 
-```ogh
+```masque
 let settings = fn (active_tab) {
   if active_tab == "keybinds" {
     on_mount { register_keybind_handlers(); };  // foot-gun!
@@ -316,7 +316,7 @@ warns. The warning text needs to be specific enough that a
 UL author migrating Settings recognizes the pattern and
 restructures to:
 
-```ogh
+```masque
 on_mount { register_keybind_handlers(); };
 
 effect (active_tab) {
@@ -333,7 +333,7 @@ hypothetical work.
 
 ### `has_input_blocking_portal` as the ONE runtime API is correct
 
-UL needs exactly one signal from Ogham about portal state:
+UL needs exactly one signal from Masque about portal state:
 "should I gate world input?" The audit found no other
 runtime-side question UL would ask about portal state. No
 need for `active_portals()`, no need for `portal_count()`,
@@ -347,7 +347,7 @@ audit confirms this is fine for UL: the recurring patterns
 that *would* benefit from helper hooks (form-state
 mirroring, server-snapshot polling, save-on-close) are
 each used 1–3 times. Inlining them in each UI is acceptable;
-factoring into shared `fn`s in a `components.ogh`-style
+factoring into shared `fn`s in a `components.masque`-style
 file handles the few places repetition would matter.
 
 ---
@@ -356,7 +356,7 @@ file handles the few places repetition would matter.
 
 Quantitative estimates of the post-Phase-2 picture.
 
-### Lines of Rust UI code likely to migrate to `.ogh`
+### Lines of Rust UI code likely to migrate to `.masque`
 
 | Category | Today | After Phase 2 | Delta |
 |---|---|---|---|
@@ -365,13 +365,13 @@ Quantitative estimates of the post-Phase-2 picture.
 | Explicit `Close*` action variants | 14 | ~10 | −4 (−29%) |
 | Per-UI Arc<Mutex<FormState>> mirrors | 8 | ~5 | −3 (−38%) |
 | `overlay_state: Option<...>` plumbing in `update.rs` | ~30 LOC | ~5 LOC | −25 |
-| `confirm_*: bool` flags in `mod.rs` | ~6 | 0 (move into `.ogh` `state`) | −6 |
+| `confirm_*: bool` flags in `mod.rs` | ~6 | 0 (move into `.masque` `state`) | −6 |
 
 Estimates are rough — they assume a thorough migration of
 heavy UIs. Light UIs (Tip Log, Chest, Crafting) gain less
 because they have less to migrate.
 
-### Lines of `.ogh` likely to grow
+### Lines of `.masque` likely to grow
 
 | Category | Today | After Phase 2 | Delta |
 |---|---|---|---|
@@ -379,11 +379,11 @@ because they have less to migrate.
 | `on_unmount` blocks | 0 | ~12 | +12 |
 | `effect` blocks | 0 | ~30 | +30 |
 | Portal usages | 0 | ~8 | +8 |
-| Tooltip / dropdown / context-menu fns in `components.ogh` | 0 | ~3 | +3 |
+| Tooltip / dropdown / context-menu fns in `components.masque` | 0 | ~3 | +3 |
 
-Total `.ogh` LOC growth: ~150–250 lines across UL,
+Total `.masque` LOC growth: ~150–250 lines across UL,
 heavily concentrated in the migrated UIs. Net codebase
-size change is negative (Rust losses outweigh Ogham gains).
+size change is negative (Rust losses outweigh Masque gains).
 
 ### New capabilities unlocked
 
@@ -442,7 +442,7 @@ Portal.
 | 10 | DM HUD: tooltips on status pills | 0.5 day | New capability |
 | 11 | Character Creation: review panel as Portal | 1 day | Visual polish |
 | 12 | Social: create-faction as Portal | 0.5 day | Modal feel |
-| 13 | DM context menu (right-click on entities) | 1 day | Brand-new capability per dm_hud.ogh:16–20 |
+| 13 | DM context menu (right-click on entities) | 1 day | Brand-new capability per dm_hud.masque:16–20 |
 | 14 | Editor UIs (Map, Blueprint, Ruleset, LifeStages): `on_mount` for registry data; keep per-tick for editor state | 2 days each | Modest per-UI; high cumulative |
 | 15 | `place_inspector` save-on-unmount | 0.5 day | Quality-of-life |
 | 16 | `sea_config` save-on-unmount | 0.5 day | Quality-of-life |
@@ -463,9 +463,9 @@ incrementally as time allows; nothing blocks.
   rather than reading via some pull mechanism. Phase 2
   doesn't add a pull side; that's a separate concern (and
   arguably correct as-is — Rust knows when the snapshot
-  changed, Ogham doesn't).
+  changed, Masque doesn't).
 - **Cross-UI state coordination.** UL's pattern of swapping
-  which Ogham instance is active stays the same. Phase 2
+  which Masque instance is active stays the same. Phase 2
   hooks operate within a single instance.
 
 ---
@@ -523,7 +523,7 @@ or explicitly punt on.
 
 6. **What about hot-reload during a focus-trapped portal?**
    If the escape menu is open with focus trapped, and the
-   author hot-reloads the escape menu's `.ogh` file, what
+   author hot-reloads the escape menu's `.masque` file, what
    happens to the focus stack? Per design open question #6,
    focus stack clears on hot-reload. UL's escape menu being
    the validation gate means this gets tested in M5
@@ -546,14 +546,14 @@ or explicitly punt on.
    Confirm at M3 that the default registration is visible
    to UL without code changes.
 
-9. **Dropdown `fn` in `examples/portals/components.ogh`.**
+9. **Dropdown `fn` in `examples/portals/components.masque`.**
    The design ships `Modal()` and `Tooltip()` as library
    `fn`s. The audit suggests adding `Dropdown()` too —
    Settings is a clear consumer that would adopt it
    immediately. Should the Phase 2 examples library include
    `Dropdown()`, or punt to a follow-up? Recommendation:
    include in M5 since the implementation cost is small
-   (~30 LOC of `.ogh`) and the consumer demand is concrete.
+   (~30 LOC of `.masque`) and the consumer demand is concrete.
 
 10. **`focus_trap` with non-focusable subtree.** What happens
     if a `focus_trap: true` Portal's children contain no
@@ -671,7 +671,7 @@ Social / Tips / Disconnect / Reset Run, plus nested confirm
 dialogs for Disconnect and Reset.
 
 **Setup:** Built inline at `client/mod.rs:2163` via
-`Self::build_escape_ogham()`. No separate UI wrapper.
+`Self::build_escape_masque()`. No separate UI wrapper.
 Confirmation state stored as `confirm_disconnect`,
 `confirm_reset_run` bools at `mod.rs:1209–1210`.
 
@@ -680,8 +680,8 @@ Confirmation state stored as `confirm_disconnect`,
 
 **Overlays:** Full-screen Flex with
 `background_color: colors.backdrop` (alpha-160 black) at
-`escape_menu.ogh:100–211`. Input gating via `overlay_state`
-in `update.rs:347, 1469` — *not* an Ogham concept. Two
+`escape_menu.masque:100–211`. Input gating via `overlay_state`
+in `update.rs:347, 1469` — *not* a Masque concept. Two
 nested confirm sub-panels swap inline via `match`.
 
 **Per-tick polling:** None — confirmation state pushed via
@@ -693,9 +693,9 @@ M5 migration. Becomes a Portal with `focus_trap: true`;
 backdrop is the first child; nested confirm-disconnect is
 its own nested Portal; `overlay_state: Option<...>`
 collapses to `let overlay_active =
-ogham.has_input_blocking_portal()` on the Rust side.
+masque.has_input_blocking_portal()` on the Rust side.
 `confirm_*` bools move from `mod.rs` into `state` cells in
-`escape_menu.ogh`.
+`escape_menu.masque`.
 
 ### inventory_hud
 
@@ -745,7 +745,7 @@ re-injects from DmMode and ServerSnapshot.
 **Migration verdict — Medium.** Tooltips on status pills
 are a quick win (M5 stretch). Context menus would unlock
 the "right-click NPC → Inspect / Possess / Spawn here"
-pattern explicitly noted as missing at `dm_hud.ogh:16–20`
+pattern explicitly noted as missing at `dm_hud.masque:16–20`
 — but that's a feature add, not a migration, and probably
 post-Phase-2.
 
@@ -943,7 +943,7 @@ button). Editor state stays in Rust.
 NPCs, spawn points, biome painter).
 
 **Setup:** Complex (3.8K-line wrapper). WorldMapEditor +
-Ogham UI wrap.
+Masque UI wrap.
 
 **Teardown:** Explicit save / discard via toolbar; no
 on-close.
@@ -1075,7 +1075,7 @@ remaining migrations, taken at the team's pace.
    - Add a sharper warning to the body-scope section about
      state writes from `on_unmount` being discarded
      (UL audit shows this is the most common temptation).
-   - Add `Dropdown()` to the `examples/portals/components.ogh`
+   - Add `Dropdown()` to the `examples/portals/components.masque`
      reference library shipped in M5 (Settings is a clear
      immediate consumer).
 3. The implementation plan

@@ -8,15 +8,15 @@
 //
 // The host side of this file is one line per frame:
 //
-//     ogham.set_anchor("cursor", Point::new(mouse_x, mouse_y));
+//     masque.set_anchor("cursor", Point::new(mouse_x, mouse_y));
 //
 // The `client` previewer already does exactly that on every pointer
 // move, so this file runs as-is: `cargo run --bin client`, ctrl+O,
-// pick `examples/portals/anchored_tooltip.ogh`, and move the mouse.
+// pick `examples/portals/anchored_tooltip.masque`, and move the mouse.
 //
 // Note what is NOT here: no edge arithmetic, no "am I near the
 // bottom" branch, no measured card width. `anchor_policy` needs the
-// subtree's laid-out size, which `.ogh` cannot see, so the renderer
+// subtree's laid-out size, which `.masque` cannot see, so the renderer
 // applies it after layout — that is the entire reason anchoring is
 // a Portal property rather than a composition pattern.
 

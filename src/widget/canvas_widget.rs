@@ -1,14 +1,14 @@
 //! Host-painted `Canvas` leaf — the one place a host application draws
-//! its own content *inside* Ogham's flex layout.
+//! its own content *inside* Masque's flex layout.
 //!
-//! Everything Ogham can already paint goes through the typed
+//! Everything Masque can already paint goes through the typed
 //! [`RenderContext`] primitives (`fill_rect`, `draw_border`, `draw_text`,
 //! …). Some host content is not expressible that way: arcs, wedges,
 //! gradients along a path, blend modes, colour matrices. Historically the
 //! only answer was "paint it on your own full-screen surface underneath a
-//! transparent Ogham root", which works for a *screen* and falls apart for
+//! transparent Masque root", which works for a *screen* and falls apart for
 //! a *widget* — a widget has siblings, and its size is a layout outcome,
-//! not a constant. Hosts ended up hardcoding measured Ogham dimensions on
+//! not a constant. Hosts ended up hardcoding measured Masque dimensions on
 //! the Skia side and defending them with geometry tests.
 //!
 //! `Canvas` closes that gap. It is a leaf widget that participates in flex
@@ -27,12 +27,12 @@
 //! - [`CanvasWidget`](canvas_widget::CanvasWidget) is the *layout
 //!   citizen*: sizes itself from a [`FlexStyle`](style::FlexStyle),
 //!   hit-tests, reconciles, and delegates paint to the painter named in
-//!   its `.ogh` declaration.
+//!   its `.masque` declaration.
 //!
 //! # Direction of flow
 //!
 //! Nothing flows *out* of a painter. It receives the `props` map declared
-//! in `.ogh` verbatim and reads live host data through whatever
+//! in `.masque` verbatim and reads live host data through whatever
 //! `Arc<Mutex<…>>` it captured at registration time, exactly as an event
 //! handler does. A painter that reached back into the runtime to push
 //! state would violate [`INTENT.md`] §2.
@@ -126,12 +126,12 @@ impl<'a> Painter<'a> {
     }
 }
 
-/// A host-registered paint routine, named from `.ogh` by
+/// A host-registered paint routine, named from `.masque` by
 /// `Canvas { painter: "name" }` and registered with
 /// [`RuntimeConfig::with_painter`](crate::runtime::config::RuntimeConfig::with_painter).
 ///
 /// The second argument is the widget's `props:` map, handed over verbatim
-/// each frame — the only channel from `.ogh` into the painter. Live host
+/// each frame — the only channel from `.masque` into the painter. Live host
 /// data comes from handles the closure captured at registration.
 ///
 /// `Send + Sync` matches `WidgetFactory` and the event-handler map, so a
@@ -168,7 +168,7 @@ fn warn_blank_canvas_once(painter_name: &str) {
     }
     warned.push(painter_name.to_string());
     eprintln!(
-        "[ogham] Canvas painter {:?} drew nothing: this rendering backend does not \
+        "[masque] Canvas painter {:?} drew nothing: this rendering backend does not \
          implement RenderContext::with_local_canvas",
         painter_name
     );
@@ -178,7 +178,7 @@ fn warn_blank_canvas_once(painter_name: &str) {
 fn warn_blank_canvas_once(_painter_name: &str) {}
 
 /// A leaf widget whose pixels are painted by host Rust rather than by
-/// Ogham's typed primitives.
+/// Masque's typed primitives.
 ///
 /// Sizing comes from [`FlexStyle`] (`width` / `height` accept `"grow"`,
 /// `"shrink"`, or a number) rather than from bare required numbers, so a
@@ -198,14 +198,14 @@ fn warn_blank_canvas_once(_painter_name: &str) {}
 ///
 /// [`INTENT.md`]: ../../../docs/internal/INTENT.md
 pub struct CanvasWidget {
-    /// The painter name exactly as written in `.ogh`. Kept even after the
+    /// The painter name exactly as written in `.masque`. Kept even after the
     /// painter itself is resolved, because reconciliation compares names
     /// (a different painter is a different widget) and the blank-backend
     /// diagnostic needs something to call it.
     pub painter_name: String,
     /// The resolved painter. `None` only when the widget was built without
     /// a registry to resolve against — the builder rejects an unregistered
-    /// name outright, so a widget reached through `.ogh` always carries a
+    /// name outright, so a widget reached through `.masque` always carries a
     /// painter.
     pub painter: Option<CanvasPainter>,
     /// The `props:` map handed to the painter verbatim each frame.
@@ -318,7 +318,7 @@ impl Widget for CanvasWidget {
                     parent_width
                 }
             }
-            // `Percent` has no `.ogh` syntax (`parse_size_value` never
+            // `Percent` has no `.masque` syntax (`parse_size_value` never
             // produces it) and `FlexWidget` resolves it to 0 as well.
             // Mirrored rather than handled so the two stay in step.
             Size::Percent(_) => 0.0,

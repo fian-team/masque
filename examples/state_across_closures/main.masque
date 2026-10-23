@@ -1,6 +1,6 @@
-import "./view_one.ogh";
-import "./view_two.ogh";
-import "./view_three.ogh";
+import "./view_one.masque";
+import "./view_two.masque";
+import "./view_three.masque";
 
 let main = fn () {
   state view = "one";

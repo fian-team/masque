@@ -2,7 +2,7 @@
 //! *language* holds it (`docs/internal/APPLICATION.md` §4.1, §4.6).
 //!
 //! **§4.6, top-level binding**, is the load-bearing property and it is
-//! constructed here rather than asserted: `tests/documents/manor_hud.ogh`
+//! constructed here rather than asserted: `tests/documents/manor_hud.masque`
 //! is regency's in-manor HUD family, checked in verbatim — five helpers,
 //! twenty unqualified reads of `hud`. The two arms of
 //! [`the_manor_screen_family_compiles_against_a_selection_unedited`] put
@@ -15,21 +15,21 @@
 //! tests are `contract/tests/selection.rs`: this file has no store in it,
 //! because §4.6 is answered by the compiler alone.
 
-use ogham::parser::Parser;
-use ogham::runtime::compiler::Compiler;
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::scanner::Scanner;
-use ogham::Ogham;
+use masque::parser::Parser;
+use masque::runtime::compiler::Compiler;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::scanner::Scanner;
+use masque::Masque;
 
 /// regency's palette, verbatim.
-const STATIONERY: &str = include_str!("documents/manor_stationery.ogh");
+const STATIONERY: &str = include_str!("documents/manor_stationery.masque");
 
 /// regency's manor HUD family, verbatim. Read by both arms, unedited.
-const HUD: &str = include_str!("documents/manor_hud.ogh");
+const HUD: &str = include_str!("documents/manor_hud.masque");
 
 /// The record block those helpers are written against today — regency's
-/// `Pip` and `Hud`, verbatim from `client.ogh` lines 72-98.
+/// `Pip` and `Hud`, verbatim from `client.masque` lines 72-98.
 ///
 /// Twenty-four fields of shape the document restates and the Rust builder
 /// restates, held together by a hand-written conformance test. It is what
@@ -190,7 +190,7 @@ fn select_is_still_an_ordinary_name() {
 /// half of "the migration touches zero helper bodies".
 #[test]
 fn a_selected_name_reads_the_host_state_key_of_the_same_name() {
-    let ui = Ogham::from_source(
+    let ui = Masque::from_source(
         "select manor { hud };\nlet main = fn () { Text { text: hud } };",
         RuntimeConfig::new().with_host_state(
             [("hud".to_string(), Value::String(String::new()))]

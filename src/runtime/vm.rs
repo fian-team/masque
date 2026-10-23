@@ -1,4 +1,4 @@
-//! Stack-based bytecode VM that executes compiled Ogham programs.
+//! Stack-based bytecode VM that executes compiled Masque programs.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -856,13 +856,13 @@ impl VM {
                     // and swallowing it made a broken wiring indistinguishable
                     // from a working one. Say what broke.
                     if let Err(e) = runtime.emit_event(&event_name, &all_args[1..]) {
-                        eprintln!("[ogham] event '{event_name}' handler failed: {e}");
+                        eprintln!("[masque] event '{event_name}' handler failed: {e}");
                     }
                     self.push(Value::Void)?;
                 }
                 OpCode::Log => {
                     let val = self.pop()?;
-                    eprintln!("[ogham] {}", val);
+                    eprintln!("[masque] {}", val);
                     self.push(Value::Void)?;
                 }
                 OpCode::PushContext => {

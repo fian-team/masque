@@ -4,14 +4,14 @@
 //! other non-default layout) instead of being stuck with the
 //! default Grow × Grow column.
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::presence_widget::PresenceWidget;
-use ogham::widget::style::{Direction, Size};
-use ogham::Ogham;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::presence_widget::PresenceWidget;
+use masque::widget::style::{Direction, Size};
+use masque::Masque;
 
-fn build(source: &str) -> Ogham {
-    Ogham::from_source(source, ogham::runtime::config::RuntimeConfig::default())
-        .expect("Ogham::from_source")
+fn build(source: &str) -> Masque {
+    Masque::from_source(source, masque::runtime::config::RuntimeConfig::default())
+        .expect("Masque::from_source")
 }
 
 #[test]
@@ -25,8 +25,8 @@ fn presence_style_overrides_default_grow() {
           }
         };
     "#;
-    let mut ogham = build(src);
-    let root = ogham.get_ui_mut().root.clone();
+    let mut masque = build(src);
+    let root = masque.get_ui_mut().root.clone();
     let guard = root.lock().expect("root lock");
     let presence = guard
         .downcast_ref::<PresenceWidget>()
@@ -49,8 +49,8 @@ fn presence_without_style_uses_default_grow() {
           }
         };
     "#;
-    let mut ogham = build(src);
-    let root = ogham.get_ui_mut().root.clone();
+    let mut masque = build(src);
+    let root = masque.get_ui_mut().root.clone();
     let guard = root.lock().expect("root lock");
     let presence = guard
         .downcast_ref::<PresenceWidget>()
@@ -71,8 +71,8 @@ fn presence_style_can_pick_row_direction() {
           }
         };
     "#;
-    let mut ogham = build(src);
-    let root = ogham.get_ui_mut().root.clone();
+    let mut masque = build(src);
+    let root = masque.get_ui_mut().root.clone();
     let guard = root.lock().expect("root lock");
     let presence = guard
         .downcast_ref::<PresenceWidget>()
@@ -108,11 +108,11 @@ fn presence_holds_child_that_inherits_its_shrink_height() {
           }
         };
     "#;
-    let mut ogham = build(src);
-    ogham.set_screen_size(800.0, 600.0);
-    ogham.get_ui_mut().layout(800.0, 600.0);
+    let mut masque = build(src);
+    masque.set_screen_size(800.0, 600.0);
+    masque.get_ui_mut().layout(800.0, 600.0);
 
-    let root = ogham.get_ui_mut().root.clone();
+    let root = masque.get_ui_mut().root.clone();
     // root is a FlexWidget; descend into its single Presence child.
     let presence_ref = {
         let g = root.lock().expect("root lock");

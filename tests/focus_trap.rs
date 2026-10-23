@@ -6,9 +6,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::{FocusRestoration, PortalEntry, PortalInfo, Widget, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::{FocusRestoration, PortalEntry, PortalInfo, Widget, WidgetRef, UI};
 
 fn make_portal(focus_trap: bool, children: Vec<WidgetRef>) -> WidgetRef {
     let mut p = PortalWidget::new();
@@ -26,7 +26,7 @@ fn entry(portal: &WidgetRef) -> PortalEntry {
     let info = portal.lock().unwrap().as_portal().expect("must be portal");
     PortalEntry {
         widget: portal.clone(),
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer: info.layer,
         focus_trap: info.focus_trap,
         cursor: info.cursor,
@@ -276,7 +276,7 @@ fn sync_focus_stack_lifo_chain_pop_restores_in_order() {
 
 fn make_portal_in_layer(
     focus_trap: bool,
-    layer: ogham::widget::portal_layer::PortalLayer,
+    layer: masque::widget::portal_layer::PortalLayer,
 ) -> WidgetRef {
     let mut p = PortalWidget::new();
     p.open = true;
@@ -285,11 +285,11 @@ fn make_portal_in_layer(
     Arc::new(Mutex::new(p))
 }
 
-fn entry_at(portal: &WidgetRef, layer: ogham::widget::portal_layer::PortalLayer) -> PortalEntry {
+fn entry_at(portal: &WidgetRef, layer: masque::widget::portal_layer::PortalLayer) -> PortalEntry {
     let info = portal.lock().unwrap().as_portal().expect("must be portal");
     PortalEntry {
         widget: portal.clone(),
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer,
         focus_trap: info.focus_trap,
         cursor: info.cursor,
@@ -298,7 +298,7 @@ fn entry_at(portal: &WidgetRef, layer: ogham::widget::portal_layer::PortalLayer)
 
 #[test]
 fn has_input_blocking_portal_only_walks_overlay_modal_layer() {
-    use ogham::widget::portal_layer::PortalLayer;
+    use masque::widget::portal_layer::PortalLayer;
     let root = make_flex();
     let mut ui = UI::new(root);
     // A focus_trap portal in the Tooltip layer should NOT
@@ -315,7 +315,7 @@ fn has_input_blocking_portal_only_walks_overlay_modal_layer() {
 
 #[test]
 fn focus_trap_in_overlay_modal_does_trip_the_gate() {
-    use ogham::widget::portal_layer::PortalLayer;
+    use masque::widget::portal_layer::PortalLayer;
     let root = make_flex();
     let mut ui = UI::new(root);
     let modal = make_portal_in_layer(true, PortalLayer::OverlayModal);

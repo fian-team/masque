@@ -3,9 +3,9 @@
 //! read the field — so these tests count gaps along a painted edge, on
 //! both the sharp per-side path and the rounded outline path.
 
-use ogham::skia::SkiaEnv;
-use ogham::widget::style::{Border, BorderSide, BorderStyle, Color, Corners};
-use ogham::widget::RenderContext;
+use masque::skia::SkiaEnv;
+use masque::widget::style::{Border, BorderSide, BorderStyle, Color, Corners};
+use masque::widget::RenderContext;
 
 fn side(style: BorderStyle) -> BorderSide {
     BorderSide { width: 2.0, color: Color::new(0, 0, 0, 255), style }
@@ -15,9 +15,9 @@ fn side(style: BorderStyle) -> BorderSide {
 /// its middle row, away from the corners.
 fn breaks_along_the_top(style: BorderStyle, corners: Corners) -> usize {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 64)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 64)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
-    env.surface.canvas().clear(ogham::skia_safe::Color::WHITE);
+    env.surface.canvas().clear(masque::skia_safe::Color::WHITE);
     let s = side(style);
     let border = Border::new(s.clone(), s.clone(), s.clone(), s);
     env.draw_border(&border, 10.0, 10.0, 220.0, 40.0, &corners);
@@ -50,7 +50,7 @@ fn a_dotted_border_has_gaps() {
 #[test]
 fn a_dash_does_not_outlive_its_border() {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 64)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 64)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     let dashed = side(BorderStyle::Dashed);
     env.draw_border(

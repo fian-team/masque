@@ -1,6 +1,6 @@
 # Typed Bindings — Phase 1 Implementation Plan
 
-> **Status: Phase 1 implementation complete (Ogham side).**
+> **Status: Phase 1 implementation complete (Masque side).**
 >
 > Concrete, merge-by-merge implementation plan for Phase 1 of the
 > typed-bindings work. Builds on
@@ -23,16 +23,16 @@
 > - M3 v1 — LSP schema-aware diagnostics + hover. ✅ Shipped.
 >   (Schema-aware completion + record goto-definition deferred to
 >   M3.5 — purely additive, doesn't block downstream work.)
-> - M4 — Workspace + ogham-derive macros. ✅ Shipped.
-> - M5 — TypedOgham + watch_typed + schema match. ✅ Shipped.
-> - M6 — Hot-reload preservation. ✅ Shipped (Ogham side).
+> - M4 — Workspace + masque-derive macros. ✅ Shipped.
+> - M5 — TypedMasque + watch_typed + schema match. ✅ Shipped.
+> - M6 — Hot-reload preservation. ✅ Shipped (Masque side).
 >   The chest_ui smoke test in Untold Lore is a separate-repo
 >   migration that lives on the consumer side; it's the
 >   validation gate for declaring "Phase 1 production-ready" but
->   doesn't block any further Ogham work.
+>   doesn't block any further Masque work.
 >
 > **Test posture (current):** 22 derive smoke tests, 11 typed
-> Ogham e2e tests, 3 hot-reload tests, 24 strict-mode tests, 9
+> Masque e2e tests, 3 hot-reload tests, 24 strict-mode tests, 9
 > LSP integration tests, 35 parser typed-binding tests, 24
 > schema unit tests, 6 SyntaxError builder tests, 4 LSP
 > diagnostic-rendering tests, plus all pre-existing tests
@@ -58,11 +58,11 @@ M3  LSP integration: schema-aware hover, completion, go-to-definition
     └── makes the schema declarations feel worth writing
     └── parallelizable with M2 once M1 lands; ~2 weeks; low risk
 
-M4  Cargo workspace restructure + ogham-derive crate
-    └── OghamRecord, OghamState, OghamMsg derives; field/variant attributes
+M4  Cargo workspace restructure + masque-derive crate
+    └── MasqueRecord, MasqueState, MasqueMsg derives; field/variant attributes
     └── longest pole; ~3-4 weeks; medium-high risk
 
-M5  TypedOgham<S, M> handle + watch_typed + startup schema-match check
+M5  TypedMasque<S, M> handle + watch_typed + startup schema-match check
     └── runtime-side wiring; MPSC event channel; first end-to-end path
     └── depends on M1+M2+M4; ~1-2 weeks; low risk
 
@@ -139,7 +139,7 @@ let length = if err.length > 0 { err.length as u32 } else { 1 };
 let mut diag = Diagnostic {
     range: Range::new(Position::new(line, col), Position::new(line, col + length)),
     severity: Some(DiagnosticSeverity::ERROR),
-    source: Some("ogham".to_string()),
+    source: Some("masque".to_string()),
     message: err.message.clone(),
     ..Default::default()
 };
@@ -168,7 +168,7 @@ have. Revisit if needed.)
 
 - `cargo build --workspace` clean.
 - `cargo test --workspace` passes (no existing parser tests break).
-- Manual LSP smoke test: open an `.ogh` with a known parse error
+- Manual LSP smoke test: open an `.masque` with a known parse error
   in VSCode, confirm the existing diagnostic still renders.
 
 ### Estimated complexity: low
@@ -282,7 +282,7 @@ direct self-reference.
 
 - `src/runtime/schema.rs`: `pub fn load_schema(path: &Path) -> Result<ModuleSchema, _>`.
 - Used by both the LSP (schema-only parse for cross-module record
-  imports) and the `Ogham::watch_typed` startup path. Does not
+  imports) and the `Masque::watch_typed` startup path. Does not
   compile bytecode.
 - Tests: load a file with imports; verify imported records
   appear in the resulting schema.
@@ -310,9 +310,9 @@ direct self-reference.
 - Pluck the inferred schemas from `TYPED_BINDINGS_UL_AUDIT.md`
   for migration-sequence items 1–8 (chest, tip_log, crafting,
   console, blueprint_editor, talents, dm_inventory, dm_hud) and
-  use them as `tests/fixtures/typed_bindings/*.ogh` parser
+  use them as `tests/fixtures/typed_bindings/*.masque` parser
   fixtures. Each must parse and resolve without error.
-- The hot-reload-schema fixture (one `.ogh` importing a record
+- The hot-reload-schema fixture (one `.masque` importing a record
   from another) must load via `load_schema()` end-to-end.
 
 ### Estimated complexity: medium
@@ -416,7 +416,7 @@ surface via the M0-extended `SyntaxError` shape.
   - Wrong arg count
   - Wrong arg type (where statically inferable)
   - Field access on primitive / array / Optional
-- Dogfood: take 2–3 audit `.ogh` schemas, deliberately introduce
+- Dogfood: take 2–3 audit `.masque` schemas, deliberately introduce
   typos in the body, confirm the diagnostics are useful.
 
 ### Estimated complexity: medium
@@ -508,7 +508,7 @@ is the only dependency.
 
 ### Validation gate
 
-- Manual: open a typed `.ogh` in VSCode, confirm hover on a
+- Manual: open a typed `.masque` in VSCode, confirm hover on a
   host_state field shows the type, completion suggests fields,
   go-to-definition jumps to the record.
 - Automated tests where feasible.
@@ -530,10 +530,10 @@ immediately during manual testing.
 
 ---
 
-## Merge 4 — Cargo workspace + ogham-derive crate
+## Merge 4 — Cargo workspace + masque-derive crate
 
-**Goal:** new crate at `crates/ogham-derive/` providing
-`OghamRecord`, `OghamState`, `OghamMsg`. Restructure the repo as
+**Goal:** new crate at `crates/masque-derive/` providing
+`MasqueRecord`, `MasqueState`, `MasqueMsg`. Restructure the repo as
 a Cargo workspace so the derive crate can depend on a shared
 schema-types crate without circular dependencies.
 
@@ -544,48 +544,48 @@ specific risk. Worth its own dedicated implementation push.
 
 **M4a — Workspace restructure** (~2 days)
 
-- Move existing crate to `crates/ogham/`.
+- Move existing crate to `crates/masque/`.
 - Top-level `Cargo.toml` becomes a workspace manifest with
-  `members = ["crates/ogham", "crates/ogham-derive", "crates/ogham-types"]`.
-- New crate `crates/ogham-types/` carries `TypeRef`, `PrimType`,
+  `members = ["crates/masque", "crates/masque-derive", "crates/masque-types"]`.
+- New crate `crates/masque-types/` carries `TypeRef`, `PrimType`,
   `KeyType`, `RecordSchema`, `EventSig`, `ModuleSchema`. Both
-  `ogham` (lib) and `ogham-derive` depend on it.
+  `masque` (lib) and `masque-derive` depend on it.
   - **Why a separate types crate:** the derive macro needs to
     emit code referencing `RecordSchema` etc., but cannot depend
-    on `ogham` itself (which depends on `skia-safe` and a stack
+    on `masque` itself (which depends on `skia-safe` and a stack
     of GUI dependencies that proc-macros don't need or want).
 - Update all internal `use` paths.
 - Validation: `cargo build --workspace`, `cargo test --workspace`
   pass.
 
-**M4b — `OghamRecord` derive** (~5 days)
+**M4b — `MasqueRecord` derive** (~5 days)
 
-- `crates/ogham-derive/src/lib.rs`: `#[proc_macro_derive(OghamRecord, attributes(ogham))]`.
+- `crates/masque-derive/src/lib.rs`: `#[proc_macro_derive(MasqueRecord, attributes(masque))]`.
 - Generates:
-  - `impl OghamRecord for Foo` with associated `OGHAM_SCHEMA`
+  - `impl MasqueRecord for Foo` with associated `MASQUE_SCHEMA`
     (lazy via `LazyLock` since `BTreeMap::new()` is not const).
   - `impl IntoHostValue for &Foo` returning `Value::Map`.
-- Field attributes: `#[ogham(rename = "...")]`, `#[ogham(skip)]`.
-- Tests: `crates/ogham-derive/tests/`. Compile-time and runtime
+- Field attributes: `#[masque(rename = "...")]`, `#[masque(skip)]`.
+- Tests: `crates/masque-derive/tests/`. Compile-time and runtime
   assertions. Use `trybuild` for "this should fail to compile"
   cases (wrong field type for the derive, etc.).
 
-**M4c — `OghamState` derive** (~3 days)
+**M4c — `MasqueState` derive** (~3 days)
 
-- Extends `OghamRecord` with:
+- Extends `MasqueRecord` with:
   - `fn snapshot_into(&self, sink: &mut impl HostStateSink)`
   - `fn diff_apply(&self, prev: &Self, sink: &mut impl HostStateSink)`
 - Both walk the struct fields and call `sink.set(name, &self.field)`.
 - `diff_apply` compares each field with `PartialEq` and skips
   unchanged ones — matches `inject_host_state_if_changed` semantics.
-- `#[ogham(default)]` is purely cosmetic on this side (the schema
+- `#[masque(default)]` is purely cosmetic on this side (the schema
   carries it; the macro does not consume it for codegen).
 
-**M4d — `OghamMsg` derive** (~5 days)
+**M4d — `MasqueMsg` derive** (~5 days)
 
-- `#[proc_macro_derive(OghamMsg, attributes(ogham))]` on enums.
+- `#[proc_macro_derive(MasqueMsg, attributes(masque))]` on enums.
 - Generates:
-  - `const OGHAM_EVENTS: &[(&'static str, EventSig)]` — declared
+  - `const MASQUE_EVENTS: &[(&'static str, EventSig)]` — declared
     events. (Or a `LazyLock` HashMap if perf demands.)
   - `fn try_from_event(name: &str, args: &[Value]) -> Option<Self>`
     — switch over variant names; for each, parse `args` into the
@@ -593,17 +593,17 @@ specific risk. Worth its own dedicated implementation push.
   - `fn register(config: &mut RuntimeConfig, tx: Sender<Self>)`
     — for each declared variant, `config.with_event_handler(name, ...)`
     where the closure parses args and pushes to `tx`.
-- Variant attributes: `#[ogham(rename = "...")]`.
+- Variant attributes: `#[masque(rename = "...")]`.
 - Tests: `trybuild` for compile-fail cases (variant with
   unsupported field type, missing rename matching schema, etc.).
 
 **M4e — Reverse direction: `TryFromValue` trait** (~2 days)
 
-- Used by `OghamMsg::try_from_event` to parse args.
-- Lives in `ogham-types` (to avoid a circular dep with the derive
+- Used by `MasqueMsg::try_from_event` to parse args.
+- Lives in `masque-types` (to avoid a circular dep with the derive
   crate).
 - Impls for primitives (i32, f32, f64, bool, String) and records
-  (auto via `#[derive(OghamRecord)]`'s reverse path).
+  (auto via `#[derive(MasqueRecord)]`'s reverse path).
 - Container impls: `Vec<T> where T: TryFromValue`,
   `HashMap<String, V>`, `Option<T>`.
 
@@ -613,7 +613,7 @@ specific risk. Worth its own dedicated implementation push.
   Use `syn`'s span machinery to point errors at the right field
   / variant.
 - Common cases: "field `foo: Bar` — `Bar` does not implement
-  `OghamRecord`" should highlight `Bar`.
+  `MasqueRecord`" should highlight `Bar`.
 - This is iteratively polishable; ship with adequate errors and
   improve over time.
 
@@ -622,11 +622,11 @@ specific risk. Worth its own dedicated implementation push.
 | File | Change |
 |---|---|
 | `Cargo.toml` (root) | Workspace manifest |
-| `crates/ogham/Cargo.toml` | Existing crate, moved |
-| `crates/ogham-types/` (new crate) | TypeRef, schemas, traits |
-| `crates/ogham-derive/` (new crate) | Three derives |
-| `crates/ogham/src/runtime/schema.rs` | Re-exports from `ogham-types` |
-| `crates/ogham/src/runtime/host_state.rs` | `IntoHostValue` impls move to or coexist with the new traits |
+| `crates/masque/Cargo.toml` | Existing crate, moved |
+| `crates/masque-types/` (new crate) | TypeRef, schemas, traits |
+| `crates/masque-derive/` (new crate) | Three derives |
+| `crates/masque/src/runtime/schema.rs` | Re-exports from `masque-types` |
+| `crates/masque/src/runtime/host_state.rs` | `IntoHostValue` impls move to or coexist with the new traits |
 
 ### Validation gate
 
@@ -636,17 +636,17 @@ specific risk. Worth its own dedicated implementation push.
 - `trybuild` cases produce expected error messages.
 - A standalone integration test:
   ```rust
-  #[derive(OghamRecord)]
+  #[derive(MasqueRecord)]
   struct Item { name: String, count: i32 }
 
-  #[derive(OghamState)]
+  #[derive(MasqueState)]
   struct State { items: Vec<Item>, count: i32 }
 
-  #[derive(OghamMsg)]
+  #[derive(MasqueMsg)]
   enum Msg { Add(String), Remove(i32) }
 
-  // Assert OGHAM_SCHEMA matches expected RecordSchema.
-  // Assert OghamMsg::try_from_event correctly parses arg lists.
+  // Assert MASQUE_SCHEMA matches expected RecordSchema.
+  // Assert MasqueMsg::try_from_event correctly parses arg lists.
   ```
 
 ### Estimated complexity: medium-high
@@ -662,22 +662,22 @@ touches every internal `use`.
 - **Lazy-init pattern for `RecordSchema`**: `LazyLock` requires
   Rust 1.80+. Confirm minimum Rust version (current: edition
   2021, no MSRV declared). Add an explicit MSRV if needed.
-- **Dependency direction**: `ogham-derive` *cannot* depend on
-  `ogham` (proc-macros can't pull in skia/winit/etc. — both for
+- **Dependency direction**: `masque-derive` *cannot* depend on
+  `masque` (proc-macros can't pull in skia/winit/etc. — both for
   build-time cost and because some of those deps don't compile
-  in proc-macro contexts). The `ogham-types` extraction is
+  in proc-macro contexts). The `masque-types` extraction is
   load-bearing for this reason.
-- **Cyclic crate-name confusion**: `ogham-types` could collide
-  in name with future crates. Consider `ogham-schema` or
-  `ogham-bindings` as alternatives. **Recommend `ogham-schema`**
+- **Cyclic crate-name confusion**: `masque-types` could collide
+  in name with future crates. Consider `masque-schema` or
+  `masque-bindings` as alternatives. **Recommend `masque-schema`**
   — clearer purpose.
 
 ---
 
-## Merge 5 — TypedOgham handle + watch_typed + schema match
+## Merge 5 — TypedMasque handle + watch_typed + schema match
 
-**Goal:** the typed-runtime path opens. `Ogham::watch_typed::<S, M>`
-constructs a `TypedOgham<S, M>`; `set_state` and `poll_msg` work.
+**Goal:** the typed-runtime path opens. `Masque::watch_typed::<S, M>`
+constructs a `TypedMasque<S, M>`; `set_state` and `poll_msg` work.
 
 This is the smallest merge by line count but the highest-value
 gate: it's the first time end-to-end typed bindings work in a
@@ -685,27 +685,27 @@ real program.
 
 ### Sub-merges
 
-**M5a — `TypedOgham` struct** (~2 days)
+**M5a — `TypedMasque` struct** (~2 days)
 
-- New module `crates/ogham/src/typed.rs`.
+- New module `crates/masque/src/typed.rs`.
 - Struct, `set_state`, `poll_msg`, `drain_msgs`, `inner`,
-  `inner_mut` per TYPED_BINDINGS.md §"`TypedOgham<S, M>`".
+  `inner_mut` per TYPED_BINDINGS.md §"`TypedMasque<S, M>`".
 - MPSC channel: `std::sync::mpsc::channel()` (open question O5
   in TYPED_BINDINGS.md — go with `std`; profile later if needed).
 
-**M5b — `Ogham::watch_typed` and `Ogham::from_source_typed`** (~3 days)
+**M5b — `Masque::watch_typed` and `Masque::from_source_typed`** (~3 days)
 
-- Lives on `Ogham` in `crates/ogham/src/lib.rs`.
+- Lives on `Masque` in `crates/masque/src/lib.rs`.
 - Loads source, parses, builds `ModuleSchema` (M1's path).
 - Registers handlers via `M::register(&mut config, tx)` (M4's path).
-- Calls `Ogham::watch` / `Ogham::from_source` internally with the
+- Calls `Masque::watch` / `Masque::from_source` internally with the
   enriched config.
 - Pushes initial state via `S::snapshot_into(...)` (M4's path).
-- Wraps the result in `TypedOgham`.
+- Wraps the result in `TypedMasque`.
 
 **M5c — Schema-match check** (~2 days)
 
-- New function in `crates/ogham/src/typed.rs`:
+- New function in `crates/masque/src/typed.rs`:
   ```rust
   fn assert_schemas_match(
       module: &ModuleSchema,
@@ -731,16 +731,16 @@ real program.
 
 | File | Change |
 |---|---|
-| `crates/ogham/src/typed.rs` (new) | `TypedOgham<S, M>`, `assert_schemas_match` |
-| `crates/ogham/src/lib.rs` | `watch_typed`, `from_source_typed` constructors |
-| `crates/ogham/src/runtime/error.rs` | New error variants |
-| `tests/typed_ogham_basic.rs` (new) | End-to-end test using a tiny `.ogh` and a derived state/msg pair |
+| `crates/masque/src/typed.rs` (new) | `TypedMasque<S, M>`, `assert_schemas_match` |
+| `crates/masque/src/lib.rs` | `watch_typed`, `from_source_typed` constructors |
+| `crates/masque/src/runtime/error.rs` | New error variants |
+| `tests/typed_masque_basic.rs` (new) | End-to-end test using a tiny `.masque` and a derived state/msg pair |
 
 ### Validation gate
 
 - All schema-match positive and negative tests pass.
 - A minimal end-to-end test: parse a schema, derive matching
-  Rust types, construct `TypedOgham`, push state, drain a
+  Rust types, construct `TypedMasque`, push state, drain a
   message. No widget rendering required for this test.
 - The chest_ui smoke test is still M6's job.
 
@@ -768,21 +768,21 @@ typed bindings end-to-end and renders correctly.
 
 **M6a — Hot-reload schema preservation** (~3 days)
 
-- `Ogham::reload` already exists and rebuilds the runtime. For
+- `Masque::reload` already exists and rebuilds the runtime. For
   typed modules, after the reload:
   - Re-run `assert_schemas_match` against the new schema.
   - If compatible: re-push `last_state` via `snapshot_into`.
   - If incompatible: surface a `RuntimeError::SchemaMismatch`
     (caller can choose to log + keep the old runtime, or panic).
-- The `TypedOgham::reload()` pass-through wraps this.
-- Tests: edit a typed `.ogh` file in a way that keeps schema
+- The `TypedMasque::reload()` pass-through wraps this.
+- Tests: edit a typed `.masque` file in a way that keeps schema
   stable (just rearrange the body) → state preserved. Edit it
   in a way that changes the schema → loud error.
 
 **M6b — chest_ui migration** (~2 days)
 
 - In Untold Lore (separate repo, separate branch).
-- Add `events { chest_pick_up(); chest_cancel(); }` to `chest.ogh`.
+- Add `events { chest_pick_up(); chest_cancel(); }` to `chest.masque`.
 - Rewrite `src/ui/chest_ui.rs` per the worked example in
   TYPED_BINDINGS.md §"Worked example".
 - Verify the chest UI still works in-game. No visible behavioral
@@ -803,11 +803,11 @@ typed bindings end-to-end and renders correctly.
 
 ### Files touched
 
-**Ogham:**
+**Masque:**
 | File | Change |
 |---|---|
-| `crates/ogham/src/typed.rs` | `reload` pass-through with schema re-check |
-| `crates/ogham/src/lib.rs` | If `Ogham::reload` needs hooks for typed paths, add them |
+| `crates/masque/src/typed.rs` | `reload` pass-through with schema re-check |
+| `crates/masque/src/lib.rs` | If `Masque::reload` needs hooks for typed paths, add them |
 | `tests/typed_hot_reload.rs` (new) | Schema-stable + schema-incompatible reload tests |
 | `docs/internal/TYPED_BINDINGS.md` | Promote to Live contract; add cookbook |
 | `docs/internal/TYPED_BINDINGS_UL_AUDIT.md` | Trim to design-relevant findings; rest moves out |
@@ -815,15 +815,15 @@ typed bindings end-to-end and renders correctly.
 **Untold Lore:**
 | File | Change |
 |---|---|
-| `data/engine/ui/chest.ogh` | Add `events {}` block |
+| `data/engine/ui/chest.masque` | Add `events {}` block |
 | `src/ui/chest_ui.rs` | Rewrite per worked example |
-| `Cargo.toml` | Depend on `ogham-derive` |
+| `Cargo.toml` | Depend on `masque-derive` |
 
 ### Validation gate
 
-- Schema-stable reload: edit `chest.ogh` to add a comment, save,
+- Schema-stable reload: edit `chest.masque` to add a comment, save,
   game continues working without restart.
-- Schema-incompatible reload: edit `chest.ogh` to add an
+- Schema-incompatible reload: edit `chest.masque` to add an
   undeclared event call, save, error surfaces in the game's
   log; the typed handle does not crash.
 - Chest UI works in-game: open a chest, click pick-up, item
@@ -834,7 +834,7 @@ typed bindings end-to-end and renders correctly.
 
 ### Risks
 
-- **`Ogham::reload` couples to host state**: today's reload
+- **`Masque::reload` couples to host state**: today's reload
   re-applies host state from `RuntimeConfig` (per
   `INTENT.md` §7). The typed path needs to re-apply
   `last_state` instead of/in addition to that. Verify the
@@ -863,7 +863,7 @@ Rationale: the merges have well-defined contracts and
 validation gates; merging each into `main` directly would put
 half-built typed-bindings code on `main` for weeks. The
 feature branch lets the work integrate continuously without
-blocking other Ogham work.
+blocking other Masque work.
 
 ### Test corpus
 
@@ -875,28 +875,28 @@ and M5 (schema-match) tests.
 Initial contents:
 ```
 tests/fixtures/typed_bindings/
-  chest.ogh                    (M1: parses; M2: resolves)
-  tip_log.ogh
-  crafting.ogh
-  console.ogh
-  blueprint_editor.ogh
-  talents.ogh
-  dm_inventory.ogh
-  dm_hud.ogh
+  chest.masque                    (M1: parses; M2: resolves)
+  tip_log.masque
+  crafting.masque
+  console.masque
+  blueprint_editor.masque
+  talents.masque
+  dm_inventory.masque
+  dm_hud.masque
   shared/
-    inventory_types.ogh        (M1: cross-module record import)
-    social_types.ogh
-  invalid/                     (M2: each .ogh has a deliberate strict-mode error)
-    typo_in_field.ogh
-    typo_in_event.ogh
-    computed_event_name.ogh
-    field_on_primitive.ogh
-    duplicate_host_state.ogh
-    direct_self_reference.ogh
+    inventory_types.masque        (M1: cross-module record import)
+    social_types.masque
+  invalid/                     (M2: each .masque has a deliberate strict-mode error)
+    typo_in_field.masque
+    typo_in_event.masque
+    computed_event_name.masque
+    field_on_primitive.masque
+    duplicate_host_state.masque
+    direct_self_reference.masque
 ```
 
 The `invalid/` corpus doubles as snapshot tests for diagnostic
-quality. Each `.ogh` has a `// EXPECT:` comment with the
+quality. Each `.masque` has a `// EXPECT:` comment with the
 expected error message; tests read the comment and assert.
 
 ### Workspace name resolution
@@ -905,9 +905,9 @@ Open question O3 in TYPED_BINDINGS.md (import alias syntax for
 record name conflicts) needs resolution before M1 lands.
 Recommend extending the existing import grammar:
 
-```ogh
-import [Item] from "./inventory.ogh";
-import [Item as ShopItem] from "./shop.ogh";
+```masque
+import [Item] from "./inventory.masque";
+import [Item as ShopItem] from "./shop.masque";
 ```
 
 Mirrors Rust's `use foo::Item as ShopItem`. Small grammar
@@ -929,7 +929,7 @@ Recommend option 1. Verify Untold Lore's Rust version first.
 Add a typed-bindings test job that runs:
 - `cargo build --workspace`
 - `cargo test --workspace`
-- `cargo test --package ogham-derive` with `trybuild` cases
+- `cargo test --package masque-derive` with `trybuild` cases
 - The fixture-based parser/resolver/diagnostic tests
 
 If CI doesn't exist yet, M0 is the right time to add it (at
@@ -948,7 +948,7 @@ Three docs evolve together:
 The relevant existing docs to update at Phase-1 ship:
 - `LANGUAGE.md` — add the new declaration forms to the grammar
   reference.
-- `RUNTIME.md` — add `TypedOgham` and the typed construction
+- `RUNTIME.md` — add `TypedMasque` and the typed construction
   path; cross-reference `INTENT.md` §2 (asymmetry preserved).
 - `LSP.md` — update the capabilities table (Completion: ✓ added;
   schema-aware Hover/Definition).
@@ -967,10 +967,10 @@ Ranked by likelihood × impact.
 | R2 | Untold Lore migration uncovers a design hole the audit missed | Medium | High | Migrate chest_ui in M6 *before* declaring Phase 1 ship. If something breaks, adjust before the audit's other 19 UIs touch the new path. |
 | R3 | Compiler identifier-resolution changes break existing closure capture | Medium | High | M2 negative tests must cover loose-mode closures; full regression suite must pass. |
 | R4 | LSP cross-module schema loading is too slow | Medium | Low | Cache parsed schemas in `DocumentStore` keyed by mtime. Easy to add reactively. |
-| R5 | Workspace restructure breaks Untold Lore's `Cargo.toml` dependency on Ogham | Low | Medium | Communicate ahead; the dep path is `ogham = "..."` either way; the internal restructure is invisible. |
+| R5 | Workspace restructure breaks Untold Lore's `Cargo.toml` dependency on Masque | Low | Medium | Communicate ahead; the dep path is `masque = "..."` either way; the internal restructure is invisible. |
 | R6 | Diagnostic infra (M0) needs more than the planned 50-line extension | Low | Low | M0 is its own merge; if it grows, it grows in isolation without blocking others. |
-| R7 | Macro-generated code conflicts with consumer's `use` statements | Low | Low | Use absolute paths (`::ogham_schema::*`) in macro output. Standard practice. |
-| R8 | A future Ogham feature (e.g., generic functions) requires changing the schema model | Low | Medium | The `ModuleSchema` is internal; revising it is allowed. The grammar is harder to walk back; design conservatively. |
+| R7 | Macro-generated code conflicts with consumer's `use` statements | Low | Low | Use absolute paths (`::masque_schema::*`) in macro output. Standard practice. |
+| R8 | A future Masque feature (e.g., generic functions) requires changing the schema model | Low | Medium | The `ModuleSchema` is internal; revising it is allowed. The grammar is harder to walk back; design conservatively. |
 
 ---
 
@@ -1001,8 +1001,8 @@ Resolve these before M0 ships:
 
 1. **Workspace Rust version**: declare `rust-version = "1.80"` or
    use `once_cell`? — recommend 1.80 (verify Untold Lore allows it).
-2. **`ogham-types` crate name**: vs. `ogham-schema` or
-   `ogham-bindings`? — recommend `ogham-schema`.
+2. **`masque-types` crate name**: vs. `masque-schema` or
+   `masque-bindings`? — recommend `masque-schema`.
 3. **`host_state` token shape**: single keyword token or
    identifier+keyword? — recommend single keyword.
 4. **`Self` keyword promotion**: keyword or contextual? —
@@ -1021,22 +1021,22 @@ if discovered mid-implementation.
 
 After M6 merges to `main`:
 - `record`, `host_state`, `events` declarations parseable in
-  any `.ogh` module.
+  any `.masque` module.
 - Strict mode (declaring `host_state {}`) catches identifier
   typos, missing fields, wrong event signatures, computed event
   names — all with helpful diagnostics.
 - LSP surfaces all of the above as hover, completion, and
   go-to-definition.
-- `#[derive(OghamRecord)]`, `#[derive(OghamState)]`,
-  `#[derive(OghamMsg)]` all work.
-- `Ogham::watch_typed::<S, M>` constructs a typed scene, runs
-  the schema-match check, and returns a `TypedOgham<S, M>`.
+- `#[derive(MasqueRecord)]`, `#[derive(MasqueState)]`,
+  `#[derive(MasqueMsg)]` all work.
+- `Masque::watch_typed::<S, M>` constructs a typed scene, runs
+  the schema-match check, and returns a `TypedMasque<S, M>`.
 - `set_state(&S)` diffs internally; `poll_msg() -> Option<M>`
   drains the event queue.
 - Hot-reload preserves typed state when the schema is unchanged;
   fails loudly when it isn't.
 - `chest_ui` in Untold Lore runs on the typed path in production.
-- All existing loose-mode `.ogh` files and Rust callers continue
+- All existing loose-mode `.masque` files and Rust callers continue
   working unchanged.
 
 The other 19 Untold Lore UIs migrate in the order specified by

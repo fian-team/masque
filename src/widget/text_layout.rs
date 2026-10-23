@@ -64,7 +64,7 @@ pub struct CaretRect {
     pub height: f32,
 }
 
-/// Map an Ogham [`TextStyle`] onto a Skia paragraph + text style — the
+/// Map a Masque [`TextStyle`] onto a Skia paragraph + text style — the
 /// geometry-affecting fields only (family, size, weight, alignment). Paint
 /// (color / outline) is the caller's concern, so this is safe to share between
 /// the measurement path (no paint) and `skia.rs`'s `apply_text_style` (which
@@ -457,7 +457,7 @@ let main = fn () {
   }
 };
 "##;
-    let mut ui = crate::Ogham::from_source(src, RuntimeConfig::default()).unwrap();
+    let mut ui = crate::Masque::from_source(src, RuntimeConfig::default()).unwrap();
     let ui = ui.get_ui_mut();
     ui.layout(400.0, 300.0);
 

@@ -4,8 +4,8 @@
 mod common;
 
 use common::parse_module;
-use ogham::parser::{Expression, Literal, Statement};
-use ogham::runtime::value::Value;
+use masque::parser::{Expression, Literal, Statement};
+use masque::runtime::value::Value;
 
 const FLEX_STYLE_WITH_NESTED_MAPS: &str = r#"
 Flex {
@@ -46,13 +46,13 @@ fn parse_flex_style_with_nested_map_literals() {
     assert_eq!(widget.identifier.get(), "Flex");
 
     fn find_prop<'a>(
-        props: &'a [(ogham::parser::Identifier, Expression)],
+        props: &'a [(masque::parser::Identifier, Expression)],
         key: &str,
     ) -> Option<&'a Expression> {
         props.iter().find(|(k, _)| k.get() == key).map(|(_, v)| v)
     }
 
-    fn has_prop(props: &[(ogham::parser::Identifier, Expression)], key: &str) -> bool {
+    fn has_prop(props: &[(masque::parser::Identifier, Expression)], key: &str) -> bool {
         props.iter().any(|(k, _)| k.get() == key)
     }
 
@@ -120,7 +120,7 @@ let main = fn () {
 
 #[test]
 fn pipeline_parse_evaluate_bridge_flex_style_maps() {
-    let mut runtime = ogham::runtime::Runtime::from_source(FULL_PROGRAM_WITH_STYLE_MAPS, None)
+    let mut runtime = masque::runtime::Runtime::from_source(FULL_PROGRAM_WITH_STYLE_MAPS, None)
         .expect("from_source should succeed");
     let module = runtime.get_module().expect("module").clone();
     let widget_value = runtime
@@ -174,14 +174,14 @@ fn pipeline_parse_evaluate_bridge_flex_style_maps() {
 
     // Bridge: widget_value_to_widget_ref should succeed and apply style
     let runtime_ref = std::sync::Arc::new(std::sync::Mutex::new(runtime));
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let widget_ref =
-        ogham::widget::builder::widget_value_to_widget_ref(&registry, &runtime_ref, &widget_value)
+        masque::widget::builder::widget_value_to_widget_ref(&registry, &runtime_ref, &widget_value)
             .expect("bridge should succeed");
     // Downcast to FlexWidget and check style was applied
     let guard = widget_ref.lock().expect("widget lock poisoned");
     let flex = guard
-        .downcast_ref::<ogham::widget::flex_widget::FlexWidget>()
+        .downcast_ref::<masque::widget::flex_widget::FlexWidget>()
         .expect("should be FlexWidget");
     assert!(
         flex.style.background_color.is_some(),
@@ -211,18 +211,18 @@ fn pipeline_parse_evaluate_bridge_flex_style_maps() {
 // two in any source order yields the same result. These tests pin
 // that behaviour through the full parse → bridge pipeline.
 
-fn build_flex_style(source: &str) -> ogham::widget::style::FlexStyle {
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).unwrap();
+fn build_flex_style(source: &str) -> masque::widget::style::FlexStyle {
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).unwrap();
     let module = runtime.get_module().unwrap().clone();
     let widget_value = runtime.execute_module(&module).unwrap();
     let runtime_ref = std::sync::Arc::new(std::sync::Mutex::new(runtime));
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let widget_ref =
-        ogham::widget::builder::widget_value_to_widget_ref(&registry, &runtime_ref, &widget_value)
+        masque::widget::builder::widget_value_to_widget_ref(&registry, &runtime_ref, &widget_value)
             .unwrap();
     let guard = widget_ref.lock().unwrap();
     guard
-        .downcast_ref::<ogham::widget::flex_widget::FlexWidget>()
+        .downcast_ref::<masque::widget::flex_widget::FlexWidget>()
         .unwrap()
         .style
         .clone()
@@ -230,7 +230,7 @@ fn build_flex_style(source: &str) -> ogham::widget::style::FlexStyle {
 
 #[test]
 fn corner_radius_shorthand_applies_round_to_all_four() {
-    use ogham::widget::style::CornerShape;
+    use masque::widget::style::CornerShape;
     let style = build_flex_style(r#"let main = fn () { Flex { style: { corner_radius: 8 } } };"#);
     assert_eq!(style.corners.top_left, CornerShape::Round(8.0));
     assert_eq!(style.corners.top_right, CornerShape::Round(8.0));
@@ -240,7 +240,7 @@ fn corner_radius_shorthand_applies_round_to_all_four() {
 
 #[test]
 fn corner_radius_zero_normalises_to_sharp() {
-    use ogham::widget::style::CornerShape;
+    use masque::widget::style::CornerShape;
     let style = build_flex_style(
         r#"let main = fn () {
               Flex { style: {
@@ -256,7 +256,7 @@ fn corner_radius_zero_normalises_to_sharp() {
 
 #[test]
 fn corner_chamfer_shorthand_applies_chamfer_to_all_four() {
-    use ogham::widget::style::CornerShape;
+    use masque::widget::style::CornerShape;
     let style = build_flex_style(r#"let main = fn () { Flex { style: { corner_chamfer: 6 } } };"#);
     assert_eq!(style.corners.top_left, CornerShape::Chamfer(6.0));
     assert_eq!(style.corners.top_right, CornerShape::Chamfer(6.0));
@@ -270,7 +270,7 @@ fn corner_radius_and_chamfer_merge_per_corner() {
     // Source-order should not matter because the merge is
     // commutative — chamfer wins on conflict, sharp inputs are
     // no-ops.
-    use ogham::widget::style::CornerShape;
+    use masque::widget::style::CornerShape;
     let style = build_flex_style(
         r#"let main = fn () {
               Flex { style: {
@@ -289,7 +289,7 @@ fn corner_radius_and_chamfer_merge_per_corner() {
 fn corner_chamfer_wins_when_both_specify_the_same_corner() {
     // If both parsers target the same corner with non-zero sizes,
     // chamfer must win regardless of which key was iterated first.
-    use ogham::widget::style::CornerShape;
+    use masque::widget::style::CornerShape;
     let style = build_flex_style(
         r#"let main = fn () {
               Flex { style: {

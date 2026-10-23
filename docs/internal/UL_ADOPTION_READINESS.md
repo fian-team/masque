@@ -1,7 +1,7 @@
-# Ogham — Untold Lore Adoption Readiness
+# Masque — Untold Lore Adoption Readiness
 
-> **Status: Ogham-side ready; UL adoption (Pass 2) outstanding.**
-> All Ogham primitives UL needs (Phase 2 lifecycle + Portal, Phase
+> **Status: Masque-side ready; UL adoption (Pass 2) outstanding.**
+> All Masque primitives UL needs (Phase 2 lifecycle + Portal, Phase
 > 2.5 layer system + cursor / key signals + hot-reload reset, Phase
 > 3 drag events + contextmenu + drain-time unmount) shipped
 > 2026-05-05. AGENTS.md and the subsystem docs reflect the full
@@ -39,7 +39,7 @@ docs for current truth. Still remaining for UL adoption:
 
 - **UL Pass 2 — adoption** — 12 person-days of per-UI work
   per the audit's verdicts. Includes the lorekeeper-side
-  input-pump rewire to call `Ogham::dispatch_drag_*` /
+  input-pump rewire to call `Masque::dispatch_drag_*` /
   `dispatch_contextmenu` and the cursor / key-signal
   coordination calls.
 
@@ -52,10 +52,10 @@ Resolved sequencing: **Phase 2.5 + Phase 3 + docs-pass
 
 | Area | State |
 |---|---|
-| UL build against current ogham `main` | ✓ Clean (verified 2026-05-05) |
-| Phase 2 ogham primitives | ✓ Shipped (M0–M5 + audit) |
-| Phase 2.5 ogham primitives | ✓ Shipped 2026-05-05 (M0–M5; timer deferred per scope) |
-| Phase 3 ogham primitives | ✓ Shipped 2026-05-05 (M0–M4; drag events + drain-time unmount) |
+| UL build against current masque `main` | ✓ Clean (verified 2026-05-05) |
+| Phase 2 masque primitives | ✓ Shipped (M0–M5 + audit) |
+| Phase 2.5 masque primitives | ✓ Shipped 2026-05-05 (M0–M5; timer deferred per scope) |
+| Phase 3 masque primitives | ✓ Shipped 2026-05-05 (M0–M4; drag events + drain-time unmount) |
 | UL `UI_RUNTIME.md` minimum API surface | ✓ Complete |
 | UL `OverlayStack` migration ready | ✓ Gated only on docs revision now |
 | UL Settings save-on-close ready | ⚠ Still gated on UL-side instance-swap restructuring (see §4) |
@@ -66,9 +66,9 @@ Resolved sequencing: **Phase 2.5 + Phase 3 + docs-pass
 
 ## 1. Build sanity (immediate)
 
-Verify on a clean checkout that UL builds against current ogham
+Verify on a clean checkout that UL builds against current masque
 `main`. The schema-diagnostics workstream's WIP can leave the
-ogham crate in a transiently-broken state (uncommitted
+masque crate in a transiently-broken state (uncommitted
 `src/diagnostics/` references; missing `mod check` / `mod render`
 were observed earlier this session).
 
@@ -79,9 +79,9 @@ were observed earlier this session).
       references without the corresponding files). This is
       their workstream's responsibility, not Phase 2's, but it
       blocks UL adoption when broken.
-- [ ] **Establish a CI signal** that catches "ogham main breaks
+- [ ] **Establish a CI signal** that catches "masque main breaks
       UL." Either a workspace member, a UL-side smoke test in
-      CI, or a pre-commit hook on ogham that runs
+      CI, or a pre-commit hook on masque that runs
       `cd ../untold_lore && cargo check`.
 
 ---
@@ -152,12 +152,12 @@ Conceptually a follow-up to M3.
 **Phase 2 ships**:
 - Internal `UI::try_set_focus`, `UI::has_input_blocking_portal`.
 - Focus stack with sync-from-portal-layer.
-- `Ogham::has_input_blocking_portal()` public.
+- `Masque::has_input_blocking_portal()` public.
 - No script-exposed focus surface.
 - No key suppression contract.
 
 **Work needed**:
-- [ ] Expose `focused_widget()` as a built-in to `.ogh` scripts.
+- [ ] Expose `focused_widget()` as a built-in to `.masque` scripts.
       Add to runtime built-ins alongside `event(...)` etc.
 - [ ] Expose `focus(widget_ref)` as a built-in or method on
       widget refs.
@@ -175,7 +175,7 @@ Conceptually a follow-up to M3.
       backdrop).
 
 **Estimated effort**: ~400 LOC + ~10 tests. Crosses the
-ogham/lorekeeper boundary (input-pump side is in lorekeeper).
+masque/lorekeeper boundary (input-pump side is in lorekeeper).
 
 ### 2.3 Drag events ✓ CLOSED (Phase 3 shipped 2026-05-05)
 
@@ -204,14 +204,14 @@ ogham/lorekeeper boundary (input-pump side is in lorekeeper).
   `UI::dispatch_contextmenu(point)` on the deepest widget.
 - Per-widget `drag_payload` and `drag_dead_zone` properties
   for source declaration and threshold override.
-- Public API on both `UI` and `Ogham`:
+- Public API on both `UI` and `Masque`:
   `dispatch_drag_start/move/end`, `dispatch_contextmenu`,
   `hit_test_drop_target`. Hosts (lorekeeper input pump) call
   these from their dead-zone state machine.
 
 **What still needs UL-side work** (Pass 2):
 - Lorekeeper input pump translates the existing dead-zone
-  state machine in `ogham/src/client/input.rs` into the new
+  state machine in `masque/src/client/input.rs` into the new
   `dispatch_drag_*` calls. ETA ~half a day; mechanical.
 - UL inventory's drag-drop migration to `accepts_drop` +
   `drag_payload` + `drag_preview`. ETA ~1-2 days
@@ -225,7 +225,7 @@ ogham/lorekeeper boundary (input-pump side is in lorekeeper).
 - Per-widget cursor declaration (focused TextInput → cursor-free
   implicitly).
 
-**Phase 2 ships**: `Ogham::has_input_blocking_portal()` — the
+**Phase 2 ships**: `Masque::has_input_blocking_portal()` — the
 moral equivalent for "is something modal open" but not the
 broader cursor-free signal.
 
@@ -253,7 +253,7 @@ can approximate a self-cleaning subscription, but not a
 fire-once-after-delay.
 
 **Work needed**:
-- [ ] **Audit first**: `panel_transition` in `main.ogh:10–15`
+- [ ] **Audit first**: `panel_transition` in `main.masque:10–15`
       implies scheduled interpolation already exists somewhere.
       Find what's there before adding new API.
 - [ ] If a timer primitive doesn't exist: add `set_timeout` /
@@ -306,7 +306,7 @@ portals work; nested portals render at wrong viewport position.
 ### 3.4 `set_compiled_module` reset on hot reload
 
 `UI::clear_lifecycle_state` exists but isn't wired to the
-hot-reload path in `Ogham::reload_file` /
+hot-reload path in `Masque::reload_file` /
 `recompile_from_source`.
 
 - [ ] Wire `clear_lifecycle_state` into the reload path so
@@ -326,11 +326,11 @@ re-sequencing, the dependency graph for each migration shifts.
 **Audit verdict**: High value. M5 canonical migration.
 
 **Blocker**: UL's overlay-instance-swap pattern. When Settings
-closes, the entire Ogham instance for the overlay is dropped —
+closes, the entire Masque instance for the overlay is dropped —
 no path-disappear, no `on_unmount` fires. The pattern UL is
 moving toward is `OverlayStack` (per `UI_SHELL.md` §B2), where
 Settings is a Portal pushed into the `overlay-modal` layer of
-a single long-lived Ogham instance. Once that's true,
+a single long-lived Masque instance. Once that's true,
 `on_unmount` fires when the portal closes.
 
 - [ ] **Cannot adopt today** without restructuring overlay
@@ -356,7 +356,7 @@ the `overlay-modal` layer with `block` backdrop policy from
 
 **Audit verdict**: Worked example.
 
-**Blocker**: lighter than 4.1/4.2. The `inventory_hud.ogh` is
+**Blocker**: lighter than 4.1/4.2. The `inventory_hud.masque` is
 a non-gating world panel (per `UI_SHELL.md` §B3b) — it's NOT
 in the overlay stack and stays mounted across overlays.
 
@@ -402,7 +402,7 @@ machine that pushes runtime portals.
 migration. Without it, UL's overlay-instance-swap pattern
 makes lifecycle hooks awkward to use.
 
-- [ ] **This is UL-side work**, not ogham work, but the
+- [ ] **This is UL-side work**, not masque work, but the
       ordering matters for adoption planning.
 - [ ] Gates on §2.1 (portal layer system) per UL's own doc:
       "Without portals, the userspace stack has no escape
@@ -412,26 +412,26 @@ makes lifecycle hooks awkward to use.
       `client/mod.rs`, `update.rs`, `actions.rs`, plus every
       overlay UI's open/close path.
 - [ ] Provides natural M5-equivalent validation for the
-      ogham layer system.
+      masque layer system.
 
 ---
 
 ## 6. Schema-diagnostics workstream coordination
 
-Separate parallel workstream that touched ogham's `lib.rs`
+Separate parallel workstream that touched masque's `lib.rs`
 and added `src/diagnostics/`. Has caused transient UL build
 breakage in this session.
 
 - [ ] **Coordinate** so their commits land atomically (every
       `pub mod X;` in `lib.rs` has its corresponding file).
-- [ ] **Their derive macros (`OghamState`, `OghamMsg`) use
-      `::ogham::*` paths that don't resolve when the macro
-      is invoked inside the `ogham` crate itself**. The
+- [ ] **Their derive macros (`MasqueState`, `MasqueMsg`) use
+      `::masque::*` paths that don't resolve when the macro
+      is invoked inside the `masque` crate itself**. The
       workstream's `src/diagnostics/manifest.rs` test module
       hits this. Their workstream to fix; flagging here so
       it's tracked.
 - [ ] Once their work lands, UL gains the cross-side
-      `.ogh` ↔ Rust drift detection. Independent of Phase 2.
+      `.masque` ↔ Rust drift detection. Independent of Phase 2.
 
 ---
 
@@ -467,22 +467,22 @@ UL adoption per the resolved sequencing in
 Will need its own implementation plan doc when Phase 2.5
 M5 graduates. Estimated ~700 LOC + ~15 tests, ~3 person-days.
 
-### Docs + Ogham-skill revision pass (between Phase 3 and UL adoption)
+### Docs + Masque-skill revision pass (between Phase 3 and UL adoption)
 
 Once both engine phases ship, the reference documentation
 needs a substantive revision pass:
 
-- `ogham/AGENTS.md` (530 lines, canonical language reference)
+- `masque/AGENTS.md` (530 lines, canonical language reference)
   — needs Portal-layers, lifecycle hooks, focus API, cursor
   coord, timer, drag.
-- `untold_lore/.agents/skills/ogham/SKILL.md` (62 lines, the
+- `untold_lore/.agents/skills/masque/SKILL.md` (62 lines, the
   pointer skill in UL's repo) — gotchas list (lines 43–57)
   needs a refresh; today it doesn't mention any Phase 2
   primitive (lifecycle, Portal) let alone the 2.5/3
   additions.
-- `ogham/README.md` — short marketing teaser; review for
+- `masque/README.md` — short marketing teaser; review for
   staleness.
-- `ogham/docs/internal/` triplet docs — possibly tidy up the
+- `masque/docs/internal/` triplet docs — possibly tidy up the
   audit doc which was scoped to Phase 2's primitives only.
 - `INTENT.md`, `LANGUAGE.md`, `LSP.md` — review for
   staleness.
@@ -531,7 +531,7 @@ its own focused pass once the surface is stable.
 4. **Schema-diagnostics workstream coordination.** Open. Needs
    either a recurring sync or a CI gate. Flag for the team.
 5. **Documentation discipline.** ✓ Resolved via the explicit
-   "docs + Ogham-skill revision pass" between Phase 3 and UL
+   "docs + Masque-skill revision pass" between Phase 3 and UL
    adoption (per `PHASE_2_5_IMPLEMENTATION.md` §"What follows
    Phase 2.5"). Each phase's M5 also updates relevant
    subsystem docs inline.

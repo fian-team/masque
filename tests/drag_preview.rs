@@ -8,13 +8,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::widget::event::DragState;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::point::Point;
-use ogham::widget::rect::Rect;
-use ogham::widget::{builder, Widget, WidgetRef, UI};
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::widget::event::DragState;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::point::Point;
+use masque::widget::rect::Rect;
+use masque::widget::{builder, Widget, WidgetRef, UI};
 
 fn build_root(src: &str) -> WidgetRef {
     let runtime = Arc::new(Mutex::new(Runtime::from_source(src, None).expect("parse")));
@@ -135,7 +135,7 @@ fn drag_preview_gets_laid_out_at_zero_origin_during_ui_layout() {
     // CursorAttached entry by viewport_rect=cursor without
     // double-offset. This test verifies the layout pass
     // actually runs against the active preview.
-    use ogham::widget::style::{FlexStyle, Size};
+    use masque::widget::style::{FlexStyle, Size};
 
     let mut origin = FlexWidget::new();
     origin.layout = Some(Rect::new(0.0, 0.0, 100.0, 100.0));

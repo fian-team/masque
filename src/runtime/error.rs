@@ -1,4 +1,4 @@
-//! Error types for the Ogham runtime and VM.
+//! Error types for the Masque runtime and VM.
 
 use std::path::PathBuf;
 
@@ -36,12 +36,12 @@ pub enum RuntimeError {
     VmError(VMError),
     /// Error during widget builder conversion
     BridgeError(builder::BridgeError),
-    /// Schema-match check (M5) failed: the Rust-side `OghamState` /
-    /// `OghamMsg` types disagree with the parsed `.ogh` module's
+    /// Schema-match check (M5) failed: the Rust-side `MasqueState` /
+    /// `MasqueMsg` types disagree with the parsed `.masque` module's
     /// schema. The string is a multi-line diff suitable for direct
     /// display.
     SchemaMismatch(String),
-    /// `Ogham::watch_typed` was called on a module that didn't
+    /// `Masque::watch_typed` was called on a module that didn't
     /// declare `host_state {}` — typed mode requires it.
     SchemaMissing,
 }

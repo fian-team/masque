@@ -1,4 +1,4 @@
-# Ogham — Slider
+# Masque — Slider
 
 > **Status: live contract. Built 2026-09-07.**
 >
@@ -12,7 +12,7 @@
 ## Why a widget
 
 untold_lore's editing surface composed a "slider" out of a filled bar
-and two nudge buttons (`ul-editor/data/ui/widgets.ogh`), with the
+and two nudge buttons (`ul-editor/data/ui/widgets.masque`), with the
 comment that the runtime had no drag-thumb primitive and a drag-heavy
 slider would be a host Rust widget. It could not be composed:
 `mouse_move` was hover-only in `UI::call_event` and never reached a
@@ -22,7 +22,7 @@ is a primitive in the runtime rather than a host widget.
 
 ## Contract
 
-```ogh
+```masque
 Slider {
   value: settings.volume,                     // required, number; controlled
   min: 0, max: 100, step: 5,                  // step optional, positive

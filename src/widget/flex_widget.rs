@@ -785,7 +785,7 @@ impl FlexWidget {
                 self.layout_anim_frames = self.layout_anim_frames.saturating_add(1);
                 if self.layout_anim_frames % 60 == 30 {
                     eprintln!(
-                        "[ogham] layout-affecting spring stuck on widget key={:?} \
+                        "[masque] layout-affecting spring stuck on widget key={:?} \
                          exiting={} hovered={} \
                          border_width={} padding={} margin={} gap={} text_size={} \
                          ({} frames)",
@@ -4452,7 +4452,7 @@ mod tests {
               }
             };
         "##;
-        let o = crate::Ogham::from_source(src, crate::runtime::config::RuntimeConfig::default())
+        let o = crate::Masque::from_source(src, crate::runtime::config::RuntimeConfig::default())
             .expect("from_source");
         let root = o.get_ui().root.clone();
         let g = root.lock().expect("widget lock poisoned");
@@ -4479,7 +4479,7 @@ mod tests {
             };
         "##;
         let mut o =
-            crate::Ogham::from_source(src, crate::runtime::config::RuntimeConfig::default())
+            crate::Masque::from_source(src, crate::runtime::config::RuntimeConfig::default())
                 .expect("from_source");
         o.get_ui_mut().layout(300.0, 100.0);
         let ui = o.get_ui_mut();
@@ -4522,7 +4522,7 @@ mod tests {
             };
         "##;
         let mut o =
-            crate::Ogham::from_source(src, crate::runtime::config::RuntimeConfig::default())
+            crate::Masque::from_source(src, crate::runtime::config::RuntimeConfig::default())
                 .expect("from_source");
         o.get_ui_mut().layout(300.0, 100.0);
         let root = o.get_ui().root.clone();

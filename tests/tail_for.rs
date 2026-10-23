@@ -5,9 +5,9 @@
 //! of five. Each case here is paired with a form that already worked, so
 //! the two have to agree.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::widget::WidgetRef;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::widget::WidgetRef;
+use masque::Masque;
 
 fn find(node: &WidgetRef, key: &str) -> Option<WidgetRef> {
     let children = {
@@ -31,7 +31,7 @@ fn counts(helpers: &str, calls: &[&str]) -> Vec<usize> {
     let src = format!(
         "{helpers}\nlet main = fn () {{ Flex {{ style: {{ direction: \"row\" }}, children: [\n{boxes}] }} }};"
     );
-    let mut o = Ogham::from_source(&src, RuntimeConfig::default()).expect("from_source");
+    let mut o = Masque::from_source(&src, RuntimeConfig::default()).expect("from_source");
     for _ in 0..2 {
         o.frame(800.0, 600.0, 1.0 / 60.0).expect("frame");
     }

@@ -3,19 +3,19 @@
 //! Cover the dispatch + hit-test surface (drag_start /
 //! drag_move / drag_end + accepts_drop predicate). The
 //! input-pump → dispatch wiring lives host-side; these
-//! tests exercise the ogham-side primitives directly.
+//! tests exercise the masque-side primitives directly.
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::widget::event::{DragState, Event, EventContext};
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::point::Point;
-use ogham::widget::portal_layer::{CursorPreference, PortalLayer};
-use ogham::widget::rect::Rect;
-use ogham::widget::style::FlexStyle;
-use ogham::widget::{builder, PortalEntry, Widget, WidgetRef, UI};
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::widget::event::{DragState, Event, EventContext};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::point::Point;
+use masque::widget::portal_layer::{CursorPreference, PortalLayer};
+use masque::widget::rect::Rect;
+use masque::widget::style::FlexStyle;
+use masque::widget::{builder, PortalEntry, Widget, WidgetRef, UI};
 
 fn make_flex_with_layout(rect: Rect) -> WidgetRef {
     let mut f = FlexWidget::new();
@@ -60,7 +60,7 @@ let main = fn () {
 }
 
 #[test]
-fn accepts_drop_predicate_runs_from_ogh_closure() {
+fn accepts_drop_predicate_runs_from_masque_closure() {
     // Authored predicate just returns the boolean argument
     // it received (after a no-op pass-through). Verifies the
     // closure path: builder reads `accepts_drop`, predicate

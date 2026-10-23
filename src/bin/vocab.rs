@@ -1,14 +1,14 @@
-//! `ogham-vocab` — read `.ogh` files and say what the language does not
+//! `masque-vocab` — read `.masque` files and say what the language does not
 //! recognise in them.
 //!
-//! The static half of [`ogham::widget::vocabulary`]: no host, no window,
+//! The static half of [`masque::widget::vocabulary`]: no host, no window,
 //! no host state, so it runs over a whole repository's UI in a second and
 //! names file, line and column. What it cannot see is a style map reached
 //! through a `let`; that is the builder's half, which a host turns on
 //! with `RuntimeConfig::with_strict_vocabulary`.
 //!
 //! ```text
-//! ogham-vocab data/ui/*.ogh
+//! masque-vocab data/ui/*.masque
 //! ```
 //!
 //! Exits non-zero when it found something, so a repository can put it in
@@ -19,7 +19,7 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     let files: Vec<String> = std::env::args().skip(1).collect();
     if files.is_empty() {
-        eprintln!("usage: ogham-vocab <file.ogh> [file.ogh ...]");
+        eprintln!("usage: masque-vocab <file.masque> [file.masque ...]");
         return ExitCode::from(2);
     }
 
@@ -32,7 +32,7 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
         };
-        for violation in ogham::widget::vocabulary::scan_source(path, &source) {
+        for violation in masque::widget::vocabulary::scan_source(path, &source) {
             println!("{violation}");
             total += 1;
         }

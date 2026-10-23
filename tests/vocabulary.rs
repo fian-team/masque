@@ -22,11 +22,11 @@
 
 use std::collections::HashMap;
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::vocabulary::{scan_source, Kind};
-use ogham::widget::Widget;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::vocabulary::{scan_source, Kind};
+use masque::widget::Widget;
+use masque::Masque;
 
 // ---------------------------------------------------------------------
 // The five, through the source scan.
@@ -35,11 +35,11 @@ use ogham::Ogham;
 fn paths(source: &str) -> Vec<String> {
     // A source that does not parse scans clean, so a fixture has to be
     // shown to parse or a "nothing reported" assertion proves nothing.
-    let tokens = ogham::scanner::Scanner::new(source.to_string()).scan();
-    ogham::parser::Parser::new(tokens)
+    let tokens = masque::scanner::Scanner::new(source.to_string()).scan();
+    masque::parser::Parser::new(tokens)
         .parse()
         .unwrap_or_else(|e| panic!("fixture does not parse: {e:?}"));
-    scan_source("fixture.ogh", source)
+    scan_source("fixture.masque", source)
         .into_iter()
         .map(|v| v.path)
         .collect()
@@ -80,7 +80,7 @@ fn a_chip_row_that_never_wrapped() {
 #[test]
 fn stretch_is_not_an_alignment_and_never_was() {
     let found = scan_source(
-        "fixture.ogh",
+        "fixture.masque",
         r#"let main = fn () {
              Flex { style: { cross_alignment: "stretch", width: "grow" } }
            };"#,
@@ -92,7 +92,7 @@ fn stretch_is_not_an_alignment_and_never_was() {
     // Named where it is, not merely counted.
     assert_eq!(
         found[0].site.to_string(),
-        "fixture.ogh:2:30",
+        "fixture.masque:2:30",
         "{}",
         found[0]
     );
@@ -204,15 +204,15 @@ const INDIRECT: &str = r#"
 
 #[test]
 fn a_let_bound_style_map_is_invisible_to_the_source_scan() {
-    assert!(scan_source("fixture.ogh", INDIRECT).is_empty());
+    assert!(scan_source("fixture.masque", INDIRECT).is_empty());
 }
 
 #[test]
 fn a_let_bound_style_map_is_not_invisible_to_the_builder() {
     let config = RuntimeConfig::new().with_strict_vocabulary();
-    let ogham = Ogham::from_source(INDIRECT, config).expect("from_source");
+    let masque = Masque::from_source(INDIRECT, config).expect("from_source");
 
-    let mut found: Vec<String> = ogham
+    let mut found: Vec<String> = masque
         .vocabulary_violations()
         .into_iter()
         .map(|v| format!("{}={}", v.path, v.found))
@@ -223,8 +223,8 @@ fn a_let_bound_style_map_is_not_invisible_to_the_builder() {
 
 #[test]
 fn strictness_is_off_by_default() {
-    let ogham = Ogham::from_source(INDIRECT, RuntimeConfig::new()).expect("from_source");
-    assert!(ogham.vocabulary_violations().is_empty());
+    let masque = Masque::from_source(INDIRECT, RuntimeConfig::new()).expect("from_source");
+    assert!(masque.vocabulary_violations().is_empty());
 }
 
 /// Diagnostics, not semantics. The same document builds the same tree
@@ -240,15 +240,15 @@ fn strictness_changes_nothing_about_the_tree() {
         }
       };"#;
 
-    let loose = Ogham::from_source(SRC, RuntimeConfig::new()).expect("loose");
+    let loose = Masque::from_source(SRC, RuntimeConfig::new()).expect("loose");
     let strict =
-        Ogham::from_source(SRC, RuntimeConfig::new().with_strict_vocabulary()).expect("strict");
+        Masque::from_source(SRC, RuntimeConfig::new().with_strict_vocabulary()).expect("strict");
 
-    let describe = |o: &Ogham| {
+    let describe = |o: &Masque| {
         let root = o.get_ui().root.clone();
         let g = root.lock().expect("widget lock poisoned");
         let flex = g
-            .downcast_ref::<ogham::widget::flex_widget::FlexWidget>()
+            .downcast_ref::<masque::widget::flex_widget::FlexWidget>()
             .expect("root is a Flex");
         format!("{:?} {:?}", flex.style, flex.get_children().len())
     };
@@ -263,7 +263,7 @@ fn one_mistake_is_reported_once() {
     let config = RuntimeConfig::new()
         .with_strict_vocabulary()
         .with_host_state(HashMap::from([("n".to_string(), Value::Integer(0))]));
-    let mut ogham = Ogham::from_source(
+    let mut masque = Masque::from_source(
         r#"host_state { n: int };
            let main = fn () { Flex { style: { wrap: true }, children: [ Text { text: n } ] } };"#,
         config,
@@ -271,17 +271,17 @@ fn one_mistake_is_reported_once() {
     .expect("from_source");
 
     for i in 0..8 {
-        ogham.with_runtime_mut(|rt| rt.inject_host_state("n".to_string(), Value::Integer(i)));
-        ogham.frame(100.0, 100.0, 0.016).expect("frame");
+        masque.with_runtime_mut(|rt| rt.inject_host_state("n".to_string(), Value::Integer(i)));
+        masque.frame(100.0, 100.0, 0.016).expect("frame");
     }
-    assert_eq!(ogham.vocabulary_violations().len(), 1);
+    assert_eq!(masque.vocabulary_violations().len(), 1);
 }
 
 // ---------------------------------------------------------------------
 // This repository's own fixtures.
 // ---------------------------------------------------------------------
 
-/// Every `.ogh` this crate ships. A language whose own examples miss its
+/// Every `.masque` this crate ships. A language whose own examples miss its
 /// own vocabulary has no standing to ask a game to fix its UI.
 ///
 /// `tests/documents/` is exempt and is the exception that proves the rule:
@@ -292,13 +292,13 @@ fn one_mistake_is_reported_once() {
 /// two live `cross_alignment: "baseline"`, a value the builder has never
 /// had and silently reads as `start`.
 #[test]
-fn the_shipped_ogh_files_use_the_language_they_document() {
+fn the_shipped_masque_files_use_the_language_they_document() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = Vec::new();
-    collect_ogh(&root.join("examples"), &mut files);
-    collect_ogh(&root.join("tests"), &mut files);
+    collect_masque(&root.join("examples"), &mut files);
+    collect_masque(&root.join("tests"), &mut files);
     files.retain(|path| !path.starts_with(root.join("tests").join("documents")));
-    assert!(!files.is_empty(), "no .ogh fixtures found");
+    assert!(!files.is_empty(), "no .masque fixtures found");
 
     let mut report = String::new();
     for path in &files {
@@ -310,15 +310,15 @@ fn the_shipped_ogh_files_use_the_language_they_document() {
     assert!(report.is_empty(), "{report}");
 }
 
-fn collect_ogh(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+fn collect_masque(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            collect_ogh(&path, out);
-        } else if path.extension().is_some_and(|e| e == "ogh") {
+            collect_masque(&path, out);
+        } else if path.extension().is_some_and(|e| e == "masque") {
             out.push(path);
         }
     }

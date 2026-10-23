@@ -8,9 +8,9 @@ import {
 let client: LanguageClient | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-  const config = vscode.workspace.getConfiguration("ogham");
+  const config = vscode.workspace.getConfiguration("masque");
   const configuredPath = config.get<string>("lspPath", "");
-  const command = configuredPath || "ogham-lsp";
+  const command = configuredPath || "masque-lsp";
 
   const serverOptions: ServerOptions = {
     command,
@@ -18,12 +18,12 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "ogham" }],
+    documentSelector: [{ scheme: "file", language: "masque" }],
   };
 
   client = new LanguageClient(
-    "ogham-lsp",
-    "Ogham Language Server",
+    "masque-lsp",
+    "Masque Language Server",
     serverOptions,
     clientOptions
   );

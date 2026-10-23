@@ -1,53 +1,53 @@
-# Ogham
+# Masque
 
-Ogham is a UI language and embeddable runtime for Rust applications. The
-runtime compiles `.ogh` source to bytecode, executes it on a stack-based VM,
+Masque is a UI language and embeddable runtime for Rust applications. The
+runtime compiles `.masque` source to bytecode, executes it on a stack-based VM,
 and reconciles the resulting widget tree against a live UI. A Skia-based
 backend ships out of the box; alternative backends implement the
 `Surface` trait.
 
 This document is the contributor onboarding map. Library users embedding
-Ogham in a host application should read [`AGENTS.md`](AGENTS.md) for the
+Masque in a host application should read [`AGENTS.md`](AGENTS.md) for the
 integration guide. The design contracts behind each subsystem live in
 [`docs/internal/`](docs/internal/).
 
 ## Repository layout
 
 ```
-ogham/
+masque/
 ├─ src/
-│  ├─ lib.rs                  — top-level Ogham facade (Arc<Mutex<Runtime>> + UI)
-│  ├─ scanner/                — lexer (.ogh source → tokens)
+│  ├─ lib.rs                  — top-level Masque facade (Arc<Mutex<Runtime>> + UI)
+│  ├─ scanner/                — lexer (.masque source → tokens)
 │  ├─ parser/                 — recursive-descent parser (tokens → AST)
 │  ├─ runtime/                — Runtime, RuntimeConfig, bytecode compiler, VM
 │  ├─ widget/                 — UI struct, widget tree, Surface trait, layout, animation
 │  ├─ skia.rs                 — reference Skia backend
-│  ├─ typed.rs                — TypedOgham<S, M> wrapper for derive-based bindings
-│  ├─ diagnostics/            — schema-diagnostic engine (consumed by `ogham check`)
-│  ├─ cli/                    — `ogham` CLI binary
-│  ├─ lsp/                    — `ogham-lsp` language server binary
-│  ├─ client/                 — standalone .ogh viewer binary
+│  ├─ typed.rs                — TypedMasque<S, M> wrapper for derive-based bindings
+│  ├─ diagnostics/            — schema-diagnostic engine (consumed by `masque check`)
+│  ├─ cli/                    — `masque` CLI binary
+│  ├─ lsp/                    — `masque-lsp` language server binary
+│  ├─ client/                 — standalone .masque viewer binary
 │  └─ file_watcher.rs         — hot-reload file watching
 ├─ crates/
-│  └─ ogham-derive/           — proc-macros: #[derive(OghamState)], #[derive(OghamMsg)]
-├─ examples/                  — runnable .ogh programs
-├─ editors/vscode/            — VS Code extension (talks to ogham-lsp)
+│  └─ masque-derive/           — proc-macros: #[derive(MasqueState)], #[derive(MasqueMsg)]
+├─ examples/                  — runnable .masque programs
+├─ editors/vscode/            — VS Code extension (talks to masque-lsp)
 ├─ tests/                     — integration tests (cargo test)
 └─ docs/internal/             — design contracts and per-phase implementation plans
 ```
 
-The crate is a Cargo workspace. `crates/ogham-derive` is split out so the
+The crate is a Cargo workspace. `crates/masque-derive` is split out so the
 proc-macro can be a `proc-macro = true` crate without forcing the rest of
 the library to compile in that mode.
 
 ## Binaries
 
-The workspace produces two binaries plus the `ogham` library crate:
+The workspace produces two binaries plus the `masque` library crate:
 
 | Binary       | Path                | Purpose                                                           |
 |--------------|---------------------|-------------------------------------------------------------------|
-| `ogham`      | `src/cli/main.rs`   | CLI. Currently one subcommand: `check` (validates `.ogh` files against typed-bindings manifests). |
-| `ogham-lsp`  | `src/lsp/main.rs`   | Language Server (LSP over stdio). Used by the VS Code extension and any LSP-capable editor. |
+| `masque`      | `src/cli/main.rs`   | CLI. Currently one subcommand: `check` (validates `.masque` files against typed-bindings manifests). |
+| `masque-lsp`  | `src/lsp/main.rs`   | Language Server (LSP over stdio). Used by the VS Code extension and any LSP-capable editor. |
 
 ## Quick start
 
@@ -55,19 +55,19 @@ The workspace produces two binaries plus the `ogham` library crate:
 # Build everything (library + 2 binaries).
 cargo build
 
-# Preview an .ogh file (hot-reloads on save). The previewer lives in the
+# Preview an .masque file (hot-reloads on save). The previewer lives in the
 # lorekeeper workspace and runs on the engine's own window host:
-#   cd ../lorekeeper && cargo run -p ogham_preview -- ../ogham/examples/counter.ogh
+#   cd ../lorekeeper && cargo run -p masque_preview -- ../masque/examples/counter.masque
 
-# Validate every .ogh file in the workspace against host bindings.
-cargo run --bin ogham -- check --all
+# Validate every .masque file in the workspace against host bindings.
+cargo run --bin masque -- check --all
 
 # Or validate a single file:
-cargo run --bin ogham -- check path/to/ui.ogh
+cargo run --bin masque -- check path/to/ui.masque
 
 # Build and run the LSP (most editors discover it via $PATH).
-cargo build --bin ogham-lsp
-./target/debug/ogham-lsp        # speaks LSP over stdin/stdout
+cargo build --bin masque-lsp
+./target/debug/masque-lsp        # speaks LSP over stdin/stdout
 
 # Run the test suite.
 cargo test
@@ -79,15 +79,15 @@ binding behaviors all have dedicated test files.
 
 ## Embedding the library
 
-Add `ogham` as a dependency, build a `RuntimeConfig`, and call
-`Ogham::watch` (file-backed, hot-reload) or `Ogham::from_source`
+Add `masque` as a dependency, build a `RuntimeConfig`, and call
+`Masque::watch` (file-backed, hot-reload) or `Masque::from_source`
 (string-backed, no watcher). Per frame, drive the runtime with `tick`,
 `tick_animations`, `layout`, and `draw`.
 
 For typed host state and event handling via Rust types rather than
-`HashMap<String, Value>`, derive `OghamState` and `OghamMsg` and use
-`TypedOgham::watch_typed`. The derive macros also emit a manifest fragment
-the `ogham check` CLI uses to flag stale `.ogh` references at analysis
+`HashMap<String, Value>`, derive `MasqueState` and `MasqueMsg` and use
+`TypedMasque::watch_typed`. The derive macros also emit a manifest fragment
+the `masque check` CLI uses to flag stale `.masque` references at analysis
 time.
 
 The full integration recipe — `RuntimeConfig` builder, host-state
@@ -98,7 +98,7 @@ custom rendering backends — lives in [`AGENTS.md`](AGENTS.md).
 ## Documentation
 
 - [`AGENTS.md`](AGENTS.md) — integration guide for library consumers and
-  language overview for `.ogh` authors.
+  language overview for `.masque` authors.
 - [`docs/internal/ARCHITECTURE.md`](docs/internal/ARCHITECTURE.md) —
   one-page orientation: pipeline, embedding seam, per-frame loop, module
   layout, where state lives.
@@ -134,9 +134,9 @@ visible. See `INTENT.md` for the convention.
 
 ## Editor support
 
-The VS Code extension in `editors/vscode/` talks to `ogham-lsp` over
-stdio. After building the binary, set `ogham.lspPath` in the extension's
-settings (defaults to `ogham-lsp` on `$PATH`). Capabilities today:
+The VS Code extension in `editors/vscode/` talks to `masque-lsp` over
+stdio. After building the binary, set `masque.lspPath` in the extension's
+settings (defaults to `masque-lsp` on `$PATH`). Capabilities today:
 diagnostics (scanner + parser + typed-bindings AST validation +
 lifecycle conditional-registration warnings), hover, go-to-definition,
 document symbols, semantic tokens. Completion, find-references, and

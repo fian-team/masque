@@ -6,17 +6,17 @@
 //! plumbing is exercised end-to-end via `Document::analyze` and
 //! the compiler.
 
-// The LSP modules are part of the `ogham-lsp` binary, not the
+// The LSP modules are part of the `masque-lsp` binary, not the
 // public library, so this integration test file can't depend on
 // them directly. We instead exercise the underlying primitives
 // (parser, schema, compiler) the way the LSP does. End-to-end LSP
 // tests live in the binary's own `#[cfg(test)]` modules.
 
-use ogham::parser::Parser;
-use ogham::runtime::compiler::Compiler;
-use ogham::runtime::error::VMError;
-use ogham::runtime::schema::ModuleSchema;
-use ogham::scanner::Scanner;
+use masque::parser::Parser;
+use masque::runtime::compiler::Compiler;
+use masque::runtime::error::VMError;
+use masque::runtime::schema::ModuleSchema;
+use masque::scanner::Scanner;
 
 /// Mirrors what `Document::analyze` does end-to-end. Returns
 /// (parse_error, schema_error, compile_error). At most one will
@@ -24,9 +24,9 @@ use ogham::scanner::Scanner;
 fn analyze(
     source: &str,
 ) -> (
-    Option<ogham::parser::SyntaxError>,
-    Option<ogham::parser::SyntaxError>,
-    Option<ogham::parser::SyntaxError>,
+    Option<masque::parser::SyntaxError>,
+    Option<masque::parser::SyntaxError>,
+    Option<masque::parser::SyntaxError>,
 ) {
     let tokens = Scanner::new(source.to_string()).scan();
     let parsed = Parser::new(tokens).parse();

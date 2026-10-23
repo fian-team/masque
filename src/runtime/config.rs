@@ -20,8 +20,8 @@ pub struct RuntimeConfig {
     pub project_root: Option<PathBuf>,
     pub import_paths: HashMap<String, PathBuf>,
     /// In-memory sources for `import "..."` resolution, keyed by the import path
-    /// string exactly as written (e.g. `"./chrome.ogh"`). Consulted BEFORE the
-    /// filesystem, so a binary can embed its `.ogh` library via `include_str!`
+    /// string exactly as written (e.g. `"./chrome.masque"`). Consulted BEFORE the
+    /// filesystem, so a binary can embed its `.masque` library via `include_str!`
     /// and run with no source-tree dependency.
     pub embedded_sources: HashMap<PathBuf, String>,
     pub fonts: Vec<FontEntry>,
@@ -30,13 +30,13 @@ pub struct RuntimeConfig {
     /// into the runtime's [`WidgetRegistry`] on creation, overriding built-in
     /// types if the names collide.
     pub custom_widgets: HashMap<String, WidgetFactory>,
-    /// Host paint routines keyed by the exact name a `.ogh` file uses in
+    /// Host paint routines keyed by the exact name a `.masque` file uses in
     /// `Canvas { painter: "name" }`. Copied onto the `Runtime` on creation;
     /// the `Canvas` builder resolves the name against this map at build time
     /// and rejects an unregistered one.
     ///
     /// Registering here rather than on a live `Runtime` is what makes
-    /// painters survive hot reload: `Ogham::reload_file` rebuilds the
+    /// painters survive hot reload: `Masque::reload_file` rebuilds the
     /// runtime from this config, so a painter added post-hoc to the old
     /// runtime would vanish on the next file save.
     pub painters: HashMap<String, CanvasPainter>,
@@ -81,10 +81,10 @@ impl RuntimeConfig {
     }
 
     /// Provide in-memory sources for `import "..."` resolution, keyed by the
-    /// import path string exactly as written (e.g. `"./chrome.ogh"`). Consulted
-    /// before the filesystem, so a binary can carry its `.ogh` library with
+    /// import path string exactly as written (e.g. `"./chrome.masque"`). Consulted
+    /// before the filesystem, so a binary can carry its `.masque` library with
     /// `include_str!` and run with no source-tree dependency. The entry module
-    /// itself is passed to [`crate::Ogham::from_source`]; its imports (and
+    /// itself is passed to [`crate::Masque::from_source`]; its imports (and
     /// theirs, transitively) resolve from this map.
     pub fn with_embedded_sources(mut self, sources: HashMap<PathBuf, String>) -> Self {
         self.embedded_sources = sources;
@@ -92,7 +92,7 @@ impl RuntimeConfig {
     }
 
     /// Register a named font family from one or more TTF/OTF file paths.
-    /// Fonts registered here are automatically loaded when the `Ogham`
+    /// Fonts registered here are automatically loaded when the `Masque`
     /// instance is created via `watch()` or `from_source()`.
     pub fn with_font(
         mut self,
@@ -116,7 +116,7 @@ impl RuntimeConfig {
     /// Register a custom widget type. The factory receives the widget
     /// registry (for building child widgets), the runtime, and the
     /// descriptor containing the widget's properties as declared in the
-    /// `.ogh` source. Names are lowercased so lookups are case-insensitive.
+    /// `.masque` source. Names are lowercased so lookups are case-insensitive.
     pub fn with_widget<S, F>(mut self, name: S, factory: F) -> Self
     where
         S: Into<String>,
@@ -134,7 +134,7 @@ impl RuntimeConfig {
         self
     }
 
-    /// Register a host paint routine that `.ogh` can seat in the layout as
+    /// Register a host paint routine that `.masque` can seat in the layout as
     /// `Canvas { painter: "name", props: { … }, style: { … } }`.
     ///
     /// The closure receives a [`Painter`] whose canvas is already
@@ -150,9 +150,9 @@ impl RuntimeConfig {
     /// build-time error listing the registered ones, never a silent blank.
     ///
     /// ```rust,no_run
-    /// # use ogham::runtime::config::RuntimeConfig;
+    /// # use masque::runtime::config::RuntimeConfig;
     /// let config = RuntimeConfig::new().with_painter("wheel_dial", |p, _props| {
-    ///     let mut paint = ogham::skia_safe::Paint::default();
+    ///     let mut paint = masque::skia_safe::Paint::default();
     ///     paint.set_anti_alias(true);
     ///     p.canvas()
     ///         .draw_circle((p.width() / 2.0, p.height() / 2.0), p.width() / 2.0, &paint);
@@ -161,13 +161,13 @@ impl RuntimeConfig {
     /// Report every style key and enum value this runtime does not
     /// recognise, instead of dropping it silently.
     ///
-    /// Off by default, and deliberately: ogham has always dropped what it
+    /// Off by default, and deliberately: masque has always dropped what it
     /// did not recognise, five repositories were written against that,
     /// and a hard default would break four codebases nobody asked to
     /// touch. Turning it on changes nothing about what is drawn — a key
     /// the builder ignores today goes on being ignored — it only says so.
     ///
-    /// Findings arrive in [`crate::Ogham::vocabulary_violations`], and
+    /// Findings arrive in [`crate::Masque::vocabulary_violations`], and
     /// each one is printed once as it is first seen. Nothing fails: a UI
     /// language that panicked mid-frame over a style key would be worse
     /// than the silence it replaced.

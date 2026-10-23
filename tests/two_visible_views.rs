@@ -22,13 +22,13 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::presence_widget::PresenceWidget;
-use ogham::widget::rect::Rect;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::presence_widget::PresenceWidget;
+use masque::widget::rect::Rect;
+use masque::Masque;
 
 const WIDTH: f32 = 800.0;
 const HEIGHT: f32 = 600.0;
@@ -55,7 +55,7 @@ screen "exit-prompt" {
 let main = fn () { outlet() };
 "#;
 
-fn mounted(path: &[&str], presses: &Arc<AtomicUsize>, which: &'static str) -> Ogham {
+fn mounted(path: &[&str], presses: &Arc<AtomicUsize>, which: &'static str) -> Masque {
     let counted = presses.clone();
     let config = RuntimeConfig::new()
         .with_event_handler("workspace_press", {
@@ -73,17 +73,17 @@ fn mounted(path: &[&str], presses: &Arc<AtomicUsize>, which: &'static str) -> Og
             }
             Ok(Value::Boolean(true))
         });
-    let mut ogham = Ogham::from_source(WORKSPACE_AND_PROMPT, config).expect("the document mounts");
-    ogham.with_runtime_mut(|rt| rt.set_route_path(path));
-    ogham
+    let mut masque = Masque::from_source(WORKSPACE_AND_PROMPT, config).expect("the document mounts");
+    masque.with_runtime_mut(|rt| rt.set_route_path(path));
+    masque
         .frame(WIDTH, HEIGHT, 1.0 / 60.0)
         .expect("a frame with the path set");
-    ogham
+    masque
 }
 
 /// Every screen's layout rect, in the order the outlet rendered them.
-fn views(ogham: &mut Ogham) -> Vec<Rect> {
-    let root = ogham.get_ui_mut().root.clone();
+fn views(masque: &mut Masque) -> Vec<Rect> {
+    let root = masque.get_ui_mut().root.clone();
     let guard = root.lock().expect("root lock");
     let presence = guard
         .downcast_ref::<PresenceWidget>()
@@ -113,8 +113,8 @@ fn views(ogham: &mut Ogham) -> Vec<Rect> {
 #[test]
 fn two_visible_views_occupy_the_same_box() {
     let presses = Arc::new(AtomicUsize::new(0));
-    let mut ogham = mounted(&["map-edit", "exit-prompt"], &presses, "prompt");
-    let views = views(&mut ogham);
+    let mut masque = mounted(&["map-edit", "exit-prompt"], &presses, "prompt");
+    let views = views(&mut masque);
 
     assert_eq!(views.len(), 2, "the outlet rendered both ids");
     assert_eq!(views[0].x, views[1].x, "same origin");
@@ -133,8 +133,8 @@ fn two_visible_views_occupy_the_same_box() {
 #[test]
 fn the_deeper_view_takes_the_press() {
     let presses = Arc::new(AtomicUsize::new(0));
-    let mut ogham = mounted(&["map-edit", "exit-prompt"], &presses, "prompt");
-    let handled = ogham.get_ui_mut().call_event(&Event::with_point(
+    let mut masque = mounted(&["map-edit", "exit-prompt"], &presses, "prompt");
+    let handled = masque.get_ui_mut().call_event(&Event::with_point(
         "mouse_down".to_string(),
         Point::new(WIDTH / 2.0, HEIGHT / 2.0),
     ));
@@ -147,8 +147,8 @@ fn the_deeper_view_takes_the_press() {
 
     // And the workspace, which is underneath, gets nothing.
     let workspace = Arc::new(AtomicUsize::new(0));
-    let mut ogham = mounted(&["map-edit", "exit-prompt"], &workspace, "workspace");
-    ogham.get_ui_mut().call_event(&Event::with_point(
+    let mut masque = mounted(&["map-edit", "exit-prompt"], &workspace, "workspace");
+    masque.get_ui_mut().call_event(&Event::with_point(
         "mouse_down".to_string(),
         Point::new(WIDTH / 2.0, HEIGHT / 2.0),
     ));
@@ -162,8 +162,8 @@ fn the_deeper_view_takes_the_press() {
 #[test]
 fn one_visible_view_lays_out_exactly_as_it_did() {
     let presses = Arc::new(AtomicUsize::new(0));
-    let mut ogham = mounted(&["map-edit"], &presses, "workspace");
-    let views = views(&mut ogham);
+    let mut masque = mounted(&["map-edit"], &presses, "workspace");
+    let views = views(&mut masque);
 
     assert_eq!(views.len(), 1);
     let one = &views[0];
@@ -178,7 +178,7 @@ fn one_visible_view_lays_out_exactly_as_it_did() {
 /// outlet's declaration, not a change to what `Presence` means.
 #[test]
 fn an_ordinary_presence_still_flows_its_children() {
-    let mut ogham = Ogham::from_source(
+    let mut masque = Masque::from_source(
         r#"
         let main = fn () {
           Presence {
@@ -193,9 +193,9 @@ fn an_ordinary_presence_still_flows_its_children() {
         RuntimeConfig::new(),
     )
     .expect("the document mounts");
-    ogham.frame(WIDTH, HEIGHT, 1.0 / 60.0).expect("a frame");
+    masque.frame(WIDTH, HEIGHT, 1.0 / 60.0).expect("a frame");
 
-    let laid = views(&mut ogham);
+    let laid = views(&mut masque);
     assert_eq!(laid.len(), 2);
     assert_eq!(laid[0].y, 0.0);
     assert_eq!(laid[1].y, 100.0, "flowed, not stacked");
@@ -205,7 +205,7 @@ fn an_ordinary_presence_still_flows_its_children() {
 /// outlet's shape by hand.
 #[test]
 fn a_presence_that_asks_to_stack_stacks() {
-    let mut ogham = Ogham::from_source(
+    let mut masque = Masque::from_source(
         r#"
         let main = fn () {
           Presence {
@@ -221,9 +221,9 @@ fn a_presence_that_asks_to_stack_stacks() {
         RuntimeConfig::new(),
     )
     .expect("the document mounts");
-    ogham.frame(WIDTH, HEIGHT, 1.0 / 60.0).expect("a frame");
+    masque.frame(WIDTH, HEIGHT, 1.0 / 60.0).expect("a frame");
 
-    let laid = views(&mut ogham);
+    let laid = views(&mut masque);
     assert_eq!(laid.len(), 2);
     assert_eq!(laid[0].y, 0.0);
     assert_eq!(laid[1].y, 0.0, "stacked");

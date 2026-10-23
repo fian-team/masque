@@ -1,4 +1,4 @@
-import "./button.ogh";
+import "./button.masque";
 
 let panel_style = {
   r: 30,

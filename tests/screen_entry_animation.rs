@@ -14,10 +14,10 @@
 //! replacing the generation wholesale, the second screen inherits the
 //! first one's widget — same key, same position — and never animates.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::presence_widget::PresenceWidget;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::presence_widget::PresenceWidget;
+use masque::Masque;
 
 /// Two screens whose documents share a key, which is what a shared panel
 /// helper produces in every real consumer.
@@ -45,15 +45,15 @@ screen "connect" {
 let main = fn () { outlet() };
 "#;
 
-fn build(source: &str) -> Ogham {
-    Ogham::from_source(source, RuntimeConfig::default()).expect("from_source")
+fn build(source: &str) -> Masque {
+    Masque::from_source(source, RuntimeConfig::default()).expect("from_source")
 }
 
 /// The opacity the live document is currently rendering at.
 ///
 /// `initial: { opacity: 0 }` means a freshly mounted widget starts at 0
 /// and springs to 1. A reused widget is already at 1 and never moves.
-fn document_opacity(ui: &mut ogham::widget::UI) -> f32 {
+fn document_opacity(ui: &mut masque::widget::UI) -> f32 {
     let root = ui.root.clone();
     let guard = root.lock().expect("root lock");
     let presence = guard
@@ -73,18 +73,18 @@ fn document_opacity(ui: &mut ogham::widget::UI) -> f32 {
     flex.style.opacity.value()
 }
 
-fn frame(ogham: &mut Ogham) {
-    ogham.frame(1280.0, 720.0, 1.0 / 60.0).expect("frame");
+fn frame(masque: &mut Masque) {
+    masque.frame(1280.0, 720.0, 1.0 / 60.0).expect("frame");
 }
 
 #[test]
 fn the_first_screen_mounts_at_its_initial_style() {
-    let mut ogham = build(SHARED_KEY);
-    ogham.with_runtime_mut(|rt| rt.set_route_path(&["title"]));
-    frame(&mut ogham);
+    let mut masque = build(SHARED_KEY);
+    masque.with_runtime_mut(|rt| rt.set_route_path(&["title"]));
+    frame(&mut masque);
     // Not exactly zero: one frame of spring has already run. What matters
     // is that it is nowhere near the declared 1.0.
-    let opacity = document_opacity(ogham.get_ui_mut());
+    let opacity = document_opacity(masque.get_ui_mut());
     assert!(
         opacity < 0.5,
         "a freshly mounted screen starts at its `initial` and springs up, got {opacity}"
@@ -93,23 +93,23 @@ fn the_first_screen_mounts_at_its_initial_style() {
 
 #[test]
 fn a_route_change_remounts_rather_than_reusing_the_shared_key() {
-    let mut ogham = build(SHARED_KEY);
-    ogham.with_runtime_mut(|rt| rt.set_route_path(&["title"]));
-    frame(&mut ogham);
+    let mut masque = build(SHARED_KEY);
+    masque.with_runtime_mut(|rt| rt.set_route_path(&["title"]));
+    frame(&mut masque);
 
     // Let the entrance settle, so a screen that failed to remount would
     // be sitting at full opacity and the assertion below would catch it.
     for _ in 0..240 {
-        frame(&mut ogham);
+        frame(&mut masque);
     }
     assert!(
-        document_opacity(ogham.get_ui_mut()) > 0.99,
+        document_opacity(masque.get_ui_mut()) > 0.99,
         "the first screen finished its entrance"
     );
 
-    ogham.with_runtime_mut(|rt| rt.set_route_path(&["connect"]));
-    frame(&mut ogham);
-    let opacity = document_opacity(ogham.get_ui_mut());
+    masque.with_runtime_mut(|rt| rt.set_route_path(&["connect"]));
+    frame(&mut masque);
+    let opacity = document_opacity(masque.get_ui_mut());
     assert!(
         opacity < 0.5,
         "the incoming screen mounts fresh and plays its entrance, even \

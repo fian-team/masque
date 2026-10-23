@@ -1,4 +1,4 @@
-# Ogham — Flex Layout
+# Masque — Flex Layout
 
 > **Status: Live contract.**
 >
@@ -346,7 +346,7 @@ When wrap is enabled and direction is `Row`:
 - **Wrapped lines don't redistribute Grow.** A Grow child in a
   wrapped row takes its natural (Shrink-equivalent) size on its
   line. CSS's `flex-wrap: wrap; flex: 1 1 0` redistributes per
-  line; Ogham doesn't.
+  line; Masque doesn't.
 
   *Drift indicators:*
   - A wrap implementation that does try to redistribute Grow

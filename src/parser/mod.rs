@@ -27,7 +27,7 @@ pub use {
 
 use super::scanner;
 
-/// Recursive-descent parser for the Ogham language.
+/// Recursive-descent parser for the Masque language.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Parser {
     input: Vec<scanner::Token>,

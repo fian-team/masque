@@ -8,13 +8,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::skia::SkiaEnv;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::Surface;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::Surface;
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -62,7 +62,7 @@ let main = fn () {{
     )
 }
 
-fn mounted(src: &str) -> (Ogham, Log) {
+fn mounted(src: &str) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let mut config = RuntimeConfig::new();
     for name in ["bar_press", "inner_press", "below_press", "dismissed"] {
@@ -72,18 +72,18 @@ fn mounted(src: &str) -> (Ogham, Log) {
             Ok(Value::Void)
         });
     }
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     env.draw(o.get_ui_mut());
     (o, log)
 }
 
-fn send(o: &mut Ogham, name: &str, x: f32, y: f32) -> bool {
+fn send(o: &mut Masque, name: &str, x: f32, y: f32) -> bool {
     o.get_ui_mut()
         .call_event(&Event::with_point(name.to_string(), Point::new(x, y)))
 }
@@ -157,7 +157,7 @@ fn a_dismissing_popover_occludes_the_whole_viewport() {
 #[test]
 fn an_unknown_backdrop_name_is_a_build_error() {
     let src = document(r#"backdrop: "modal","#);
-    let err = Ogham::from_source(&src, RuntimeConfig::new())
+    let err = Masque::from_source(&src, RuntimeConfig::new())
         .err()
         .expect("the build is refused");
     let text = format!("{err:?}");

@@ -1,9 +1,9 @@
-# Ogham — Surface (Rendering Backend)
+# Masque — Surface (Rendering Backend)
 
 > **Status: Live contract.**
 >
 > The `Surface` and `RenderContext` traits — the only seam where
-> Ogham talks to a rendering backend. The Skia implementation
+> Masque talks to a rendering backend. The Skia implementation
 > (`SkiaEnv`) is the reference; custom backends are free to ship
 > their own. This doc covers the contract, the responsibilities
 > on each side, and the gotchas around DPI scale and text
@@ -432,7 +432,7 @@ Today's widgets:
 - **The image cache lives on the UI, not the backend.**
   `ImageCache` is loaded with images on demand by
   `RenderContext::draw_image`. The cache survives across
-  frames and reloads (it's part of `UI`, which Ogham
+  frames and reloads (it's part of `UI`, which Masque
   reconciles into rather than rebuilds from scratch).
 
   *Drift indicators:*

@@ -9,12 +9,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::style::Size;
-use ogham::widget::{LayoutCounts, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::style::Size;
+use masque::widget::{LayoutCounts, WidgetRef};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -75,30 +75,30 @@ fn initial() -> Vec<(&'static str, Value)> {
     ]
 }
 
-fn mounted(src: &str) -> Ogham {
+fn mounted(src: &str) -> Masque {
     let config = RuntimeConfig::new().with_host_state(
         initial()
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
             .collect::<HashMap<_, _>>(),
     );
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
     o
 }
 
-fn set(o: &mut Ogham, name: &str, value: Value) {
+fn set(o: &mut Masque, name: &str, value: Value) {
     o.with_runtime_mut(|rt| rt.set_host_state(name, value));
 }
 
-fn counts(o: &Ogham) -> LayoutCounts {
+fn counts(o: &Masque) -> LayoutCounts {
     o.get_ui().layout_counts()
 }
 
 /// Every keyed widget's parent-relative rect.
-fn rects(o: &Ogham) -> BTreeMap<String, (f32, f32, f32, f32)> {
+fn rects(o: &Masque) -> BTreeMap<String, (f32, f32, f32, f32)> {
     fn walk(node: &WidgetRef, out: &mut BTreeMap<String, (f32, f32, f32, f32)>) {
         let children = {
             let g = node.lock().unwrap();
@@ -116,12 +116,12 @@ fn rects(o: &Ogham) -> BTreeMap<String, (f32, f32, f32, f32)> {
     out
 }
 
-fn rect(o: &Ogham, key: &str) -> (f32, f32, f32, f32) {
+fn rect(o: &Masque, key: &str) -> (f32, f32, f32, f32) {
     rects(o)[key]
 }
 
 /// Lay the whole tree out from scratch and return what it produced.
-fn full_pass_rects(o: &mut Ogham) -> BTreeMap<String, (f32, f32, f32, f32)> {
+fn full_pass_rects(o: &mut Masque) -> BTreeMap<String, (f32, f32, f32, f32)> {
     o.get_ui_mut().mark_needs_layout();
     o.get_ui_mut().layout(W, H);
     rects(o)

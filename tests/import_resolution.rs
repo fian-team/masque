@@ -11,7 +11,7 @@
 //! The embedded map is one flat namespace keyed by the import string
 //! exactly as written, and it used to be consulted first for every path.
 //! So a host carrying an in-memory library under a key like
-//! `"./widgets.ogh"` captured *every* document's `import "./widgets.ogh"`,
+//! `"./widgets.masque"` captured *every* document's `import "./widgets.masque"`,
 //! whatever directory that document sat in and whatever lay beside it on
 //! disk. The document said "the file next to me" and got the host's.
 //!
@@ -20,7 +20,7 @@
 //! unlike the one being edited — and only if the two files differ visibly,
 //! which two copies of one library often do not.
 //!
-//! It was live in a workspace where a game mounted an editor's `.ogh`
+//! It was live in a workspace where a game mounted an editor's `.masque`
 //! library as embedded sources under seven such keys, while the game's own
 //! documents sat in a different crate's directory.
 //!
@@ -35,18 +35,18 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
 
-/// A scratch directory of our own, removed on drop. `ogham` carries no
+/// A scratch directory of our own, removed on drop. `masque` carries no
 /// dev-dependencies and this is not worth becoming the first one.
 struct Scratch(PathBuf);
 
 impl Scratch {
     fn new(name: &str) -> Self {
         let dir = std::env::temp_dir().join(format!(
-            "ogham-import-{}-{}-{:?}",
+            "masque-import-{}-{}-{:?}",
             name,
             std::process::id(),
             std::thread::current().id(),
@@ -102,16 +102,16 @@ fn renders(runtime: &mut Runtime) -> Result<(), String> {
 #[test]
 fn a_relative_import_from_a_file_takes_the_file_beside_it() {
     let scratch = Scratch::new("sibling-wins");
-    scratch.write("kit.ogh", &only_defines("from_the_sibling_on_disk"));
+    scratch.write("kit.masque", &only_defines("from_the_sibling_on_disk"));
     let main = scratch.write(
-        "main.ogh",
-        "import \"./kit.ogh\";\nfrom_the_sibling_on_disk()",
+        "main.masque",
+        "import \"./kit.masque\";\nfrom_the_sibling_on_disk()",
     );
 
     // The trap: the same spelling, in memory, pointing somewhere else.
     let mut embedded = HashMap::new();
     embedded.insert(
-        PathBuf::from("./kit.ogh"),
+        PathBuf::from("./kit.masque"),
         only_defines("from_the_embedded_library"),
     );
     let config = RuntimeConfig::new().with_embedded_sources(embedded);
@@ -134,12 +134,12 @@ fn a_relative_import_from_a_file_takes_the_file_beside_it() {
 fn a_relative_import_with_no_file_behind_it_still_takes_the_embedded_source() {
     let mut embedded = HashMap::new();
     embedded.insert(
-        PathBuf::from("./kit.ogh"),
+        PathBuf::from("./kit.masque"),
         only_defines("from_the_embedded_library"),
     );
     let config = RuntimeConfig::new().with_embedded_sources(embedded);
 
-    let entry = "import \"./kit.ogh\";\nfrom_the_embedded_library()";
+    let entry = "import \"./kit.masque\";\nfrom_the_embedded_library()";
     let mut runtime = Runtime::from_source(entry, Some(config)).expect("from_source");
     renders(&mut runtime).expect(
         "a root with no file behind it has no directory to resolve against, so \
@@ -156,16 +156,16 @@ fn a_relative_import_with_no_file_behind_it_still_takes_the_embedded_source() {
 fn an_embedded_module_resolves_its_own_relative_imports_in_the_map() {
     let mut embedded = HashMap::new();
     embedded.insert(
-        PathBuf::from("./leaf.ogh"),
+        PathBuf::from("./leaf.masque"),
         only_defines("from_the_leaf"),
     );
     embedded.insert(
-        PathBuf::from("./middle.ogh"),
-        "import \"./leaf.ogh\";".to_string(),
+        PathBuf::from("./middle.masque"),
+        "import \"./leaf.masque\";".to_string(),
     );
     let config = RuntimeConfig::new().with_embedded_sources(embedded);
 
-    let entry = "import \"./middle.ogh\";\nfrom_the_leaf()";
+    let entry = "import \"./middle.masque\";\nfrom_the_leaf()";
     let mut runtime = Runtime::from_source(entry, Some(config)).expect("from_source");
     renders(&mut runtime).expect("the second hop must resolve in the map too");
 }
@@ -183,12 +183,12 @@ fn a_relative_import_is_measured_from_the_importing_document() {
 
     // Two files named alike, one in each directory. Only the nested one
     // defines what the entry ends up calling.
-    scratch.write("kit.ogh", &only_defines("from_the_root_kit"));
-    scratch.write("nested/kit.ogh", &only_defines("from_the_nested_kit"));
-    scratch.write("nested/leaf.ogh", "import \"./kit.ogh\";");
+    scratch.write("kit.masque", &only_defines("from_the_root_kit"));
+    scratch.write("nested/kit.masque", &only_defines("from_the_nested_kit"));
+    scratch.write("nested/leaf.masque", "import \"./kit.masque\";");
     let main = scratch.write(
-        "main.ogh",
-        "import \"./nested/leaf.ogh\";\nfrom_the_nested_kit()",
+        "main.masque",
+        "import \"./nested/leaf.masque\";\nfrom_the_nested_kit()",
     );
 
     let mut runtime = Runtime::from_file(&main, None).expect("from_file");
@@ -206,15 +206,15 @@ fn a_relative_import_is_measured_from_the_importing_document() {
 fn a_named_import_still_reaches_the_embedded_library() {
     let scratch = Scratch::new("named");
     // A decoy beside the document, which a named import must NOT take.
-    scratch.write("kit.ogh", &only_defines("from_the_decoy_sibling"));
+    scratch.write("kit.masque", &only_defines("from_the_decoy_sibling"));
     let main = scratch.write(
-        "main.ogh",
-        "import \"@lib/kit.ogh\";\nfrom_the_embedded_library()",
+        "main.masque",
+        "import \"@lib/kit.masque\";\nfrom_the_embedded_library()",
     );
 
     let mut embedded = HashMap::new();
     embedded.insert(
-        PathBuf::from("@lib/kit.ogh"),
+        PathBuf::from("@lib/kit.masque"),
         only_defines("from_the_embedded_library"),
     );
     let config = RuntimeConfig::new().with_embedded_sources(embedded);
@@ -224,14 +224,14 @@ fn a_named_import_still_reaches_the_embedded_library() {
 }
 
 /// A bare import — no `./` — is a **named** one and goes to the project
-/// root, which is what `examples/import/importer.ogh` has always relied on.
+/// root, which is what `examples/import/importer.masque` has always relied on.
 /// Pinned because the split is decided on the `./`, and a tidier-looking
 /// reading ("anything without a prefix is relative") would break it.
 #[test]
 fn a_bare_import_is_named_and_not_relative() {
     let scratch = Scratch::new("bare");
-    scratch.write("kit.ogh", &only_defines("from_the_project_root_kit"));
-    let main = scratch.write("main.ogh", "import \"kit.ogh\";\nfrom_the_project_root_kit()");
+    scratch.write("kit.masque", &only_defines("from_the_project_root_kit"));
+    let main = scratch.write("main.masque", "import \"kit.masque\";\nfrom_the_project_root_kit()");
 
     let mut runtime = Runtime::from_file(&main, None).expect("from_file");
     renders(&mut runtime).expect("a bare import resolves at the project root");
@@ -243,12 +243,12 @@ fn a_bare_import_is_named_and_not_relative() {
 #[test]
 fn a_prefix_maps_a_named_import_onto_a_directory() {
     let scratch = Scratch::new("prefix-dir");
-    scratch.write("lib/kit.ogh", &only_defines("from_the_mapped_library"));
+    scratch.write("lib/kit.masque", &only_defines("from_the_mapped_library"));
     // A decoy at the project root under the same leaf name.
-    scratch.write("kit.ogh", &only_defines("from_the_root_decoy"));
+    scratch.write("kit.masque", &only_defines("from_the_root_decoy"));
     let main = scratch.write(
-        "main.ogh",
-        "import \"@lib/kit.ogh\";\nfrom_the_mapped_library()",
+        "main.masque",
+        "import \"@lib/kit.masque\";\nfrom_the_mapped_library()",
     );
 
     let config = RuntimeConfig::new().with_import_path("@lib", scratch.path().join("lib"));

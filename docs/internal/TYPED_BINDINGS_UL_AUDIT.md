@@ -3,18 +3,18 @@
 > **Status: Working notes (in-progress).**
 >
 > This doc validates [`TYPED_BINDINGS.md`](TYPED_BINDINGS.md) against
-> Untold Lore's 20 production Ogham UIs. It deliberately mixes
-> Ogham-design findings with Untold-Lore-specific migration notes;
+> Untold Lore's 20 production Masque UIs. It deliberately mixes
+> Masque-design findings with Untold-Lore-specific migration notes;
 > a cleanup pass to separate the two will happen once Phase 1
 > implementation is underway. The Untold-Lore-specific bits will
-> probably move to a doc in that repo; the Ogham-design bits will
+> probably move to a doc in that repo; the Masque-design bits will
 > fold into TYPED_BINDINGS.md or a sibling doc.
 >
 > **Methodology:** four parallel extraction passes covering 20
 > UIs (17 in `src/ui/` plus map_editor_ui at the crate root, the
 > menu inside `client/mod.rs`, and the escape menu inside
 > `client/actions.rs`). For each UI: read the Rust wrapper and
-> the matching `.ogh`; infer what `host_state {}`, `events {}`,
+> the matching `.masque`; infer what `host_state {}`, `events {}`,
 > and supporting `record` declarations would look like under
 > typed bindings. Quantify boilerplate. Flag patterns that would
 > not migrate cleanly.
@@ -28,10 +28,10 @@
   shape resolves to named records of depth ≤ 3. No heterogeneous
   arrays were found anywhere in production.
 - **One real strict-mode migration blocker found:**
-  `place_inspector.ogh::pill_btn` calls `event(evt, key)` with
+  `place_inspector.masque::pill_btn` calls `event(evt, key)` with
   `evt` bound to a function parameter — this is a computed event
   name, forbidden in strict mode. Solvable with an inline
-  refactor on the `.ogh` side; no Ogham design change needed.
+  refactor on the `.masque` side; no Masque design change needed.
 - **One scope-pressure finding:** `map_editor_ui` has 147
   host_state fields, 108 event handlers, and uses pipe-delimited
   encoded event payloads (`"place|42|name_changed|..."`). The
@@ -53,7 +53,7 @@
 - **Cross-module record sharing matters more than expected.** At
   least 4 record types (`Item`/`InvItem`, `Skill`, `Player`,
   `Place`) are duplicated across 2–4 UIs each. The
-  `import [Foo] from "./shared.ogh"` story is load-bearing for
+  `import [Foo] from "./shared.masque"` story is load-bearing for
   the migration to be coherent rather than a rats' nest of near-
   identical record decls.
 - **Numeric-as-string draft pattern is universal** in form-heavy
@@ -70,10 +70,10 @@ Numbered for citation in design-doc updates.
 
 ### F1. Computed event names exist in one production file (strict-mode blocker)
 
-**Location:** `data/engine/ui/place_inspector.ogh` lines 24–42, the
+**Location:** `data/engine/ui/place_inspector.masque` lines 24–42, the
 `pill_btn` helper.
 
-```ogh
+```masque
 let pill_btn = fn (label: string, is_active: bool, evt: string, key: string) {
   Flex {
     mouse_down: fn () { event(evt, key); },
@@ -100,9 +100,9 @@ strict mode."*
    string args; loses some Phase-1 type-safety value.
 
 **Recommendation:** option 2. Keeps the closure shape, costs
-~10 lines, no Ogham changes.
+~10 lines, no Masque changes.
 
-**Ogham design implication:** none. The rule is sound; the
+**Masque design implication:** none. The rule is sound; the
 production cost is small. **No action needed in TYPED_BINDINGS.md.**
 
 ### F2. Encoded multi-field event payloads (large UI scope concern)
@@ -130,14 +130,14 @@ and parses the destination from the payload.
 3. **Defer migration of `map_editor_ui`** — keep it on the loose
    path until the rest of the codebase has migrated and (a) we
    know whether the explosion is tolerable in production, or (b)
-   a future Ogham feature (Scenes, custom-widget property
+   a future Masque feature (Scenes, custom-widget property
    schemas in Phase 4) makes the right factoring obvious.
 
 **Recommendation:** option 3. Defer `map_editor_ui` until last.
 Carry on migrating the other 19 UIs; revisit map_editor's
 factoring informed by what we learn.
 
-**Ogham design implication:** none required for Phase 1, but
+**Masque design implication:** none required for Phase 1, but
 worth flagging for Phase 4 (custom widget property schemas) and
 Shift B (Scenes) — both might offer a cleaner factoring than
 multi-arg dispatch.
@@ -160,7 +160,7 @@ separate float events or one `(float, float, float)` event.
 
 **Recommendation:** option 1 or 2 during migration.
 
-**Ogham design implication:** none. Already supported.
+**Masque design implication:** none. Already supported.
 
 ### F4. String-encoded enums (deferred sum-type case, tracked)
 
@@ -191,9 +191,9 @@ but no worse than today.
 **Future work:** when `enum`/sum types land, every one of these
 would be revisited. Each migration is mechanical (declare an
 enum, replace the `string` field with the enum type, replace
-match arms in `.ogh` with the enum's variant tags).
+match arms in `.masque` with the enum's variant tags).
 
-**Ogham design implication:** none for Phase 1. Worth noting in
+**Masque design implication:** none for Phase 1. Worth noting in
 TYPED_BINDINGS.md's "Out of scope" list as the most-felt
 deferral. Done already.
 
@@ -228,10 +228,10 @@ errors flow through companion fields (e.g. `base_xp: string` +
   string."
 - A pair convention: `field: string` paired with `field_error:
   string?` always declared together; possibly enforced.
-- Just leave it as is — the convention works, costs no Ogham
+- Just leave it as is — the convention works, costs no Masque
   feature.
 
-**Ogham design implication:** none required. Worth noting in the
+**Masque design implication:** none required. Worth noting in the
 migration guide ("for form fields you want raw text preserved,
 declare as `string`, even when the underlying value is numeric").
 
@@ -244,7 +244,7 @@ exemplar; partial usage in a few others). Most just call
 `inject_host_state` unconditionally and rely on the runtime to
 diff per-key.
 
-`TypedOgham::set_state` diffs the whole struct internally before
+`TypedMasque::set_state` diffs the whole struct internally before
 calling `inject_host_state_if_changed` per field. Two wins:
 - **No-op frames trigger zero rerenders** (already true today
   in the partial-adopters; will be universal after migration).
@@ -255,7 +255,7 @@ helpers across 20 UIs make a combined ~250 `inject_host_state`
 calls per frame across the whole client. Post-migration: 20
 `set_state` calls per frame, each diffing internally.
 
-**Ogham design implication:** validates the design as drafted.
+**Masque design implication:** validates the design as drafted.
 No change.
 
 ### F7. `Arc<Mutex<FormState>>` shadow state vanishes on typed path
@@ -272,7 +272,7 @@ The pattern exists today only because event handlers must be
 and therefore can't hold `&mut Self`. The shadow gives them
 *something* mutable to write to.
 
-`TypedOgham`'s MPSC-based `poll_msg`/`drain_msgs` model
+`TypedMasque`'s MPSC-based `poll_msg`/`drain_msgs` model
 eliminates this entirely: the consumer drains messages in their
 normal update loop with full mutable access to game state.
 
@@ -281,7 +281,7 @@ removes a `Arc<Mutex<...>>` clone from every event handler
 closure (typically 5–30 closures per UI), shrinking each UI by
 20–60% in line count.
 
-**Ogham design implication:** validates the design's core
+**Masque design implication:** validates the design's core
 motivation. No change.
 
 ### F8. Heterogeneous arrays — none found
@@ -295,7 +295,7 @@ where each `Adventure` has a `kind: string` discriminator that
 drives different button rendering — but the *struct* is uniform;
 only its presentation varies.
 
-**Ogham design implication:** Phase 1's omission of sum types is
+**Masque design implication:** Phase 1's omission of sum types is
 safe. No production code is blocked.
 
 ### F9. Nesting depth stays ≤ 3 across all UIs
@@ -307,7 +307,7 @@ array<string>`. Depth 3.
 Most UIs are depth ≤ 2 (`host_state → array<Record>` where
 Record fields are scalars or `array<string>`).
 
-**Ogham design implication:** the Phase 1 type universe handles
+**Masque design implication:** the Phase 1 type universe handles
 production complexity. No pressure to add structural-sharing or
 generic record forms.
 
@@ -329,13 +329,13 @@ Cross-module candidates:
 
 Without cross-module record imports, each UI would re-declare
 its own `record InvItem { name, x, y, w, h, ... }` with the same
-shape (and risk drift). With them, a `data/engine/ui/shared.ogh`
+shape (and risk drift). With them, a `data/engine/ui/shared.masque`
 or per-domain modules
-(`data/engine/ui/inventory_types.ogh`,
-`data/engine/ui/social_types.ogh`) become natural.
+(`data/engine/ui/inventory_types.masque`,
+`data/engine/ui/social_types.masque`) become natural.
 
-**Ogham design implication:** the
-`import [Item] from "./shared.ogh"` story specified in
+**Masque design implication:** the
+`import [Item] from "./shared.masque"` story specified in
 TYPED_BINDINGS.md §"`ModuleSchema` tenets" is load-bearing, not
 a nice-to-have. Confirms the design choice. Open implementation
 question O3 (alias syntax for import conflicts) is real — `Item`
@@ -362,7 +362,7 @@ arguments. Examples:
   value)`
 - `map_editor`: many
 
-**Ogham design implication:** Phase 1's `events { name(T1, T2,
+**Masque design implication:** Phase 1's `events { name(T1, T2,
 ...) }` syntax handles all observed cases. Confirmed as drafted.
 
 ### F12. `Self`-references not used; `map<int, T>` not used
@@ -371,7 +371,7 @@ No tree-shaped data structures appear in any UI's host_state.
 All maps observed are `map<string, T>` (e.g.
 `settings.keybinds: map<string, string>`).
 
-**Ogham design implication:** confirms `Self` syntax is
+**Masque design implication:** confirms `Self` syntax is
 nice-to-have and not load-bearing for Phase 1. Confirms
 deferring `map<int, T>` (open question O1 in TYPED_BINDINGS.md)
 is safe.
@@ -400,26 +400,26 @@ uses `match (selected_id != "") { … }`.
 **Recommendation:** migrate the easy ones to `T?` opportunistically
 during their UI's typed-bindings migration; don't force it.
 
-**Ogham design implication:** none.
+**Masque design implication:** none.
 
 ### F14. Module-scoped `state` declarations work fine alongside typed host_state
 
-`inventory_hud.ogh` lines 13–15:
+`inventory_hud.masque` lines 13–15:
 
-```ogh
+```masque
 state hovered_inv_x = -1;
 state hovered_inv_y = -1;
 state hovered_shop_type = "";
 ```
 
 These persist across rerenders, are mutated from event handlers
-in `.ogh`, and never touch host_state. The typed boundary doesn't
+in `.masque`, and never touch host_state. The typed boundary doesn't
 care about them; they remain loose. Confirmed compatible across
 all UIs that use this pattern (inventory_hud, character_creation,
 several editors).
 
-**Ogham design implication:** the typed boundary deliberately
-covers only the Rust↔Ogham seam, not in-language state. Confirms
+**Masque design implication:** the typed boundary deliberately
+covers only the Rust↔Masque seam, not in-language state. Confirms
 design scope as drafted.
 
 ### F15. Map editor's 147-field schema is the upper bound — also a scope-pressure signal
@@ -428,7 +428,7 @@ The map editor is by an order of magnitude the largest UI:
 - 147 host_state fields
 - 108 events
 - 2906 lines of Rust wrapper
-- 5 sidebar `.ogh` files (largest is 1680 lines)
+- 5 sidebar `.masque` files (largest is 1680 lines)
 
 Migration is mechanical but creates a 147-field `EditorState`
 struct and a 108-variant `EditorMsg` enum on the Rust side, both
@@ -439,12 +439,12 @@ migration as the forcing function for Shift B (Scenes) — the
 natural factoring is one Scene per sidebar, each with its own
 ~30-field schema.
 
-**Ogham design implication:** Phase 1 is not blocked by this;
+**Masque design implication:** Phase 1 is not blocked by this;
 but Shift B's priority is reinforced.
 
 ---
 
-## Ogham design implications, distilled
+## Masque design implications, distilled
 
 What this audit changes about the Phase 1 design:
 
@@ -479,7 +479,7 @@ correct and complete for what production code requires.
 
 Computed by counting `with_event_handler` chains, per-field
 `set_host_state` / `inject_host_state` calls, `Arc<Mutex>` shadow
-state setup, and accessor boilerplate (`ogham()` / `ogham_mut()`
+state setup, and accessor boilerplate (`masque()` / `masque_mut()`
 / `get_ui_mut()`) eliminated by the typed path.
 
 | UI | Today (lines) | After (est.) | Reduction |
@@ -506,12 +506,12 @@ state setup, and accessor boilerplate (`ogham()` / `ogham_mut()`
 | main menu (in `client/mod.rs`) | ~1500 (slice) | ~750 | 50% |
 | **Total** | **~10,378** | **~5,440** | **~48%** |
 
-Roughly half of the Untold-Lore Ogham boilerplate disappears.
+Roughly half of the Untold-Lore Masque boilerplate disappears.
 Excluding map_editor, the average reduction is ~54%.
 
-### Required `.ogh` refactors (migration blockers)
+### Required `.masque` refactors (migration blockers)
 
-1. **`place_inspector.ogh::pill_btn`** — refactor per F1 above.
+1. **`place_inspector.masque::pill_btn`** — refactor per F1 above.
    Estimated: 30 minutes of work.
 2. **All files with `host_state {}`-eligible fields** — declare
    the schema. Mechanical work; LSP diagnostics will guide.
@@ -523,14 +523,14 @@ No other strict-mode-incompatible patterns surfaced.
 
 ### Required Rust-side scaffolding (one-time)
 
-1. New crate `ogham-derive` (or in-tree macro) for the three
+1. New crate `masque-derive` (or in-tree macro) for the three
    derives.
 2. A small `Untold Lore-side trait `UIController`** can replace
-   the per-UI `ogham()` / `ogham_mut()` / `get_ui_mut()` accessors
-   by delegating through `TypedOgham::inner()`. Already feasible
+   the per-UI `masque()` / `masque_mut()` / `get_ui_mut()` accessors
+   by delegating through `TypedMasque::inner()`. Already feasible
    without the typed path — just easier to motivate now.
-3. The `client/ui.rs` 69-line dispatch (`active_ogham`,
-   `active_ogham_mut`, `get_ui_mut`) is unaffected by typed
+3. The `client/ui.rs` 69-line dispatch (`active_masque`,
+   `active_masque_mut`, `get_ui_mut`) is unaffected by typed
    bindings; it remains the same. (Shift B is its eventual fix.)
 
 ---
@@ -544,7 +544,7 @@ typed handle before tackling the gnarly cases.
 |---|---|---|
 | 1 | `chest_ui` | Empty-state smoke test (no host_state, 2 events). Forces the macro to handle the trivial case. |
 | 2 | `tip_log_ui` | Smallest non-empty schema (2 fields, 1 event, 1 record). |
-| 3 | `crafting_ui` | First real `OghamRecord` (CraftingRecipe), small surface. |
+| 3 | `crafting_ui` | First real `MasqueRecord` (CraftingRecipe), small surface. |
 | 4 | `blueprint_editor_ui` | Scalar-only state (13 fields), no records — tests wide-flat state. |
 | 5 | `talents_ui` | First nested-record (Talent + SkillRequirement), but tiny event surface. **The "gold standard" UI per the audit** — clean one-way data flow. |
 | 6 | `dm_inventory_ui` | Tests `array<array<Cell>>` (nested arrays) and multi-arg event (`dm_inv_take(int, int)`). |
@@ -561,7 +561,7 @@ typed handle before tackling the gnarly cases.
 | 17 | `character_creation_ui` | Deepest nesting (depth 3), wizard state machine. |
 | 18 | `life_stages_editor_ui` | Heavily nested grants, dynamic toggles. |
 | 19 | `ruleset_editor_ui` | 26 fields, 8 records, 40+ events. |
-| 20 | `main menu` | 94 fields, 55 events, 2085 `.ogh` lines. State-machine-by-string is felt here. |
+| 20 | `main menu` | 94 fields, 55 events, 2085 `.masque` lines. State-machine-by-string is felt here. |
 | 21 | `map_editor_ui` | **Defer until after Shift B work begins.** 147 fields, 108 events, encoded payloads — wait for Scenes to factor. |
 
 Migrating items 1–10 first lets the macro story stabilize before
@@ -600,15 +600,15 @@ and may stay loose indefinitely.
 
 5. **Where do shared records actually live?** F10 confirms the
    need; the question is the file path. Candidates:
-   - `data/engine/ui/types/inventory.ogh`
-   - `data/engine/ui/types/social.ogh`
-   - `data/engine/ui/types/world.ogh`
-   - or one big `data/engine/ui/types.ogh`
+   - `data/engine/ui/types/inventory.masque`
+   - `data/engine/ui/types/social.masque`
+   - `data/engine/ui/types/world.masque`
+   - or one big `data/engine/ui/types.masque`
 
-   Untold-Lore-side decision; Ogham doesn't care.
+   Untold-Lore-side decision; Masque doesn't care.
 
 6. **Does map_editor's encoded-payload pattern justify a
-   first-class "tagged event" in Ogham?** The cleanest answer is
+   first-class "tagged event" in Masque?** The cleanest answer is
    probably "no, let Scenes solve it" — a per-entity-kind Scene
    gets per-kind events naturally. Ties to Shift B.
 
@@ -623,9 +623,9 @@ keeping. Records that appear in multiple UIs are flagged with
 
 ---
 
-### `chest_ui` (53 lines + 36 .ogh)
+### `chest_ui` (53 lines + 36 .masque)
 
-```ogh
+```masque
 events {
   chest_pick_up(),
   chest_cancel(),
@@ -633,8 +633,8 @@ events {
 ```
 
 ```rust
-#[derive(OghamState, Default)] struct ChestState {}
-#[derive(OghamMsg)] enum ChestMsg { ChestPickUp, ChestCancel }
+#[derive(MasqueState, Default)] struct ChestState {}
+#[derive(MasqueMsg)] enum ChestMsg { ChestPickUp, ChestCancel }
 ```
 
 Empty state, two scalar events. Migration smoke test.
@@ -643,7 +643,7 @@ Empty state, two scalar events. Migration smoke test.
 
 ### `tip_log_ui` (70 + 88)
 
-```ogh
+```masque
 record TipEntry { title: string, body: string };
 host_state { tips: array<TipEntry>, tip_count: int };
 events { close_tip_log() };
@@ -655,7 +655,7 @@ events { close_tip_log() };
 
 ### `crafting_ui` (117 + 100)
 
-```ogh
+```masque
 record CraftingRecipe { id: string, name: string, inputs_text: string, can_craft: bool };
 host_state {
   station_name: string,
@@ -669,13 +669,13 @@ events {
 ```
 
 `is_pending` was a clock-driven boolean recomputed each frame
-on the Rust side; clean separation from the .ogh.
+on the Rust side; clean separation from the .masque.
 
 ---
 
 ### `console_ui` (117 + 105)
 
-```ogh
+```masque
 record ConsoleEntry { text: string, kind: string };  // kind: future enum
 host_state {
   history: array<ConsoleEntry>,
@@ -695,7 +695,7 @@ disappears entirely.
 
 ### `blueprint_editor_ui` (168 + 303)
 
-```ogh
+```masque
 host_state {
   blueprint_id: string, display_name: string,
   tool: string,                 // "select" | "draw_wall"
@@ -724,7 +724,7 @@ events {
 
 ### `talents_ui` (195 + 154) — **gold standard**
 
-```ogh
+```masque
 record SkillRequirement { text: string, met: bool };
 record TalentCard {
   id: string, name: string, description: string,
@@ -753,7 +753,7 @@ should feel.
 
 ### `dm_inventory_ui` (239 + 161)
 
-```ogh
+```masque
 record Cell {
   cx: int, cy: int,
   kind: string,                 // "empty" | "origin" | "covered"
@@ -782,7 +782,7 @@ keep separate.
 
 ### `dm_hud_ui` (301 + 245)
 
-```ogh
+```masque
 record EntityInspector {
   name: string,
   kind: string,                 // "Player Character" | "NPC" | ...
@@ -812,7 +812,7 @@ events {
 
 ### `character_select_ui` (347 + 495)
 
-```ogh
+```masque
 record Character { id: string, name: string, backstory_title: string };
 record Map { id: string, name: string, live: bool, player_count: string };
 record Adventure { id: string, name: string, kind: string };
@@ -845,7 +845,7 @@ events {
 
 ### `place_inspector_ui` (327 + 193) — **requires pill_btn refactor**
 
-```ogh
+```masque
 record PlaceKind { id: string, display_name: string };
 host_state {
   place_id: string, place_name: string,
@@ -876,7 +876,7 @@ events {
 
 ### `settings_ui` (341 + 294 + 190 components)
 
-```ogh
+```masque
 host_state {
   master_volume: string, music_volume: string,
   sfx_volume: string, ui_volume: string,        // F5 numeric drafts
@@ -913,7 +913,7 @@ factory collapse.
 Today: 18 individual `_r`/`_g`/`_b` channel string fields,
 events take `"r,g,b"` strings. Recommended migration:
 
-```ogh
+```masque
 record RgbColor { r: float, g: float, b: float };
 host_state {
   sea_level: string, turbulence: string,
@@ -942,7 +942,7 @@ nodes.
 
 ### `inventory_hud` (523 + 760)
 
-```ogh
+```masque
 record Player { name: string };
 record InvItem {
   name: string, x: int, y: int, w: int, h: int,
@@ -996,7 +996,7 @@ but with diverging fields — keep separate or factor with care.
 
 ### `social_ui` (578 + 505)
 
-```ogh
+```masque
 record PlayerInfo {
   id: int, name: string, has_party: bool,
   is_party_leader: bool, faction_count: int,
@@ -1055,7 +1055,7 @@ Largest "clean fit" UI. Multi-arg events are well-tested here.
 
 ### `character_creation_ui` (783 + 573) — depth-3 nesting
 
-```ogh
+```masque
 record CommittedRow {
   index: int, stage_id: string, stage_title: string,
   choice_label: string,
@@ -1112,7 +1112,7 @@ events {
 
 ### `life_stages_editor_ui` (1005 + 93 + sidebar)
 
-```ogh
+```masque
 record GrantItem { index: int, item_type: string, count: string };
 record GrantSkill { index: int, skill_id: string, level: string };
 record GrantTrait { index: int, value: string };
@@ -1195,9 +1195,9 @@ agent report. Notable points:
 
 ---
 
-### escape menu (in `client/actions.rs`, ~70 lines + 142 .ogh)
+### escape menu (in `client/actions.rs`, ~70 lines + 142 .masque)
 
-```ogh
+```masque
 host_state { steam_enabled: bool, confirm_disconnect: bool };
 events {
   close_escape_menu(),
@@ -1211,7 +1211,7 @@ Minimal. Tests construction at a non-`src/ui/` site.
 
 ---
 
-### main menu (in `client/mod.rs`, ~1500 lines slice + 2085 .ogh)
+### main menu (in `client/mod.rs`, ~1500 lines slice + 2085 .masque)
 
 94 host_state fields, 55 events. Full schema in agent report.
 Notable design-validation points:
@@ -1270,8 +1270,8 @@ Once Phase 1 implementation begins:
    a 2026-05-04 snapshot.
 3. Move the per-UI detail and the migration sequence to a doc
    in the Untold Lore repo; keep the cross-cutting findings and
-   design implications in Ogham.
-4. Spike the `ogham-derive` macros against `chest_ui` (UI #1 in
+   design implications in Masque.
+4. Spike the `masque-derive` macros against `chest_ui` (UI #1 in
    the migration sequence) to validate the empty-state path
    before tackling any other UI.
 

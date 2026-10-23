@@ -1,11 +1,11 @@
-# Ogham — Typed Rust↔Ogham Bindings (Phase 1)
+# Masque — Typed Rust↔Masque Bindings (Phase 1)
 
 > **Status: PARTIALLY CUT (2026-06-07, `addd9da`) — read this before
 > planning against anything below.**
 >
-> The Rust-side half of this design — `ogham-derive`
-> (`OghamState`/`OghamMsg`/`OghamRecord`), `TypedOgham<S, M>`,
-> `watch_typed`/`from_source_typed`, `ogham check`, and the
+> The Rust-side half of this design — `masque-derive`
+> (`MasqueState`/`MasqueMsg`/`MasqueRecord`), `TypedMasque<S, M>`,
+> `watch_typed`/`from_source_typed`, `masque check`, and the
 > diagnostics manifest system — was built (M4–M6, landed 2026-05),
 > then **deliberately removed** as a rival typed layer per
 > [`IDENTITY_AND_SCOPE.md`](IDENTITY_AND_SCOPE.md) §1–2: one
@@ -14,24 +14,24 @@
 > document.
 >
 > What **survives, load-bearing** (see the cut commit for the
-> split): the `.ogh`-source schema — `record` / `host_state {}` /
+> split): the `.masque`-source schema — `record` / `host_state {}` /
 > `events {}` declarations, `ModuleSchema`/`RecordSchema`/
 > `load_schema*`, compiler strict-mode resolution + event-call
 > validation, LSP hover/diagnostics, the view layer's Tenet-6
 > host-state requirements, and `ModuleSchema::validate_host_state`
 > (runtime value validation for host conformance tests). The
-> `.ogh` declaration is the **single** description of the
+> `.masque` declaration is the **single** description of the
 > contract; hosts inject loose `Value`s against it. (A host may
 > *derive* those `Value`s from an `editable`-derived struct — see
 > the 2026-07-13 amendment in `IDENTITY_AND_SCOPE.md` §4 — but the
-> struct conforms to the `.ogh` declaration, never the reverse.)
+> struct conforms to the `.masque` declaration, never the reverse.)
 > Sections below
-> describing the `.ogh` grammar and strict mode remain accurate;
-> sections describing derives, `TypedOgham`, manifests, and the
+> describing the `.masque` grammar and strict mode remain accurate;
+> sections describing derives, `TypedMasque`, manifests, and the
 > CLI are **historical**.
 >
 > This document specifies Phase 1 of the typed-bindings work: a
-> per-module schema declared in `.ogh` source, paired with Rust
+> per-module schema declared in `.masque` source, paired with Rust
 > derive macros and a typed scene handle. It supersedes none of
 > the existing live contracts; it adds an opt-in mode that
 > coexists with today's loose, stringly-typed `set_host_state`
@@ -59,9 +59,9 @@
 >   schema-aware hover for host_state fields and record names.
 >   (Schema-aware completion + record goto-definition are a
 >   future M3.5.)
-> - M4: Cargo workspace; `ogham-derive` proc-macro crate with
->   OghamRecord/OghamState/OghamMsg derives.
-> - M5: TypedOgham<S, M> handle, watch_typed/from_source_typed,
+> - M4: Cargo workspace; `masque-derive` proc-macro crate with
+>   MasqueRecord/MasqueState/MasqueMsg derives.
+> - M5: TypedMasque<S, M> handle, watch_typed/from_source_typed,
 >   startup schema-match check, MPSC event channel.
 > - M6: hot-reload preserves typed state across schema-stable
 >   reloads, fails loud on schema-incompatible reloads.
@@ -76,17 +76,17 @@
 
 ## Motivation
 
-Today's Rust↔Ogham boundary is a `HashMap<String, Value>` for
+Today's Rust↔Masque boundary is a `HashMap<String, Value>` for
 state and a string-keyed `Fn(&[Value])` for events. Renames are
 silent; typos are silent; missing fields manifest as runtime
-crashes rather than build errors. The `Ogham` consumer
+crashes rather than build errors. The `Masque` consumer
 (currently Untold Lore) carries large amounts of boilerplate to
 patch around this — closure factories cloning `Arc<Mutex<...>>`
 form-state shadows, hand-rolled `push_state` field-by-field
 shovels, and runtime `Value::String(s) = args.first()` matches
 repeated across every event handler.
 
-Phase 1 introduces an *opt-in* typed contract per `.ogh` module:
+Phase 1 introduces an *opt-in* typed contract per `.masque` module:
 the module declares its host-state schema and event signatures;
 the Rust caller derives a matching pair of types and calls a
 typed constructor that verifies them at startup and exposes a
@@ -94,7 +94,7 @@ typed `set_state` / `poll_msg` API. The loose path stays
 unchanged. Migration is per-file, not per-codebase.
 
 Phase 1 deliberately does not try to type-check the *body* of
-`.ogh` expressions (no arithmetic-type inference, no `let`-type
+`.masque` expressions (no arithmetic-type inference, no `let`-type
 inference, no function-signature checking). It types the
 *boundary* and the resolution of host-state identifiers at the
 boundary.
@@ -105,16 +105,16 @@ boundary.
 
 ```mermaid
 flowchart LR
-    subgraph .ogh ["settings.ogh"]
+    subgraph .masque ["settings.masque"]
         rec["record SettingsState { ... }"]
         hs["host_state { ... }"]
         ev["events { ... }"]
         body["body uses master_volume,<br/>event(\"set_master_volume\", v)"]
     end
     subgraph rust ["Rust"]
-        s["#[derive(OghamState)]<br/>struct SettingsState"]
-        m["#[derive(OghamMsg)]<br/>enum SettingsMsg"]
-        h["TypedOgham&lt;S, M&gt;"]
+        s["#[derive(MasqueState)]<br/>struct SettingsState"]
+        m["#[derive(MasqueMsg)]<br/>enum SettingsMsg"]
+        h["TypedMasque&lt;S, M&gt;"]
     end
     rec -.matches.-> s
     ev  -.matches.-> m
@@ -123,9 +123,9 @@ flowchart LR
     ms -- startup match check --> h
 ```
 
-Three new declaration forms in `.ogh` (`record`, `host_state`,
-`events`), three derive macros in Rust (`OghamRecord`,
-`OghamState`, `OghamMsg`), one new constructor (`watch_typed`).
+Three new declaration forms in `.masque` (`record`, `host_state`,
+`events`), three derive macros in Rust (`MasqueRecord`,
+`MasqueState`, `MasqueMsg`), one new constructor (`watch_typed`).
 The compiler emits a `ModuleSchema` from the declarations; the
 typed constructor compares it against the macro-generated
 schemas on the Rust side and refuses to start if they disagree.
@@ -139,9 +139,9 @@ fixes line up surface-by-surface:
 
 | Surface | Today | Phase 1 |
 |---|---|---|
-| Host state | `runtime.set_host_state("k", v)`; bare globals in `.ogh` | `host_state { … }` block; `TypedOgham::set_state(&S)` |
-| Events     | `event("name", a, b)`; `Fn(&[Value])` handlers       | `events { name(T, T) }`; `TypedOgham::poll_msg() -> Option<M>` |
-| Nested data | implicit `Value::Map`/`Value::Array` shapes | `record Foo { … }` declarations; `#[derive(OghamRecord)]` |
+| Host state | `runtime.set_host_state("k", v)`; bare globals in `.masque` | `host_state { … }` block; `TypedMasque::set_state(&S)` |
+| Events     | `event("name", a, b)`; `Fn(&[Value])` handlers       | `events { name(T, T) }`; `TypedMasque::poll_msg() -> Option<M>` |
+| Nested data | implicit `Value::Map`/`Value::Array` shapes | `record Foo { … }` declarations; `#[derive(MasqueRecord)]` |
 | Custom widget props | `WidgetDescriptor.properties: HashMap<String, Value>` | **Phase 4** (out of scope here; same machinery applies) |
 
 Event-handler return values are dropped on the typed path; see
@@ -374,7 +374,7 @@ host-state field through directly) come for free.
 
 ## Defaults and Optional
 
-```ogh
+```masque
 host_state {
   count:        int = 0,           // defaulted: never missing at use site
   player_name:  string,            // required: must be supplied before render
@@ -399,9 +399,9 @@ Strict mode makes that impossible.
 The default is a literal that becomes the initial value if the
 host has not pushed one before first render.
 
-In typed mode (`watch_typed` + `OghamState`), defaults are
+In typed mode (`watch_typed` + `MasqueState`), defaults are
 **purely declarative**: the Rust struct always supplies a value
-because `OghamState` requires every field. The default is a
+because `MasqueState` requires every field. The default is a
 documentation aid that survives in the schema and shows up in
 LSP hovers (`count: int (default: 0)`) but is never actually
 consulted.
@@ -419,9 +419,9 @@ inconsistency.
 ### Optional (`T?`)
 
 A field that may or may not be present. Represented as
-`Option<T>` on the Rust side, matched in `.ogh` via:
+`Option<T>` on the Rust side, matched in `.masque` via:
 
-```ogh
+```masque
 match selection {
   Some(s) => Text { text: "Selected: " + s, ... },
   None    => Text { text: "Nothing selected", ... },
@@ -445,7 +445,7 @@ target shape:
 
 ```text
 error: unknown identifier `master_voloume`
-  --> settings.ogh:42:14
+  --> settings.masque:42:14
    |
 42 |   text: master_voloume -> string,
    |         ^^^^^^^^^^^^^^^
@@ -457,7 +457,7 @@ error: unknown identifier `master_voloume`
 
 ```text
 error: argument type mismatch in `event("set_master_volume", ...)`
-  --> settings.ogh:20:38
+  --> settings.masque:20:38
    |
 20 |     mouse_down: fn() { event("set_master_volume", v); },
    |                                                   ^
@@ -467,7 +467,7 @@ error: argument type mismatch in `event("set_master_volume", ...)`
 
 ```text
 error: unknown event `closse`
-  --> settings.ogh:5:25
+  --> settings.masque:5:25
    |
 5  |     mouse_down: fn() { event("closse"); },
    |                              ^^^^^^^^
@@ -478,7 +478,7 @@ error: unknown event `closse`
 
 ```text
 error: field `xp_needd` not found on record `Skill`
-  --> talents.ogh:30:14
+  --> talents.masque:30:14
    |
 30 |   text: skill.xp_needd -> string,
    |               ^^^^^^^^
@@ -520,7 +520,7 @@ pub struct ModuleSchema {
     pub records:    HashMap<String, RecordSchema>,
     pub host_state: Option<RecordSchema>,         // None in loose mode
     pub events:     HashMap<String, EventSig>,
-    pub imports:    HashMap<String, ImportedTy>,  // e.g. Item from "./inv.ogh"
+    pub imports:    HashMap<String, ImportedTy>,  // e.g. Item from "./inv.masque"
 }
 
 pub struct RecordSchema {
@@ -562,7 +562,7 @@ pub enum ImportedTy {
 
 - **Imports of records are resolved at parse time, not at
   execution time.** When a module does
-  `import [Item] from "./inventory.ogh"`, the parser loads the
+  `import [Item] from "./inventory.masque"`, the parser loads the
   imported module's schema and stitches `Item` into the local
   schema's `imports` map.
 
@@ -572,9 +572,9 @@ pub enum ImportedTy {
   add a parse-time schema-only pass parallel to it.
 
 - **Record name conflicts on import are errors.** If
-  `inv.ogh` and `shop.ogh` both export `Item` and a third file
+  `inv.masque` and `shop.masque` both export `Item` and a third file
   imports both, the importer must alias one (`import [Item as
-  ShopItem] from "./shop.ogh"` — extends today's import
+  ShopItem] from "./shop.masque"` — extends today's import
   grammar).
 
   *Why:* matches Rust's `use` semantics; silently shadowing one
@@ -586,13 +586,13 @@ pub enum ImportedTy {
 
 Three derives, in priority order of impact.
 
-### `#[derive(OghamState)]`
+### `#[derive(MasqueState)]`
 
 Top-level. Marks a struct as the host_state for a typed module.
 Generates:
 
-- `impl OghamState for SettingsState` with:
-  - `const OGHAM_SCHEMA: RecordSchema` — the schema this struct
+- `impl MasqueState for SettingsState` with:
+  - `const MASQUE_SCHEMA: RecordSchema` — the schema this struct
     expects, computed at compile time from field types.
   - `fn snapshot_into(&self, sink: &mut impl HostStateSink)` —
     field-by-field invocation of `sink.set("name", &self.field)`,
@@ -601,34 +601,34 @@ Generates:
     diffs apply and there's no rerender churn on no-op frames).
   - `fn diff_apply(&self, prev: &Self, sink: &mut impl HostStateSink)`
     — only sets fields that changed against the previous
-    snapshot; called by `TypedOgham::set_state`.
+    snapshot; called by `TypedMasque::set_state`.
 
 ```rust
-#[derive(OghamState)]
+#[derive(MasqueState)]
 struct SettingsState {
     master_volume: f32,
     music_volume:  f32,
     keybinds:      HashMap<String, String>,
     server_name:   Option<String>,         // matches `server_name: string?`
-    #[ogham(default)]
-    pending_count: i32,                    // documents the .ogh-side default
+    #[masque(default)]
+    pending_count: i32,                    // documents the .masque-side default
 }
 ```
 
-### `#[derive(OghamRecord)]`
+### `#[derive(MasqueRecord)]`
 
 For nested record types referenced from a `host_state` field
 or another record. Generates:
 
-- `impl OghamRecord for Item` with:
-  - `const OGHAM_SCHEMA: RecordSchema`
+- `impl MasqueRecord for Item` with:
+  - `const MASQUE_SCHEMA: RecordSchema`
   - `fn into_host_value(&self) -> Value` — converts to
     `Value::Map`.
   - `impl IntoHostValue for &Item` so it composes with
     `HostStateSinkExt::set` and array/map field translation.
 
 ```rust
-#[derive(OghamRecord)]
+#[derive(MasqueRecord)]
 struct Item {
     name:  String,
     count: i32,
@@ -636,12 +636,12 @@ struct Item {
 }
 ```
 
-### `#[derive(OghamMsg)]`
+### `#[derive(MasqueMsg)]`
 
 For the events enum. Generates:
 
-- `impl OghamMsg for SettingsMsg` with:
-  - `const OGHAM_EVENTS: HashMap<&'static str, EventSig>` (or
+- `impl MasqueMsg for SettingsMsg` with:
+  - `const MASQUE_EVENTS: HashMap<&'static str, EventSig>` (or
     equivalent) — declared event signatures.
   - `fn try_from_event(name: &str, args: &[Value]) -> Option<Self>`
     — parse args into a variant.
@@ -650,7 +650,7 @@ For the events enum. Generates:
     parsed messages into `tx`.
 
 ```rust
-#[derive(OghamMsg)]
+#[derive(MasqueMsg)]
 enum SettingsMsg {
     SetMasterVolume(f32),
     SetMusicVolume(f32),
@@ -663,15 +663,15 @@ enum SettingsMsg {
 
 | Attribute | Applies to | Effect |
 |---|---|---|
-| `#[ogham(rename = "...")]` | record / state field | Use a different name on the `.ogh` side |
-| `#[ogham(skip)]` | state field | Field is Rust-only; not part of the schema, not pushed |
-| `#[ogham(default)]` | state field | Documents that the matching `.ogh` field has a default; no behavior change on the Rust side |
+| `#[masque(rename = "...")]` | record / state field | Use a different name on the `.masque` side |
+| `#[masque(skip)]` | state field | Field is Rust-only; not part of the schema, not pushed |
+| `#[masque(default)]` | state field | Documents that the matching `.masque` field has a default; no behavior change on the Rust side |
 
-Variant attributes for `OghamMsg`:
+Variant attributes for `MasqueMsg`:
 
 | Attribute | Applies to | Effect |
 |---|---|---|
-| `#[ogham(rename = "...")]` | enum variant | Use a different event name on the `.ogh` side |
+| `#[masque(rename = "...")]` | enum variant | Use a different event name on the `.masque` side |
 
 ### Macro tenets
 
@@ -690,51 +690,51 @@ Variant attributes for `OghamMsg`:
 - **Generated code is private by default.** The derives produce
   trait impls; they do not introduce new public items on the
   user's struct. Callers get the surface they explicitly opt
-  into via `TypedOgham`.
+  into via `TypedMasque`.
 
 ---
 
-## Rust side: `TypedOgham<S, M>`
+## Rust side: `TypedMasque<S, M>`
 
-The typed constructor and handle. Wraps `Ogham` and adds the
+The typed constructor and handle. Wraps `Masque` and adds the
 typed surface.
 
 ```rust
-// src/lib.rs (new methods alongside Ogham)
+// src/lib.rs (new methods alongside Masque)
 
-impl Ogham {
+impl Masque {
     pub fn watch_typed<S, M>(
         path:    impl Into<String>,
         initial: S,
         config:  RuntimeConfig,
-    ) -> Result<TypedOgham<S, M>, RuntimeError>
+    ) -> Result<TypedMasque<S, M>, RuntimeError>
     where
-        S: OghamState + 'static,
-        M: OghamMsg + Send + 'static,
+        S: MasqueState + 'static,
+        M: MasqueMsg + Send + 'static,
     {
         // 1. Load source, parse → ModuleSchema.
-        // 2. Strict-mode required: the .ogh must declare host_state {}.
+        // 2. Strict-mode required: the .masque must declare host_state {}.
         //    If not: RuntimeError::SchemaMissing.
-        // 3. Match S::OGHAM_SCHEMA against ModuleSchema.host_state.
-        // 4. Match M::OGHAM_EVENTS against ModuleSchema.events.
+        // 3. Match S::MASQUE_SCHEMA against ModuleSchema.host_state.
+        // 4. Match M::MASQUE_EVENTS against ModuleSchema.events.
         // 5. Build the channel; register one handler per event
         //    via M::register(&mut config, tx).
-        // 6. Construct the inner Ogham via watch().
+        // 6. Construct the inner Masque via watch().
         // 7. Snapshot `initial` into the runtime's host_state.
-        // 8. Return TypedOgham { inner, rx, last_state: initial, .. }.
+        // 8. Return TypedMasque { inner, rx, last_state: initial, .. }.
     }
 
-    pub fn from_source_typed<S, M>( /* analog */ ) -> Result<TypedOgham<S, M>, _>;
+    pub fn from_source_typed<S, M>( /* analog */ ) -> Result<TypedMasque<S, M>, _>;
 }
 
-pub struct TypedOgham<S, M> {
-    inner:      Ogham,
+pub struct TypedMasque<S, M> {
+    inner:      Masque,
     rx:         std::sync::mpsc::Receiver<M>,
     last_state: S,
     _phantom:   std::marker::PhantomData<(S, M)>,
 }
 
-impl<S: OghamState, M: OghamMsg> TypedOgham<S, M> {
+impl<S: MasqueState, M: MasqueMsg> TypedMasque<S, M> {
     /// Diff `new` against the last snapshot and inject only changed fields.
     pub fn set_state(&mut self, new: S);
 
@@ -746,20 +746,20 @@ impl<S: OghamState, M: OghamMsg> TypedOgham<S, M> {
 
     /// Escape hatches for code that still wants the loose surface
     /// (e.g. for layout/render calls that don't need typing).
-    pub fn inner(&self)         -> &Ogham;
-    pub fn inner_mut(&mut self) -> &mut Ogham;
+    pub fn inner(&self)         -> &Masque;
+    pub fn inner_mut(&mut self) -> &mut Masque;
 }
 ```
 
-### `TypedOgham` tenets
+### `TypedMasque` tenets
 
-- **The typed handle owns the loose `Ogham`; it doesn't replace
-  it.** All existing methods on `Ogham` remain reachable via
+- **The typed handle owns the loose `Masque`; it doesn't replace
+  it.** All existing methods on `Masque` remain reachable via
   `inner_mut()`. Layout, animation tick, hot-reload, custom
   widget registration — all unchanged.
 
   *Why:* keeps the typed path additive. Untold Lore can migrate
-  one UI to `TypedOgham` while the other 16 keep using `Ogham`.
+  one UI to `TypedMasque` while the other 16 keep using `Masque`.
 
 - **Events flow through an MPSC channel, not direct callbacks.**
   Per-variant handlers parse `&[Value]` into a typed `M` and
@@ -782,7 +782,7 @@ impl<S: OghamState, M: OghamMsg> TypedOgham<S, M> {
   in [`RUNTIME.md`](RUNTIME.md). Untold Lore's per-frame
   injection becomes free when nothing changed.
 
-- **Hot reload preserves `last_state`.** When the `.ogh` file
+- **Hot reload preserves `last_state`.** When the `.masque` file
   reloads, the typed handle re-runs the schema match against the
   new module. If the schema is still compatible, `last_state` is
   re-pushed to seed the new module. If not, the reload fails
@@ -801,13 +801,13 @@ When `watch_typed::<S, M>` runs after parsing produces a
 
 1. **Module must be strict.** `ModuleSchema.host_state` must be
    `Some(_)`. Loose-mode modules can't use the typed API.
-2. **Field-by-field equality** of `S::OGHAM_SCHEMA` against
+2. **Field-by-field equality** of `S::MASQUE_SCHEMA` against
    `ModuleSchema.host_state.unwrap()`:
    - Same set of field names.
    - Each field's `TypeRef` matches recursively.
 3. **Record references resolve** to the same `RecordSchema` on
    both sides (recursive walk, comparing `BTreeMap` of fields).
-4. **Event-by-event equality** of `M::OGHAM_EVENTS` against
+4. **Event-by-event equality** of `M::MASQUE_EVENTS` against
    `ModuleSchema.events`:
    - Same set of event names.
    - Each event's argument list matches recursively.
@@ -816,18 +816,18 @@ Any mismatch fails the constructor with a `RuntimeError`
 diagnostic of the same shape as the strict-mode parse errors:
 
 ```text
-schema mismatch: settings.ogh declares
+schema mismatch: settings.masque declares
     `master_volume: float`
 but Rust SettingsState declares
     `master_volume: i32`
 
-schema mismatch: settings.ogh declares event
+schema mismatch: settings.masque declares event
     `set_master_volume(float)`
 but Rust SettingsMsg has no matching variant
 
 schema mismatch: Rust SettingsMsg has variant
     `Rebind(string, string)`
-but settings.ogh does not declare this event
+but settings.masque does not declare this event
 ```
 
 The check runs once at construction; the cost is paid at app
@@ -886,15 +886,15 @@ what makes it *feel* worth declaring. Phase 1 LSP additions:
 
 Per-file, in any order. The shape:
 
-1. Pick a small `.ogh` file (suggested: `chest.ogh`, ~35 lines
+1. Pick a small `.masque` file (suggested: `chest.masque`, ~35 lines
    with no host_state today).
 2. Add a `host_state { ... }` block declaring the fields the
    file actually reads. The LSP/parser flags missing
    declarations.
 3. Add an `events { ... }` block declaring the events the file
    actually emits.
-4. On the Rust side, replace the `Ogham::watch(path, config)`
-   call with `Ogham::watch_typed::<MyUiState, MyUiMsg>(path,
+4. On the Rust side, replace the `Masque::watch(path, config)`
+   call with `Masque::watch_typed::<MyUiState, MyUiMsg>(path,
    initial, config)`. Define the two types with derives.
 5. Replace per-frame `rt.set_host_state(...)` calls with a
    single `typed.set_state(new_state)`.
@@ -910,8 +910,8 @@ Per-file, in any order. The shape:
   indefinitely.
 - **Migration is safe to do incrementally** — half a Rust
   application can hold typed UIs and the other half loose ones.
-  The Rust-level dispatch (Untold Lore's `active_ogham()`) sees
-  `&Ogham` either way (via `TypedOgham::inner()`).
+  The Rust-level dispatch (Untold Lore's `active_masque()`) sees
+  `&Masque` either way (via `TypedMasque::inner()`).
 - **Tooling (a future LSP code action "extract host_state
   schema from current set_host_state call sites") is out of
   scope for Phase 1** but is the obvious follow-on if migration
@@ -944,7 +944,7 @@ prioritized.
 - **Removal of the loose API.** `set_host_state`,
   `with_event_handler`, `inject_host_state_batch` all stay.
 - **Event-handler return values on the typed path.** Dropped
-  entirely on `OghamMsg`'s registrar; nothing observable in
+  entirely on `MasqueMsg`'s registrar; nothing observable in
   Untold Lore today depends on them. Loose path keeps them.
 - **Performance work on style re-parsing, signal-based
   reactivity, scenes/portals/lifecycle.** Independent tracks.
@@ -970,7 +970,7 @@ implementation. None block starting Phase 1.
    diagnostic-enrichment pass; if so, it should land first as a
    foundational change.
 3. **Imported-record alias syntax.** `import [Item] from
-   "./inv.ogh"` works for non-conflicting names; `import [Item
+   "./inv.masque"` works for non-conflicting names; `import [Item
    as ShopItem]` for conflicts. Current import grammar may not
    support `as`; if not, Phase 1 needs to extend it.
 4. **`OnceLock` / lazy schema initialization on the macro
@@ -978,7 +978,7 @@ implementation. None block starting Phase 1.
    const-constructible. The schema must be lazily initialized.
    Determine whether `LazyLock` (1.80+) or `once_cell` is the
    right dependency choice for the proc-macro output.
-5. **Channel choice for `OghamMsg` events.** `std::sync::mpsc`
+5. **Channel choice for `MasqueMsg` events.** `std::sync::mpsc`
    is the obvious default; `crossbeam` is faster but adds a
    dependency. Recommend `std::sync::mpsc` unless profiling
    later disagrees.
@@ -1038,19 +1038,19 @@ Concrete checklist for "Phase 1 ships":
       existing `IntoHostValue` / `HostStateSink` /
       `inject_host_state_if_changed` infrastructure.
 
-### Macros (new crate: `ogham-derive` or similar)
+### Macros (new crate: `masque-derive` or similar)
 
-- [ ] `OghamRecord` derive.
-- [ ] `OghamState` derive (extends `OghamRecord` with
+- [ ] `MasqueRecord` derive.
+- [ ] `MasqueState` derive (extends `MasqueRecord` with
       `snapshot_into` / `diff_apply`).
-- [ ] `OghamMsg` derive.
-- [ ] `#[ogham(rename = ...)]`, `#[ogham(skip)]`,
-      `#[ogham(default)]` field/variant attributes.
+- [ ] `MasqueMsg` derive.
+- [ ] `#[masque(rename = ...)]`, `#[masque(skip)]`,
+      `#[masque(default)]` field/variant attributes.
 
 ### Typed handle (`src/lib.rs`)
 
-- [ ] `TypedOgham<S, M>` struct.
-- [ ] `Ogham::watch_typed`, `Ogham::from_source_typed`.
+- [ ] `TypedMasque<S, M>` struct.
+- [ ] `Masque::watch_typed`, `Masque::from_source_typed`.
 - [ ] Startup schema-match check with diff-style error messages.
 - [ ] Hot-reload path that re-runs the schema check.
 
@@ -1074,15 +1074,15 @@ Concrete checklist for "Phase 1 ships":
       mismatch (missing field, wrong type, missing event, extra
       event, recursive record mismatch) produces the right
       error.
-- [ ] Integration tests with a real `OghamState` /
-      `OghamMsg` derive and a representative module.
+- [ ] Integration tests with a real `MasqueState` /
+      `MasqueMsg` derive and a representative module.
 - [ ] Hot-reload preserves typed-state when schema unchanged;
       fails loudly when schema-incompatible.
 
 ### Documentation
 
 - [ ] Update `LANGUAGE.md` with the new declarations.
-- [ ] Update `RUNTIME.md` with `TypedOgham` and the typed
+- [ ] Update `RUNTIME.md` with `TypedMasque` and the typed
       construction path.
 - [ ] Update `LSP.md` with the new query capabilities.
 - [ ] Update `AGENTS.md` (the user-facing integration guide)
@@ -1093,20 +1093,20 @@ Concrete checklist for "Phase 1 ships":
 
 ---
 
-## Worked example: Untold Lore's `chest.ogh` migration
+## Worked example: Untold Lore's `chest.masque` migration
 
 The simplest UI in the codebase, used as the migration smoke
 test. Today's shape:
 
-- `chest.ogh` reads no host_state, fires two events:
+- `chest.masque` reads no host_state, fires two events:
   `chest_pick_up`, `chest_cancel`.
 - `chest_ui.rs` registers two `with_event_handler` closures
   cloning an `ActionSender<ClientAction>`.
 
 After migration:
 
-```ogh
-// chest.ogh — adds at top:
+```masque
+// chest.masque — adds at top:
 events {
   chest_pick_up(),
   chest_cancel(),
@@ -1116,25 +1116,25 @@ events {
 ```rust
 // chest_ui.rs — replaces ~50 lines with ~15
 
-#[derive(OghamState, Default)]
+#[derive(MasqueState, Default)]
 struct ChestState {}                          // empty, but typed
 
-#[derive(OghamMsg)]
+#[derive(MasqueMsg)]
 enum ChestMsg {
     ChestPickUp,
     ChestCancel,
 }
 
 pub struct ChestUI {
-    typed: TypedOgham<ChestState, ChestMsg>,
+    typed: TypedMasque<ChestState, ChestMsg>,
 }
 
 impl ChestUI {
     pub fn new(sender: ActionSender<ClientAction>) -> Result<Self, String> {
         let config = crate::util::font_config();
-        let typed  = Ogham::watch_typed::<ChestState, ChestMsg>(
+        let typed  = Masque::watch_typed::<ChestState, ChestMsg>(
             CHEST_PATH, ChestState::default(), config,
-        ).map_err(|e| format!("Failed to load chest.ogh: {e}"))?;
+        ).map_err(|e| format!("Failed to load chest.masque: {e}"))?;
         Ok(Self { typed })
     }
 
@@ -1147,8 +1147,8 @@ impl ChestUI {
         }
     }
 
-    pub fn ogham(&self)         -> &Ogham    { self.typed.inner() }
-    pub fn ogham_mut(&mut self) -> &mut Ogham { self.typed.inner_mut() }
+    pub fn masque(&self)         -> &Masque    { self.typed.inner() }
+    pub fn masque_mut(&mut self) -> &mut Masque { self.typed.inner_mut() }
 }
 ```
 
@@ -1156,7 +1156,7 @@ The `ChestState` being empty is intentional — it forces the
 macro / typed-handle path to handle the trivially-empty case
 cleanly. If that works, the larger UIs (SettingsUI's ~30 fields,
 DmInventoryUI's nested records) follow the same pattern with
-more fields and one or two `#[derive(OghamRecord)]` types.
+more fields and one or two `#[derive(MasqueRecord)]` types.
 
 ---
 
@@ -1166,18 +1166,18 @@ Suggested sequencing for implementation; each item ships
 independently and earns value before the next lands.
 
 1. **Front-end + schema** (parser, scanner, `ModuleSchema`,
-   resolver). No Rust API changes; `.ogh` files can declare
+   resolver). No Rust API changes; `.masque` files can declare
    schemas and the LSP can hover them via diagnostics-only
    integration. **First merge.**
 2. **Strict-mode resolution + diagnostics** (compiler changes;
    identifier-not-found, event-call checks, field-access checks).
-   `.ogh` authors see real errors. **Second merge.**
+   `.masque` authors see real errors. **Second merge.**
 3. **LSP completion + hover** (schema-aware). Authoring
    experience lands. **Third merge.**
-4. **Derive macros** (`OghamRecord`, `OghamState`,
-   `OghamMsg`). Rust authors can declare typed counterparts.
+4. **Derive macros** (`MasqueRecord`, `MasqueState`,
+   `MasqueMsg`). Rust authors can declare typed counterparts.
    **Fourth merge.**
-5. **`TypedOgham` + `watch_typed` + schema-match check**. The
+5. **`TypedMasque` + `watch_typed` + schema-match check**. The
    typed runtime path opens. **Fifth merge.**
 6. **Hot-reload schema preservation**. Migrates the chest_ui
    smoke test end-to-end. **Sixth merge.**
@@ -1214,14 +1214,14 @@ evidence.
 Three patterns surfaced by the Untold Lore audit
 ([`TYPED_BINDINGS_UL_AUDIT.md`](TYPED_BINDINGS_UL_AUDIT.md))
 need explicit handling during the per-UI migration. None
-require Ogham changes; they're rewrites in `.ogh` and Rust
+require Masque changes; they're rewrites in `.masque` and Rust
 calling code.
 
 ### F1 — Computed event names (strict-mode blocker)
 
-**Pattern in production code** (place_inspector.ogh):
+**Pattern in production code** (place_inspector.masque):
 
-```ogh
+```masque
 let pill_btn = fn (label: string, is_active: bool, evt: string, key: string) {
   Flex {
     mouse_down: fn () { event(evt, key); },  // ← computed name
@@ -1248,7 +1248,7 @@ Three migration options:
    worth it for large groups.
 
 **Recommendation:** option 2. Keeps closure ergonomics, costs
-~10 lines, no Ogham changes.
+~10 lines, no Masque changes.
 
 ### F5 — Numeric-as-string draft fields
 
@@ -1269,7 +1269,7 @@ parse to NaN. The Phase 1 idiom: declare them as `string` in
 both the schema and the Rust struct. Pair with a sibling
 validation flag when the field has constraints:
 
-```ogh
+```masque
 host_state {
     base_xp: string,
     base_xp_invalid: bool,
@@ -1277,7 +1277,7 @@ host_state {
 ```
 
 ```rust
-#[derive(OghamState, ...)]
+#[derive(MasqueState, ...)]
 struct State {
     base_xp: String,
     base_xp_invalid: bool,
@@ -1299,7 +1299,7 @@ selected_character_id: String,    // "" means "no selection"
 selected_entity: HashMap<...>,    // empty map means "no entity"
 ```
 
-```ogh
+```masque
 // today's idiom
 match (selected_character_id != "") {
     true => render_selected(),
@@ -1314,13 +1314,13 @@ selected_character_id: Option<String>,
 selected_entity: Option<EntityInspector>,
 ```
 
-```ogh
+```masque
 host_state {
     selected_character_id: string?,
     selected_entity: EntityInspector?,
 };
 
-// .ogh becomes
+// .masque becomes
 match selected_character_id {
     Some(id) => render_selected(),
     None     => render_empty_state(),

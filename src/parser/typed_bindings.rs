@@ -188,7 +188,7 @@ pub struct ScreenDecl {
 // ---------------------------------------------------------------------
 // TypeRef canonical-string rendering and round-trip parser.
 //
-// The canonical form is the exact surface syntax a user types in `.ogh`
+// The canonical form is the exact surface syntax a user types in `.masque`
 // source: `int`, `array<T>`, `map<K, V>`, `T?`, `Self`, or a bare
 // identifier for a record reference. This single source of truth is
 // consumed by:
@@ -197,7 +197,7 @@ pub struct ScreenDecl {
 //   `format_type_ref` helpers, which now delegate here).
 // - The schema-diagnostics manifest format (P0-M2 onwards): macros
 //   serialize TypeRefs to canonical strings; the diagnostic backend
-//   parses them back when running schema-match against a `.ogh` file.
+//   parses them back when running schema-match against a `.masque` file.
 //
 // Round-trip identity is a property test invariant: every constructible
 // TypeRef must satisfy `from_canonical_string(t.to_canonical_string()) == t`.
@@ -205,7 +205,7 @@ pub struct ScreenDecl {
 
 impl TypeRef {
     /// Render this type to its canonical string form — the exact
-    /// surface syntax users type in `.ogh` source. Output is
+    /// surface syntax users type in `.masque` source. Output is
     /// deterministic and stable; callers may persist it.
     pub fn to_canonical_string(&self) -> String {
         match self {
@@ -236,7 +236,7 @@ impl TypeRef {
     /// whose `name` matches a reserved word (`int`, `float`, `bool`,
     /// `string`, `array`, `map`, `Self`) won't round-trip through this
     /// parser — the rendered string would be re-parsed as the keyword.
-    /// In practice this can't happen from a real `.ogh` source because
+    /// In practice this can't happen from a real `.masque` source because
     /// those words are reserved on the front-end too; it's only
     /// reachable if a user constructs `TypeRef::Record("array")`
     /// programmatically or names a Rust struct `array` (legal but

@@ -1,4 +1,4 @@
-//! Conversion helpers for pushing host (Rust-side) state into the Ogham
+//! Conversion helpers for pushing host (Rust-side) state into the Masque
 //! runtime. The [`IntoHostValue`] trait removes the per-call
 //! `Value::String(s.clone())` ceremony from binding sites: callers write
 //! `rt.set_host_state("name", &fs.field)` and the trait picks the right

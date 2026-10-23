@@ -1,7 +1,7 @@
-//! Ogham depends on nothing of the router, in any dependency table and at
+//! Masque depends on nothing of the router, in any dependency table and at
 //! any depth.
 //!
-//! The router (`structure`, working name) lives in its own repository and
+//! The router (`carte`) lives in its own repository and
 //! the two are independent libraries; what joins them lives in a consumer
 //! (lorekeeper's `driver`). `cargo tree` is the proof, but a test cannot
 //! shell out to cargo cheaply, so this reads the two files `cargo tree`
@@ -10,7 +10,7 @@
 
 /// Packages that must never appear in this crate's build. `contract` is
 /// the document contract, which depends on the router.
-const FORBIDDEN: &[&str] = &["structure", "contract"];
+const FORBIDDEN: &[&str] = &["carte", "contract"];
 
 fn read(name: &str) -> String {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(name);
@@ -32,7 +32,7 @@ fn the_manifest_declares_no_router_dependency() {
         let key = line.split('=').next().unwrap_or("").trim();
         assert!(
             !FORBIDDEN.contains(&key),
-            "{table} declares `{key}`: ogham must not depend on the router"
+            "{table} declares `{key}`: masque must not depend on the router"
         );
     }
 }
@@ -44,7 +44,7 @@ fn the_lockfile_resolves_no_router_package() {
         let entry = format!("name = \"{forbidden}\"");
         assert!(
             !lock.lines().any(|line| line.trim() == entry),
-            "Cargo.lock resolves `{forbidden}`: something pulls the router into ogham's build"
+            "Cargo.lock resolves `{forbidden}`: something pulls the router into masque's build"
         );
     }
 }

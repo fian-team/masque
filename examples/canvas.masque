@@ -8,7 +8,7 @@
 // The point of the widget is the two Canvases below: one fixed-size dial
 // seated in a column *above* a card whose height the framework measures,
 // and one `width: "grow"` meter that spans whatever the column resolves
-// to. Neither needs the host to know a single Ogham dimension.
+// to. Neither needs the host to know a single Masque dimension.
 
 let ink        = { r: 232, g: 230, b: 226, a: 255 };
 let muted      = { r: 150, g: 150, b: 160, a: 255 };
@@ -48,11 +48,11 @@ let main = fn () {
     },
     children: [
       Text {
-        text: "Canvas: host paint, Ogham layout",
+        text: "Canvas: host paint, Masque layout",
         style: { size: 20, color: ink },
       },
 
-      // The dial. `props` is the only channel from .ogh into the painter;
+      // The dial. `props` is the only channel from .masque into the painter;
       // everything else it draws comes from host Rust. A click bumps the
       // charge, the module re-renders, and the painter sees the new props
       // on the very next frame.

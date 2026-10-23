@@ -1,11 +1,11 @@
-//! Comprehensive language conformance test suite for Ogham.
+//! Comprehensive language conformance test suite for Masque.
 
 mod common;
 
 use std::collections::HashMap;
 
 use common::{eval, run};
-use ogham::runtime::value::Value;
+use masque::runtime::value::Value;
 
 // ===========================================================================
 // Variables and state
@@ -48,7 +48,7 @@ let main = fn () {
     count
 };
 "#;
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).expect("from_source");
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
     let first = runtime.execute_module(&module).expect("first execute");
     assert_eq!(first, Value::Integer(1));
@@ -671,9 +671,9 @@ let main = fn () {
 fn implicit_return() {
     let source = r#"
 let greet = fn (name: string): string { "Hello, " + name };
-let main = fn () { greet("Ogham") };
+let main = fn () { greet("Masque") };
 "#;
-    assert_eq!(run(source), Value::String("Hello, Ogham".to_string()));
+    assert_eq!(run(source), Value::String("Hello, Masque".to_string()));
 }
 
 #[test]
@@ -952,7 +952,7 @@ fn event_handler_receives_args() {
     let received_clone = received.clone();
 
     let config =
-        ogham::runtime::config::RuntimeConfig::new().with_event_handler("my_event", move |args| {
+        masque::runtime::config::RuntimeConfig::new().with_event_handler("my_event", move |args| {
             if let Some(Value::Integer(n)) = args.first() {
                 received_clone.lock().unwrap().push(*n);
             }
@@ -965,7 +965,7 @@ let main = fn () {
 };
 "#;
     let mut runtime =
-        ogham::runtime::Runtime::from_source(source, Some(config)).expect("from_source");
+        masque::runtime::Runtime::from_source(source, Some(config)).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
     runtime.execute_module(&module).expect("execute");
 
@@ -1103,7 +1103,7 @@ let main = fn () {
     return a + b;
 };
 "#;
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).expect("from_source");
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
     let first = runtime.execute_module(&module).expect("first");
     assert_eq!(first, Value::Integer(3));
@@ -1114,7 +1114,7 @@ fn host_state_injection() {
     let mut initial = HashMap::new();
     initial.insert("greeting".to_string(), Value::String("Hello".to_string()));
 
-    let config = ogham::runtime::config::RuntimeConfig::new().with_host_state(initial);
+    let config = masque::runtime::config::RuntimeConfig::new().with_host_state(initial);
 
     let source = r#"
 let main = fn () {
@@ -1122,7 +1122,7 @@ let main = fn () {
 };
 "#;
     let mut runtime =
-        ogham::runtime::Runtime::from_source(source, Some(config)).expect("from_source");
+        masque::runtime::Runtime::from_source(source, Some(config)).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
     let result = runtime.execute_module(&module).expect("execute");
     assert_eq!(result, Value::String("Hello".to_string()));
@@ -1194,7 +1194,7 @@ let main = fn () {
     x
 };
 "#;
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).expect("from_source");
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
     runtime.execute_module(&module).expect("first");
     assert!(runtime.needs_rerender());

@@ -1,6 +1,6 @@
-use ogham::parser::typed_bindings::TypeRef;
-use ogham::parser::*;
-use ogham::runtime::schema::ModuleSchema;
+use masque::parser::typed_bindings::TypeRef;
+use masque::parser::*;
+use masque::runtime::schema::ModuleSchema;
 
 /// Result of looking up a position in the AST.
 pub enum HoverInfo {
@@ -66,33 +66,33 @@ impl HoverInfo {
                     DeclKind::Import => "import",
                 };
                 if value_hint.is_empty() {
-                    format!("```ogham\n{kw} {name}\n```")
+                    format!("```masque\n{kw} {name}\n```")
                 } else {
-                    format!("```ogham\n{kw} {name}: {value_hint}\n```")
+                    format!("```masque\n{kw} {name}: {value_hint}\n```")
                 }
             }
             HoverInfo::Parameter { name } => {
-                format!("```ogham\nparameter {name}\n```")
+                format!("```masque\nparameter {name}\n```")
             }
             HoverInfo::WidgetType { name } => {
-                format!("```ogham\nwidget {name}\n```")
+                format!("```masque\nwidget {name}\n```")
             }
             HoverInfo::Property { name } => {
-                format!("```ogham\nproperty {name}\n```")
+                format!("```masque\nproperty {name}\n```")
             }
             HoverInfo::Literal { description } => description.clone(),
             HoverInfo::Keyword { name, description } => {
                 format!("**{name}** -- {description}")
             }
             HoverInfo::ImportPath { path } => {
-                format!("```ogham\nimport \"{path}\"\n```")
+                format!("```masque\nimport \"{path}\"\n```")
             }
             HoverInfo::HostStateField {
                 name,
                 type_label,
                 default_label,
             } => {
-                let mut out = format!("```ogham\nhost_state {{ {name}: {type_label} }}\n```");
+                let mut out = format!("```masque\nhost_state {{ {name}: {type_label} }}\n```");
                 if let Some(d) = default_label {
                     out.push_str(&format!("\n\n*default*: `{d}`"));
                 }
@@ -101,7 +101,7 @@ impl HoverInfo {
             }
             HoverInfo::RecordName { name, field_count } => {
                 format!(
-                    "```ogham\nrecord {name}\n```\n\n{field_count} field{}",
+                    "```masque\nrecord {name}\n```\n\n{field_count} field{}",
                     if *field_count == 1 { "" } else { "s" }
                 )
             }
@@ -181,8 +181,8 @@ fn format_type_ref(ty: &TypeRef) -> String {
 }
 
 /// Render a schema literal default for hover display.
-fn format_schema_literal(lit: &ogham::parser::typed_bindings::SchemaLiteral) -> String {
-    use ogham::parser::typed_bindings::SchemaLiteral;
+fn format_schema_literal(lit: &masque::parser::typed_bindings::SchemaLiteral) -> String {
+    use masque::parser::typed_bindings::SchemaLiteral;
     match lit {
         SchemaLiteral::Int(v) => v.to_string(),
         SchemaLiteral::Float(v) => v.to_string(),

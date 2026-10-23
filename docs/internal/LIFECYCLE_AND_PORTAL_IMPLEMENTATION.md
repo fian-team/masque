@@ -25,7 +25,7 @@
 | Merge | Title | LOC | Tests | Risk | Hardest part |
 |---|---|---|---|---|---|
 | M0 | Lifecycle plumbing (foundation) | ~600 | ~12 | Medium | `owned_path_prefix` widget-tree migration |
-| M1 | `on_mount` / `on_unmount` in `.ogh` | ~500 | ~15 | Medium | Closure scope capture for unmount |
+| M1 | `on_mount` / `on_unmount` in `.masque` | ~500 | ~15 | Medium | Closure scope capture for unmount |
 | M2 | `effect` + `cleanup` | ~400 | ~12 | Low | Dep equality on `Value` |
 | M3 | Portal: deferred-paint primitive | ~600 | ~10 | High | Two-pass paint without breaking existing renderer assumptions |
 | M4 | Portal: `focus_trap` + `has_input_blocking_portal` | ~350 | ~8 | Medium | Focus stack semantics under modal-on-modal |
@@ -37,7 +37,7 @@
 
 M0–M2 ship the **lifecycle subsystem** end-to-end. After M2,
 authors can write `on_mount`, `on_unmount`, `effect`, and
-`cleanup` in `.ogh`; the runtime fires them; the LSP
+`cleanup` in `.masque`; the runtime fires them; the LSP
 highlights and diagnoses them. This is the foundation —
 Portal builds on it.
 
@@ -48,7 +48,7 @@ runtime API.
 
 M5 is **validation**: migrate three UL UIs (Settings save,
 escape menu Portal, one tooltip), ship the
-`examples/portals/components.ogh` reference library
+`examples/portals/components.masque` reference library
 (`Modal()`, `Tooltip()`, `Dropdown()`), graduate the design
 doc from "Live design contract" to "Live contract."
 
@@ -60,7 +60,7 @@ to `main` after passing its gate. The gate is **all of**:
 - `cargo build --workspace` clean
 - `cargo test --workspace` green
 - All new tests added in this merge pass
-- UL builds clean against the new `ogham` (`cd ../untold_lore && cargo build`)
+- UL builds clean against the new `masque` (`cd ../untold_lore && cargo build`)
 - No regressions in existing tests
 
 If a gate fails, the work-in-progress stays uncommitted until
@@ -75,7 +75,7 @@ clean-merge cadence held up; we keep that.
 
 Land all the runtime + widget-tree machinery for lifecycle
 events **without exposing any author surface**. Nothing in
-`.ogh` changes. The diff is observable via direct unit tests
+`.masque` changes. The diff is observable via direct unit tests
 on the new internal APIs.
 
 ### Deliverables
@@ -174,7 +174,7 @@ on the new internal APIs.
 12. `call_opcode_skips_path_insert_when_lifecycle_inactive`
 
 All tests use the StateManager and runtime APIs directly —
-no `.ogh` source involved.
+no `.masque` source involved.
 
 ### Cross-merge dependencies
 
@@ -194,7 +194,7 @@ no `.ogh` source involved.
 
 ### What M0 does NOT include
 
-- Any `.ogh` syntax for hooks (M1).
+- Any `.masque` syntax for hooks (M1).
 - Any `effect` semantics (M2).
 - The `Portal` widget (M3).
 - The focus stack (M4).
@@ -211,13 +211,13 @@ no `.ogh` source involved.
 
 ---
 
-## Merge 1 — `on_mount` / `on_unmount` in `.ogh`
+## Merge 1 — `on_mount` / `on_unmount` in `.masque`
 
 ### Goal
 
 Ship the user-visible lifecycle hook surface for the two
 non-effect kinds. After M1, authors can write `on_mount`
-and `on_unmount` in `.ogh` and the runtime fires them.
+and `on_unmount` in `.masque` and the runtime fires them.
 
 ### Deliverables
 
@@ -374,7 +374,7 @@ small.)
 - All M0 + M1 tests pass.
 - UL builds clean.
 - Manual smoke: write a tiny `on_mount { log "hi" }` in a
-  test `.ogh`, verify it logs once on first render and not
+  test `.masque`, verify it logs once on first render and not
   on subsequent renders.
 
 ---
@@ -517,7 +517,7 @@ cleanup runs before re-fire and at unmount.
 
 - Portal (M3).
 - Auto-tracked deps (signal-based; explicitly Phase 3+).
-- React-style "if you forget a dep, we warn you" — Ogham
+- React-style "if you forget a dep, we warn you" — Masque
   doesn't have the AST traversal infrastructure to do
   that reliably without false positives. Defer.
 
@@ -675,7 +675,7 @@ Focus_trap is **not** in M3 (M4).
 
 - All M0–M3 tests pass.
 - UL builds clean.
-- Smoke: write a tooltip Portal in a test `.ogh`; verify
+- Smoke: write a tooltip Portal in a test `.masque`; verify
   it paints in front of the parent's clip, dismisses on
   outside click, animates in/out.
 
@@ -697,7 +697,7 @@ input-gating booleans from `has_input_blocking_portal()`.
 - `Portal`'s internal lifecycle hooks: on mount with
   `focus_trap: true`, push to focus stack; on unmount,
   pop and restore. (Uses M1's hook plumbing internally —
-  not exposed to consumer's `.ogh`.)
+  not exposed to consumer's `.masque`.)
 - Focus-changing operations (tab, arrow keys,
   programmatic `set_focused`) consult `focus_stack.last()`
   and reject moves outside the trapped portal's subtree.
@@ -800,7 +800,7 @@ input-gating booleans from `has_input_blocking_portal()`.
 ### Goal
 
 Migrate the three M5 UL deliverables; ship the
-`examples/portals/components.ogh` reference library;
+`examples/portals/components.masque` reference library;
 graduate the design doc; resolve the remaining hot-reload
 open question (audit OQ#7).
 
@@ -808,22 +808,22 @@ open question (audit OQ#7).
 
 - **Settings save-on-close** migrated:
   `actions.rs:2646`'s `client_settings.save()` moves
-  behind a `save_settings` event handler; `settings.ogh`
+  behind a `save_settings` event handler; `settings.masque`
   gets `on_unmount { event("save_settings", form) }`.
   `CloseSettings` action handler simplified.
 - **Escape menu Portal migration**:
-  `escape_menu.ogh` rewritten per the design doc's worked
+  `escape_menu.masque` rewritten per the design doc's worked
   example. `overlay_state` plumbing in `update.rs`
   collapsed to `let overlay_active =
-  ogham.has_input_blocking_portal()`.
+  masque.has_input_blocking_portal()`.
   `confirm_disconnect` and `confirm_reset_run` bools moved
   from `mod.rs:1209–1210` into `state` cells in the
-  `.ogh`. Nested confirm-disconnect becomes a nested
+  `.masque`. Nested confirm-disconnect becomes a nested
   Portal.
 - **Inventory tooltip**: one tooltip on inventory cells
   showing item details on hover. Implemented as the
   worked non-modal Portal example.
-- `examples/portals/components.ogh` ships with `Modal()`,
+- `examples/portals/components.masque` ships with `Modal()`,
   `Tooltip()`, and `Dropdown()` library `fn`s.
 - Hot-reload + lifecycle interaction tested and either
   works correctly or has a known-limitation
@@ -842,23 +842,23 @@ open question (audit OQ#7).
      `actions.rs` (extract logic from
      `CloseSettings` handler).
    - Add `on_unmount { event("save_settings", form) }`
-     to `settings.ogh`.
+     to `settings.masque`.
    - Simplify `CloseSettings` to just close the UI (no
      save).
    - Test: open Settings, change a value, close — verify
      save happens.
 2. **Escape menu migration**:
-   - Rewrite `escape_menu.ogh` to use `Portal { open:
+   - Rewrite `escape_menu.masque` to use `Portal { open:
      host_state.show_escape_menu, focus_trap: true,
      children: [...] }`. Backdrop becomes first child
      with `on_click` to dispatch hide event.
    - Move `confirm_disconnect`, `confirm_reset_run` from
-     `mod.rs` to `state` cells in `escape_menu.ogh`.
+     `mod.rs` to `state` cells in `escape_menu.masque`.
    - Implement nested confirm-disconnect as nested
      `Portal { focus_trap: true, ... }`.
    - Replace `overlay_state` plumbing in
      `update.rs:347, 1469` with
-     `ogham.has_input_blocking_portal()`.
+     `masque.has_input_blocking_portal()`.
    - Test: open menu, verify focus trapped, verify
      world input gated, verify confirm-disconnect nested
      trap works, verify Escape key dispatches hide event.
@@ -867,7 +867,7 @@ open question (audit OQ#7).
    - Wrap details Flex in `Portal { open: state.hover,
      children: [tooltip Flex with translate_y transform] }`.
    - Test: hover cell, verify tooltip appears below.
-4. **`examples/portals/components.ogh`**:
+4. **`examples/portals/components.masque`**:
    - `Modal({ open, children })` — Portal with
      `focus_trap: true`, backdrop child, centered
      dialog wrapper.
@@ -877,7 +877,7 @@ open question (audit OQ#7).
      anchor-relative item list, outside-click dismiss.
 5. **Hot-reload + lifecycle test** (audit OQ#7):
    - Open the escape menu in a UL session.
-   - Modify `escape_menu.ogh`, save.
+   - Modify `escape_menu.masque`, save.
    - Hot-reload triggers; observe whether pending
      unmounts flush correctly, whether the new module's
      mount fires, whether focus stack handles the swap.
@@ -968,7 +968,7 @@ pub fn collect_hook_log(runtime: &mut Runtime) -> Vec<String> {
 ```
 
 Plus a per-test "log when this hook fires" pattern — hooks
-in test `.ogh` use `event("test_log", "mount fired")` and
+in test `.masque` use `event("test_log", "mount fired")` and
 the test handler appends to a shared log.
 
 ### Per-frame allocation budget
@@ -1096,7 +1096,7 @@ small and can be made now or at M0 kickoff:
    Skip for M1 — make it a constant; expose configurability
    only if a consumer needs it.
 5. **Where to expose `lifecycle_error_count`.** On
-   `Runtime` directly. Not on `TypedOgham` — typed
+   `Runtime` directly. Not on `TypedMasque` — typed
    handles wrap `Runtime` and inherit access via
    `&Runtime`.
 6. **Test-only event handler convention.** For lifecycle
@@ -1143,7 +1143,7 @@ When M5's gate passes:
   simplified.
 - UL's inventory HUD has a tooltip on cells (one worked
   example).
-- `examples/portals/components.ogh` ships with `Modal()`,
+- `examples/portals/components.masque` ships with `Modal()`,
   `Tooltip()`, and `Dropdown()` library `fn`s.
 - All Phase 1 functionality continues to work unchanged.
 - Hot reload behaves correctly across the new state (or
@@ -1260,7 +1260,7 @@ tests:
 2. **LSP conditional-hook walker never descended into fn
    bodies**: bailed at `Statement::Declare(_)` via the
    catchall arm. Fix: descend into `Function` literal
-   bodies. The warning now actually fires in real .ogh
+   bodies. The warning now actually fires in real .masque
    code.
 3. **Effect dep type check missing** (M2 deliverable
    skipped). Fix: `fn_typed_locals` HashSet on the
@@ -1304,7 +1304,7 @@ WidgetRegistry::with_defaults; 10 tests.
 sync_focus_stack (called from Skia's draw after Pass B);
 try_set_focus rejects out-of-subtree moves;
 clear_lifecycle_state for hot-reload safety;
-Ogham::has_input_blocking_portal public API forwarding to
+Masque::has_input_blocking_portal public API forwarding to
 UI.has_input_blocking_portal; 9 tests.
 
 **Deviations:**
@@ -1324,11 +1324,11 @@ UI.has_input_blocking_portal; 9 tests.
 - Click-leak through a backdrop-less focus_trap portal
   (M3 limitation) is **not** wired in M4. Backdrops are
   the canonical solution, encoded in the
-  `examples/portals/components.ogh` Modal helper.
+  `examples/portals/components.masque` Modal helper.
 
 ### M5 — Examples library + doc graduation — 2026-05-05 (this commit)
 
-**Shipped:** `examples/portals/components.ogh` with
+**Shipped:** `examples/portals/components.masque` with
 Modal/Tooltip/Dropdown reference fns; design doc status
 banner graduated to "Live contract — Phase 2 shipped";
 this trailer added.
@@ -1338,12 +1338,12 @@ this trailer added.
   escape menu Portal, inventory tooltip) are
   **deferred to a post-Phase-2 UL backlog**. Two
   reasons:
-  1. UL's `overlay_state` pattern swaps Ogham instances
+  1. UL's `overlay_state` pattern swaps Masque instances
      when an overlay opens/closes. Runtime drop doesn't
      fire `on_unmount` mid-render — the path simply
      vanishes when the runtime is dropped. The M5
      Settings save migration would need UL to restructure
-     so Settings stays inside the same Ogham instance,
+     so Settings stays inside the same Masque instance,
      reaching `on_unmount` via path-disappear semantics.
      That's beyond the M5 surface — it's a UL refactor.
   2. UL has uncommitted in-progress combat work touching
@@ -1351,7 +1351,7 @@ this trailer added.
      files. The M5 migrations would touch the same
      files. Cross-repo WIP collision risk is high.
 - The patterns are demonstrated in
-  `examples/portals/components.ogh` instead. UL adoption
+  `examples/portals/components.masque` instead. UL adoption
   is now an ordinary post-Phase-2 task, joining the ~12
   person-day backlog from the audit's per-UI verdicts.
 - Hot-reload + lifecycle smoke test (audit OQ#7) is also
@@ -1432,5 +1432,5 @@ bugs fixed, one documented as known limitation.
 5. Address the schema-diagnostics workstream's
    lib-test breakage (untracked
    `src/diagnostics/manifest.rs` uses derive macros
-   that don't resolve `::ogham` paths inside the
-   ogham crate itself — separate workstream).
+   that don't resolve `::masque` paths inside the
+   masque crate itself — separate workstream).

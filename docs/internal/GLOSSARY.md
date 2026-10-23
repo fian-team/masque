@@ -1,4 +1,4 @@
-# Ogham — Glossary
+# Masque — Glossary
 
 > **Status: Live contract.**
 >
@@ -10,7 +10,7 @@
 
 ## Pipeline stages
 
-**Source** — A `.ogh` file's text. Always UTF-8.
+**Source** — A `.masque` file's text. Always UTF-8.
 
 **Token** — Output of the [scanner](LANGUAGE.md). One unit of
 lexical syntax (e.g. `Identifier("counter")`, `Plus`, `Integer(5)`).
@@ -21,7 +21,7 @@ a tree of `Statement` and `Expression` nodes wrapping a top-level
 `Function` (the *module*). Untyped; type identifiers are recorded
 but not enforced.
 
-**Module** — The `Function` produced by parsing a top-level `.ogh`
+**Module** — The `Function` produced by parsing a top-level `.masque`
 file. Always has arity 0; its body is the file's statement list.
 
 **Bytecode** — Output of the [compiler](VM.md): a `FunctionProto`
@@ -66,7 +66,7 @@ on the runtime across rerenders, keyed by call-stack path.
 *Component state*, in React terms.
 
 **Host state** — Variables injected by the embedding Rust code via
-`Runtime::set_host_state` / `inject_host_state_batch`. From `.ogh`
+`Runtime::set_host_state` / `inject_host_state_batch`. From `.masque`
 code these are observable (read via `GetState` falling through to
 `GetHostState`) but immutable. See [INTENT §2](INTENT.md#2-host-state-flows-in-events-flow-out).
 
@@ -96,9 +96,9 @@ side-effects to a widget's mount, unmount, or dependency changes:
 path-based — every `(call_stack, hook_id)` pair is a fresh slot.
 See [RUNTIME.md](RUNTIME.md) for drain semantics.
 
-**TypedOgham** — `TypedOgham<S, M>` in `src/typed.rs`. A typed
-wrapper around `Ogham` that uses `#[derive(OghamState)]` /
-`#[derive(OghamMsg)]` to bridge a Rust struct/enum to the
+**TypedMasque** — `TypedMasque<S, M>` in `src/typed.rs`. A typed
+wrapper around `Masque` that uses `#[derive(MasqueState)]` /
+`#[derive(MasqueMsg)]` to bridge a Rust struct/enum to the
 runtime's host state and event bus. `set_state` diffs against
 the previous frame's `S` and only injects changed fields.
 
@@ -204,7 +204,7 @@ because text widgets call into Skia.
 **UpdateResult** — Returned by `Widget::update`. Carries
 `absorbed` (did the existing widget accept the new descriptor in
 place?) plus `needs_layout` / `needs_repaint` flags. Bubbles up
-the tree so `Ogham::update` can decide whether to invalidate the
+the tree so `Masque::update` can decide whether to invalidate the
 cached layout.
 
 **TickResult** — Returned by `Widget::tick_animations`. Carries
@@ -281,7 +281,7 @@ inside `RenderContext` calls.
 
 ## LSP and tooling
 
-**ogham-lsp** — The language server binary. Reuses the scanner
+**masque-lsp** — The language server binary. Reuses the scanner
 and parser; never instantiates the runtime or widget tree. See
 [LSP.md](LSP.md).
 
@@ -295,9 +295,9 @@ drop the old hook registry, and a tree reconcile against the new
 output; *some* state survives if keys and shapes match. See
 [RUNTIME.md](RUNTIME.md).
 
-**Schema diagnostic** — Cross-side check between a `.ogh` file
+**Schema diagnostic** — Cross-side check between a `.masque` file
 and the typed-bindings manifest produced by
-`#[derive(OghamState)]` / `#[derive(OghamMsg)]`. Engine lives
-in `src/diagnostics/`; consumed by the `ogham check` CLI.
+`#[derive(MasqueState)]` / `#[derive(MasqueMsg)]`. Engine lives
+in `src/diagnostics/`; consumed by the `masque check` CLI.
 LSP wiring is on the roadmap (Phase 1 in
 [SCHEMA_DIAGNOSTICS.md](SCHEMA_DIAGNOSTICS.md)).

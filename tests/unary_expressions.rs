@@ -3,7 +3,7 @@
 mod common;
 
 use common::eval;
-use ogham::runtime::value::Value;
+use masque::runtime::value::Value;
 
 #[test]
 fn negate_integer() {

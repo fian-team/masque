@@ -1,4 +1,4 @@
-# Ogham — Events
+# Masque — Events
 
 > **Status: Live contract.**
 >
@@ -195,7 +195,7 @@ so widgets can self-check focus, and dispatches to the root.
 
 #### Key chords — `keydown:` on `Flex` (2026-09-07)
 
-```ogh
+```masque
 Flex {
   keydown: {
     ctrl_k:     fn () { event("open_palette"); },
@@ -486,7 +486,7 @@ the wheel and Escape are reported handled. The release fires
 leaving the tree, ends it with nothing fired.
 
 - A `drag_payload` of `""` declares no source — the document's way to
-  say *not this one*, since ogham has no null.
+  say *not this one*, since masque has no null.
 - A two-parameter `drag_end` listener is handed `at`, the drop point in
   the target's own pixels as `{ x, y }`. That is what lets a widget
   stand for a surface the host draws (a map, a world view).
@@ -529,7 +529,7 @@ behaviour).
 
 ### `contextmenu`
 
-`Ogham::dispatch_contextmenu(point)` fires on the deepest widget
+`Masque::dispatch_contextmenu(point)` fires on the deepest widget
 at the cursor and stops there — *no automatic bubble*. Wrap if
 ancestor handling is needed. Use this instead of overloading
 `mouse_down` so left-click and right-click route independently.
@@ -575,7 +575,7 @@ taking it. Two things are true of a right-click on either path
 
 ## Layer 2 — Host events (outbound)
 
-This is the channel `.ogh` code uses to ask the host to do
+This is the channel `.masque` code uses to ask the host to do
 things the runtime can't do itself. See
 [INTENT §2](INTENT.md#2-host-state-flows-in-events-flow-out)
 for the asymmetry that makes this load-bearing.
@@ -584,7 +584,7 @@ for the asymmetry that makes this load-bearing.
 
 **Fire-and-forget — `event(name, ...args)`:**
 
-```ogh
+```masque
 Flex {
   on_click: fn () {
     event("save_clicked", document_id);
@@ -600,7 +600,7 @@ discarded.
 
 **Tracked — `mutation("name")`:**
 
-```ogh
+```masque
 state save = mutation("save_document");
 
 Flex {
@@ -723,7 +723,7 @@ the call site decides whether to track the result.
 - **Hit-test order is painter-order (declaration order), not
   reverse-painter.** This is the inverse of every other UI
   framework I've seen. A button rendered "on top" of a
-  background in CSS catches clicks first; in Ogham, the
+  background in CSS catches clicks first; in Masque, the
   background catches first because it's declared first. This
   feels like a bug worth confirming. Verify by writing an
   example with two overlapping siblings.
@@ -753,7 +753,7 @@ the call site decides whether to track the result.
   the args. `mouse_down` and `key_down` and `please_save_now`
   go through the same dispatch; a typo is silently a no-op.
 - **`event()` discards handler errors.** A misbehaving handler
-  (a host that throws on every call) is invisible to `.ogh`
+  (a host that throws on every call) is invisible to `.masque`
   unless wrapped in a mutation. Could be at minimum an
   `eprintln!` for debug builds.
 - **Mutations always trigger a rerender.** Authors with handlers

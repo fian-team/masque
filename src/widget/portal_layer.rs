@@ -97,7 +97,7 @@ impl PortalLayer {
         }
     }
 
-    /// Parse a string layer name as it appears in `.ogh`
+    /// Parse a string layer name as it appears in `.masque`
     /// source. Returns `None` for unknown names — the caller
     /// surfaces the diagnostic with the list of valid names.
     pub fn from_source_name(name: &str) -> Option<Self> {
@@ -112,7 +112,7 @@ impl PortalLayer {
         }
     }
 
-    /// String name as it appears in `.ogh` source. Used by
+    /// String name as it appears in `.masque` source. Used by
     /// LSP hover, error messages, and the "list of valid
     /// names" diagnostic.
     pub fn source_name(self) -> &'static str {
@@ -173,7 +173,7 @@ impl PortalLayer {
 /// the pointer near the right edge of the window runs off it, and
 /// a tooltip near the bottom wants to sit *above* the pointer
 /// rather than be shoved up into it. Both corrections need the
-/// subtree's measured size, which `.ogh` cannot see — hence a
+/// subtree's measured size, which `.masque` cannot see — hence a
 /// named policy resolved in the renderer rather than arithmetic
 /// in the language.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -208,7 +208,7 @@ impl AnchorPolicy {
     /// All policies, in the order the diagnostic lists them.
     pub const ALL: [AnchorPolicy; 3] = [Self::Raw, Self::Clamp, Self::Flip];
 
-    /// Parse a string policy name as it appears in `.ogh`
+    /// Parse a string policy name as it appears in `.masque`
     /// source. Returns `None` for unknown names — the caller
     /// surfaces the diagnostic with the list of valid names.
     /// Mirrors [`PortalLayer::from_source_name`].
@@ -221,7 +221,7 @@ impl AnchorPolicy {
         }
     }
 
-    /// String name as it appears in `.ogh` source. Used by LSP
+    /// String name as it appears in `.masque` source. Used by LSP
     /// hover, error messages, and the "list of valid names"
     /// diagnostic.
     pub fn source_name(self) -> &'static str {
@@ -358,7 +358,7 @@ impl BackdropPolicy {
     /// All policies, in the order the diagnostic lists them.
     pub const ALL: [BackdropPolicy; 3] = [Self::None, Self::Dismiss, Self::Block];
 
-    /// Parse a policy name as it appears in `.ogh` (`backdrop:`).
+    /// Parse a policy name as it appears in `.masque` (`backdrop:`).
     /// Returns `None` for unknown names — the builder surfaces the
     /// diagnostic with the list of valid names, mirroring
     /// [`PortalLayer::from_source_name`].
@@ -371,7 +371,7 @@ impl BackdropPolicy {
         }
     }
 
-    /// String name as it appears in `.ogh` source.
+    /// String name as it appears in `.masque` source.
     pub fn source_name(self) -> &'static str {
         match self {
             Self::None => "none",

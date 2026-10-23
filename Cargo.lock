@@ -620,6 +620,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "masque"
+version = "0.1.0"
+dependencies = [
+ "downcast-rs",
+ "lodepng",
+ "nalgebra-glm",
+ "notify",
+ "skia-safe",
+ "tokio",
+ "tower-lsp",
+]
+
+[[package]]
+name = "masque-web"
+version = "0.0.0"
+dependencies = [
+ "masque",
+]
+
+[[package]]
 name = "matrixmultiply"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -765,26 +785,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "ogham"
-version = "0.1.0"
-dependencies = [
- "downcast-rs",
- "lodepng",
- "nalgebra-glm",
- "notify",
- "skia-safe",
- "tokio",
- "tower-lsp",
-]
-
-[[package]]
-name = "ogham-web"
-version = "0.0.0"
-dependencies = [
- "ogham",
 ]
 
 [[package]]

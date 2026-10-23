@@ -1,7 +1,7 @@
-# Ogham — Identity & Scope (workshop draft)
+# Masque — Identity & Scope (workshop draft)
 
 > **Status: workshop draft. NOT a contract.** This captures a multi-session
-> design reckoning about *what Ogham is for* and *what it should keep, cut, and
+> design reckoning about *what Masque is for* and *what it should keep, cut, and
 > defer*. It will be workshopped over several sessions and, once settled, will
 > inform new tenets in [`INTENT.md`](INTENT.md) and the cut/keep sequencing.
 > Until then, nothing here overrides existing contracts. Where this doc and the
@@ -19,13 +19,13 @@
 > `Reader` mirror of `apply`, the `$variant` discriminant, ambient reads, and the
 > cut/build/migrate execution sequence — see §5). Revised 2026-06-08b (codebase
 > reckoning, blockers 1–3: `runtime/schema.rs` / `parser/typed_bindings.rs` are
-> split-not-delete — the `.ogh`-source schema stays; `$variant` blast radius
+> split-not-delete — the `.masque`-source schema stays; `$variant` blast radius
 > verified — runtime flip is automatic, 23 *test* edit-paths need a schema-aware
 > audit (11 in `editable` all-union, 12 in `content-core` of which 3 are
 > record-field `.kind` traps that must not flip), no production/content change;
 > `Reader` scoped to ~2 days with Design C —
 > promotions inline at the field site, no read-walk cycle guard; execution sequence
-> made repo-explicit across `ogham` / `lorekeeper` / `small_mercies`; write wire
+> made repo-explicit across `masque` / `lorekeeper` / `small_mercies`; write wire
 > format pinned to six named events — four already proven in the frozen panes, +2
 > for maps — with the `PaneAction`→`FieldOp` decode as a write-side survivor).
 > Revised 2026-06-08c (pre-implementation verification pass — every `file:line`
@@ -33,26 +33,26 @@
 > corrected — `text_input_widget` does **not** leak skia; the `compile_increment`
 > bug is an *unconditional* `SetState` the local path guards, at `1249-1262`/1257;
 > the `$variant` audit is **23** test paths not ~18, of which 3 `content-core`
-> record-field `.kind` sites must not flip; the `OghamField` trait + a separate
-> `FromOghamValue` belong in the schema.rs cut list. No design change — counts and
+> record-field `.kind` sites must not flip; the `MasqueField` trait + a separate
+> `FromMasqueValue` belong in the schema.rs cut list. No design change — counts and
 > pointers only. Cleared for implementation.)
 
 ---
 
 ## 1. The reckoning
 
-Ogham has been quietly trying to be **two frameworks in one binary**:
+Masque has been quietly trying to be **two frameworks in one binary**:
 
 - **A "JavaScript + React replacement" / standalone app platform.** This
-  identity funds: local `useState`-style state, the `OghamState`/`OghamMsg`
+  identity funds: local `useState`-style state, the `MasqueState`/`MasqueMsg`
   typed-binding layer (the React+TS analogue), `mutation()` request/response,
   the standalone `client` viewer with `Ctrl+O`, portals/modals, and the LSP. It
-  presupposes *Ogham is the application* and the host is a thin shell.
+  presupposes *Masque is the application* and the host is a thin shell.
 
 - **A "UI framework for Rust applications."** This identity is host-state-in /
-  events-out: the host owns all state and logic, and Ogham is a *projection
+  events-out: the host owns all state and logic, and Masque is a *projection
   surface* over it. Here the Rust domain model is the source of truth and the
-  `.ogh` renders + emits.
+  `.masque` renders + emits.
 
 **The framework ships both and has committed to neither.** That indecision is
 the root cause of most of the weak spots found in the audit: unused surface that
@@ -61,15 +61,15 @@ model that confuses authors.
 
 ### What the consumers actually voted for
 
-Revealed preference across the three real consumers (small_mercies ~7.7k `.ogh`
+Revealed preference across the three real consumers (small_mercies ~7.7k `.masque`
 LOC, untold_lore ~19k, lorekeeper 146 — a fossil) is decisive:
 
 | Signal | Finding |
 |---|---|
-| Typed bindings (`derive(OghamState/OghamMsg)`) | **1 site total** (UL `chest_ui.rs`); 0 in SM, 0 in LK |
-| `ogham check` / strict validation in any build/CI | **none** |
+| Typed bindings (`derive(MasqueState/MasqueMsg)`) | **1 site total** (UL `chest_ui.rs`); 0 in SM, 0 in LK |
+| `masque check` / strict validation in any build/CI | **none** |
 | Local `state` declarations | **1 in SM, ~10 in UL** (several serving dead drag/hover surface) |
-| Lifecycle hooks (`on_mount`/`on_unmount`/`effect`/`cleanup`) | **0** in real `.ogh` (only the test suite) |
+| Lifecycle hooks (`on_mount`/`on_unmount`/`effect`/`cleanup`) | **0** in real `.masque` (only the test suite) |
 | Portals | **0 SM / 1 UL**; SM overlays are plain stacked flex + frosted glass; 0 Rust portal calls |
 | `svg` widget / `mutation()` / drag (`draggable`/`on_drag`) | **0** anywhere |
 | The schema-driven `editable` derive | **spreading across all authored content** up to the `Content` root; an active refactor |
@@ -81,14 +81,14 @@ flex-with-wrap (5 / 8), `text_input` (29+ in UL).
 
 The verdict writes itself: **when the developers hit the exact need the typed
 React-style layer was meant to serve — typed, introspectable host state — they
-built a *second, better* system (`editable`) outside Ogham entirely**, because
-Ogham's version was scoped to the wrong problem (view-binding validation) and
+built a *second, better* system (`editable`) outside Masque entirely**, because
+Masque's version was scoped to the wrong problem (view-binding validation) and
 lived at the wrong layer (coupled to the renderer, so a domain type couldn't
 derive it without dragging in the UI).
 
 ### Decision
 
-**[DECIDED] Commit Ogham to the "UI framework for Rust applications" identity.
+**[DECIDED] Commit Masque to the "UI framework for Rust applications" identity.
 Shed the standalone-browser / JS-replacement ambition as a *deliberate
 deferral*, not a thing to keep half-building toward.**
 
@@ -103,7 +103,7 @@ breadth is how challengers lose.
 **The preserved option is the four-pass pipeline** (scanner → parser → compiler
 → VM). That spine already pays rent (it runs `for`/`match`/components) and keeps
 the door open to richer in-language logic later *without a rewrite*. `mutation`, the
-unused dynamism tail, `OghamState`, the standalone-app posture are **not** option
+unused dynamism tail, `MasqueState`, the standalone-app posture are **not** option
 value — they are depreciating inventory that rots while it waits (proof: the
 `compile_increment`-on-upvalue bug at `compiler.rs:1249-1262` — a feature unused
 long enough to be silently wrong: the upvalue branch emits an **unconditional**
@@ -144,13 +144,13 @@ surface, and fixing it is part of the price of keeping them).
   keeping them — don't ship the rot.
 - **LSP + structural diagnostics** — [DECIDED] keep. Hover, goto-def, semantic
   tokens, scanner/parser diagnostics genuinely reduce friction for *agents
-  hand-authoring `.ogh`*, which remains a substantial fraction of player-facing
-  UI. Note it **re-sources, not dies**: it stops validating against `OghamState`
-  manifests and validates `.ogh` field references against `editable` schema
+  hand-authoring `.masque`*, which remains a substantial fraction of player-facing
+  UI. Note it **re-sources, not dies**: it stops validating against `MasqueState`
+  manifests and validates `.masque` field references against `editable` schema
   blobs instead (see §4).
 - **`Surface` / `RenderContext` seam** — [DECIDED] keep, but **demote the
   rationale**. It is no longer "backend portability" (Skia is the only impl and
-  GPU/tile-baking lives *outside* Ogham, so there is no second backend coming).
+  GPU/tile-baking lives *outside* Masque, so there is no second backend coming).
   It survives as a **paint-isolation + test seam**: it keeps `skia_safe` out of
   `widget/` (layout, hit-test, animation stay backend-pure and unit-testable)
   and prevents the skia-leak drift INTENT §6 warns about. Rewrite §6's *why*
@@ -162,18 +162,18 @@ surface, and fixing it is part of the price of keeping them).
 
 ### Cut — safe immediately (zero consumer entanglement)
 
-- The rival typed layer: `OghamState`/`OghamMsg`, `ogham check`, the diagnostics
+- The rival typed layer: `MasqueState`/`MasqueMsg`, `masque check`, the diagnostics
   manifest-matching (`diagnostics/{check,manifest}.rs`, `cli/check.rs`, `typed.rs`),
-  and the typed half of `ogham-derive` (the `OghamState`/`OghamMsg` derives +
+  and the typed half of `masque-derive` (the `MasqueState`/`MasqueMsg` derives +
   `manifest_emit`). Superseded by `editable`; 1 site.
   - **Caveat — `runtime/schema.rs` and `parser/typed_bindings.rs` are split, not
-    deleted.** Both mix the cut Rust-derive layer with the *kept* `.ogh`-source
-    schema. Cut only the Rust-derive traits: `OghamField` (417), `OghamRecord` (430),
-    `OghamState` (445), `OghamMsg` (458), `HostStateSinkErased` (474) — the 417–482
-    cluster — plus `FromOghamValue` (605), which sits separately after the primitive
+    deleted.** Both mix the cut Rust-derive layer with the *kept* `.masque`-source
+    schema. Cut only the Rust-derive traits: `MasqueField` (417), `MasqueRecord` (430),
+    `MasqueState` (445), `MasqueMsg` (458), `HostStateSinkErased` (474) — the 417–482
+    cluster — plus `FromMasqueValue` (605), which sits separately after the primitive
     impls (so it's two excisions, not one contiguous block). **Keep** `ModuleSchema`/
     `RecordSchema`/`FieldSchema`/`EventSig`/`from_module`/`load_schema*` and the
-    `parser/typed_bindings.rs` parser for the `.ogh` `host_state {}` / `events {}` /
+    `parser/typed_bindings.rs` parser for the `.masque` `host_state {}` / `events {}` /
     `record {}` syntax + the `TypeRef`/`PrimType`/`KeyType`/`SchemaLiteral`
     vocabulary — they are load-bearing for compiler strict-mode identifier
     resolution + event validation, the **view layer's Tenet 6 host-state
@@ -253,7 +253,7 @@ not to host state at large. We adopt the discipline *with eyes open*:
 
 **Real, present-tense gains:**
 1. **LSP/typo checking where it pays.** Generically-edited content gets its
-   `.ogh` field references validated against the schema (the LSP re-sourcing, §4).
+   `.masque` field references validated against the schema (the LSP re-sourcing, §4).
    Plain host state stays ad-hoc — fine, it carries no editor.
 2. **A named change-unit seam** (rung 1, below).
 
@@ -276,7 +276,7 @@ not to host state at large. We adopt the discipline *with eyes open*:
      prerequisite). Build only when a real app janks on global rerenders.
    Framing: struct-partitioned state is *preserved option value* for reactivity.
    Take the seam; defer the engine.
-4. **Component isolation — real but NOT automatic.** Ogham's read model is
+4. **Component isolation — real but NOT automatic.** Masque's read model is
    *ambient* (plain identifiers fall through to the global host bag, §2), so
    structs-in-host-state isolate nothing by themselves. The benefit only
    materializes if components must *declare* which structs they see (props, not
@@ -297,20 +297,20 @@ carefully (§4).
 
 ---
 
-## 4. The `editable` ⟷ Ogham seam — reading & writing Rust structs
+## 4. The `editable` ⟷ Masque seam — reading & writing Rust structs
 
 ### The goal, stated explicitly  [DECIDED]
 
-**A Rust struct that derives `editable` should round-trip through Ogham's
+**A Rust struct that derives `editable` should round-trip through Masque's
 existing host-state-in / events-out pattern with no per-type hand-written glue.**
 For a content type like SM's `Scene`:
 
-- **Read:** `&Scene` projects into a `Value` tree of *field rows* that `.ogh`
+- **Read:** `&Scene` projects into a `Value` tree of *field rows* that `.masque`
   renders as an editor. Each row carries a label, the current value, a `kind`
-  telling `.ogh` which widget to draw, and the dotted `path` an edit carries
+  telling `.masque` which widget to draw, and the dotted `path` an edit carries
   back. (SM's `field_entries` in `editor/src/client.rs` already hand-writes this
   shape: `{ key, value, field (=path), kind, options, editable }`.)
-- **Write:** a field edit leaves `.ogh` as an event carrying `(path, op)`; the
+- **Write:** a field edit leaves `.masque` as an event carrying `(path, op)`; the
   host applies it via `editable::apply()`. No `SetHostState` opcode (§2 holds).
 
 That is the *entire* job — not a new pattern, just host-state-in / events-out
@@ -324,7 +324,7 @@ hand-written UI per type. That is the pervasive real case (SM's inspector over
 `Scene` / `Character` / `Encounter` / …). Two would-be justifications are **out
 of scope**:
 
-- **Mod-defined shapes.** Mods rely solely on **hand-authored Ogham state**, not
+- **Mod-defined shapes.** Mods rely solely on **hand-authored Masque state**, not
   Rust structs — a mod's content shape has no compile-time struct to derive from,
   so it never enters this seam. (Retires the old §3 `Kind::Map`-for-mod-resources
   framing.)
@@ -338,10 +338,10 @@ of scope**:
 > (`#[derive(Editable)]` chrome state → `Value` at mutation time, diffed
 > per field before injection). This stays inside the seam's rules: the
 > `Value`-building visitor lives **host-side** (the composition-point rule
-> below), the `.ogh` `host_state {}` block remains the single contract
+> below), the `.masque` `host_state {}` block remains the single contract
 > description (validated at load via `ModuleSchema::validate_host_state`),
-> and Ogham stays derive-free — `addd9da` stands; this is *not* a revival
-> of `TypedOgham`/`OghamState`. It relaxes only the "one thing" framing
+> and Masque stays derive-free — `addd9da` stands; this is *not* a revival
+> of `TypedMasque`/`MasqueState`. It relaxes only the "one thing" framing
 > above: the walk serves generic *projection*, of which generic editing is
 > the richest case.
 
@@ -349,11 +349,11 @@ of scope**:
 
 Read and write come from **the same `editable` derive**. `apply` already walks the
 real types to *write*; the derive gains the symmetric walk to *read*. There is
-**no second derive** and **no `OghamRead` / `OghamWrite` capability crate** — the
-prior draft's "thin Ogham-tied traits over the leaf" are superseded.
+**no second derive** and **no `MasqueRead` / `MasqueWrite` capability crate** — the
+prior draft's "thin Masque-tied traits over the leaf" are superseded.
 
-The code that turns a read into Ogham's `Value` (the row tree) names *both*
-`editable` and Ogham, so it can't live in `editable` (purity). But it does **not
+The code that turns a read into Masque's `Value` (the row tree) names *both*
+`editable` and Masque, so it can't live in `editable` (purity). But it does **not
 need a dedicated crate**: the **host already depends on both** and is the
 composition point (the layering invariant), so the `Value`-building visitor can
 live in the host. Promote it to a *thin, derive-less* shared helper **only** if a
@@ -378,10 +378,10 @@ SM corpus:
 - `Action` (`#[serde(tag = "kind")]`) → `{"kind": "apply_condition", …}`.
 - `editable::apply` addresses **every** union through the `kind` discriminant.
 
-So a serde read would feed `.ogh` an `Effect` shaped `{"Ruleset": {…}}` while a
+So a serde read would feed `.masque` an `Effect` shaped `{"Ruleset": {…}}` while a
 variant-switch write goes out as `effects.0.kind = "give_item"` into `apply`'s
 `kind`-path — read and write disagreeing on a union's shape, **in shipping
-content**. That is the two-descriptions-drift disease that killed `OghamState`;
+content**. That is the two-descriptions-drift disease that killed `MasqueState`;
 serde re-opens it on the read side. (Secondary cost: serde's choices are
 *save-format* choices — `#[serde(default)]`, `skip`, tagging — so an editor built
 on serde couples to the save format.)
@@ -391,7 +391,7 @@ the `kind` convention **by construction** and cannot drift. serde keeps its real
 job (disk / saves) and stays out of the UI path.
 
 **Keeping `editable` pure:** the read is a **visitor / streaming traversal**, not
-a returned tree — `editable` must not depend on Ogham's `Value` *and* keeps its
+a returned tree — `editable` must not depend on Masque's `Value` *and* keeps its
 "no intermediate value model" rule. `editable` gains a small **pure** `Reader`
 trait (scalar / list-begin/end / union-variant callbacks); the derived read
 drives it; the host's `Value`-building visitor implements it. One walker, no serde
@@ -399,8 +399,8 @@ in the UI path, purity intact, read/write drift-proof.
 
 ### The layering invariant (unchanged, now sharper)
 
-`editable` depends on Ogham for nothing — it gains only a *pure* `Reader` trait
-and stays a serde-only leaf. Ogham stays domain-agnostic. The host composes the
+`editable` depends on Masque for nothing — it gains only a *pure* `Reader` trait
+and stays a serde-only leaf. Masque stays domain-agnostic. The host composes the
 two by supplying the `Value`-building visitor. Domain types still derive **only**
 `editable`.
 
@@ -413,9 +413,9 @@ The projection is *what node does each `Kind` produce?* — and the read emits a
 > row list (as `backstory_rows_value` hand-builds today) is *itself a second,
 > derived representation* layered over the real shape — precisely the kind of
 > rival description that drifts, which this whole doc kills elsewhere (serde, §4;
-> `OghamState`, §1). Flattening also bakes in assumptions that break when a new
+> `MasqueState`, §1). Flattening also bakes in assumptions that break when a new
 > schema nests differently. The read mirrors the data structure 1:1; any
-> flattening for display is a *rendering* choice made later in `.ogh`, never baked
+> flattening for display is a *rendering* choice made later in `.masque`, never baked
 > into the projection.
 
 > **[DECIDED] `Ref` candidates ride a sibling channel.** A `ref` node carries only
@@ -450,7 +450,7 @@ events instead of smuggling them through magic keys. Keep the node vocabulary an
 
 #### The write wire format: six named events  [DECIDED]
 
-The `.ogh`→host edit channel is **named, typed events** (not one generic
+The `.masque`→host edit channel is **named, typed events** (not one generic
 `apply_edit(path, op_map)` — a tagged-union-in-`Value` would be the rival encoding
 this doc kills everywhere else). **Four already exist and are proven in the frozen
 panes** (scenes, companion_reactions; `editor/src/client.rs:840-935` dispatch →
@@ -458,7 +458,7 @@ panes** (scenes, companion_reactions; `editor/src/client.rs:840-935` dispatch �
 also hand-decoding in their own `handle()`); the nested model adds **two** for
 maps:
 
-| node action | `.ogh` event | args | `FieldOp` |
+| node action | `.masque` event | args | `FieldOp` |
 |---|---|---|---|
 | set any scalar leaf | `set_field(path, value)` | `String, String` | `Set(value)` |
 | switch a union variant | `set_field(path + ".$variant", variant)` | `String, String` | `Set` on discriminant |
@@ -483,25 +483,25 @@ so the markers evaporate with the flat model — no replacement encoding needed.
 > envelope is the *agent* path, table+id+op; it is unaffected — both paths bottom
 > out at `editable::edit`.)
 
-**The `.ogh` render consequence:** a **recursive `field_node` component** that
+**The `.masque` render consequence:** a **recursive `field_node` component** that
 `match`es `node.kind` and recurses **uniformly into `node.children`** via `for`.
 Each child is **keyed by its `path`** — the dotted path is a naturally stable
 identity, so reconcile-by-key (INTENT §3/§5) and path-based hook identity (INTENT
 §9) make the recursive tree animate and preserve state correctly.
 
-> **[DECIDED 2026-06-08c — Ogham gains function self-recursion; `field_node` is
-> interim-tiered until it lands.]** Building step 3 surfaced that Ogham's kept core
+> **[DECIDED 2026-06-08c — Masque gains function self-recursion; `field_node` is
+> interim-tiered until it lands.]** Building step 3 surfaced that Masque's kept core
 > *deliberately* lacks function self-recursion (the explicit `recursive_function_not_supported`
-> test, `tests/language.rs:542`; `effects.ogh` already works around it with manually
+> test, `tests/language.rs:542`; `effects.masque` already works around it with manually
 > unrolled depth tiers). So a *truly* recursive `field_node` is impossible **today**,
 > and the shipped step-3 component is unrolled into **9 depth tiers** (the established
-> `effects.ogh` pattern). That is a stopgap, not the design: it merely *raises* the
+> `effects.masque` pattern). That is a stopgap, not the design: it merely *raises* the
 > `MAX_NESTED_DEPTH` display cap (from the old 3 to 9) instead of *eliminating* it as
 > this doc intends — and the content schema permits **unbounded** nesting (`Action.on_success:
 > Vec<Action>` is self-recursive), so deep instances still bottom out at the tier floor
 > (data round-trips at any depth; only live *editing* past depth 9 is bounded).
 >
-> **Decision: add function self-recursion to the Ogham core.** The enabling change
+> **Decision: add function self-recursion to the Masque core.** The enabling change
 > looks small — `compile_function` (`src/runtime/compiler.rs:1297`) already reserves
 > **slot 0 for the callee** (the executing closure on the stack); it currently binds
 > that slot to an empty name (`String::new()`, ~line 1309). Binding it to the
@@ -510,7 +510,7 @@ identity, so reconcile-by-key (INTENT §3/§5) and path-based hook identity (INT
 > cover closures that capture themselves, nested function-components, and the upvalue
 > path; replace `recursive_function_not_supported` with positive recursion tests.
 > Once it lands, `field_node` collapses to the clean recursive component above, the
-> 9-tier unroll (and ideally `effects.ogh`'s tiers) disappears, and the depth cap is
+> 9-tier unroll (and ideally `effects.masque`'s tiers) disappears, and the depth cap is
 > genuinely gone. **Status: DECIDED, not yet implemented** — a prerequisite for
 > finalizing step 4's `field_node`.
 
@@ -563,7 +563,7 @@ Three properties pin it:
   **surviving core of the replaced `schema_form.rs`** (the *walk* moves into the
   derive; this visitor + the `refs` channel is all that stays host-side).
 - **`Reader` lives in `editable`, depending only on `editable::Kind`** — purity
-  intact; it never names an Ogham type.
+  intact; it never names a Masque type.
 
 Callback set (shape fixed, names at implementation): `scalar(&Kind,&str)`,
 `begin_group`/`end_group`, `begin_list(len)`/`end_list`,
@@ -603,11 +603,11 @@ names instead of `0`/`1`? Use a struct variant — that's the nudge.
    `editable-derive/lib.rs:38`) and delete the now-vacuous field-name rejection;
    `parse_path` / `schema()` need no change (runtime edit-paths only).
 
-   **Blast radius (verified across ogham / lorekeeper / small_mercies).** The flip
+   **Blast radius (verified across masque / lorekeeper / small_mercies).** The flip
    is *automatic at runtime* — the derived `apply` routes the discriminant via
    `::editable::DISCRIMINANT` (`editable-derive/lib.rs:439`), so every union's
    variant-switch follows the const. **No content migration** holds: serde's
-   on-disk `#[serde(tag = "kind")]` is untouched and no `.ogh` file references the
+   on-disk `#[serde(tag = "kind")]` is untouched and no `.masque` file references the
    discriminant (both verified). **But** every *string-literal* edit-path whose
    segment is exactly `kind` must be hand-audited.
 
@@ -699,18 +699,18 @@ rival inspectors, the disease this doc exists to kill:
 - **The `§list` marker hack** (`list_marker`; list chrome encoded as a `Toggle`)
   → real `list` nodes.
 - **Sentinel keys `__add` / `__objdel` / `__add_kind`** (`characters.rs:647/685`,
-  `items.rs:197`) and their `.ogh` arms (`characters.ogh:93-96`,
+  `items.rs:197`) and their `.masque` arms (`characters.masque:93-96`,
   `add_control_row` / `obj_del_row`) → explicit container ops.
 - **`MAX_NESTED_DEPTH` + the "edit in JSON" leaf** → goes with nesting. No cycle
   guard replaces it: the read walks a finite instance and terminates on the data
   (see the read-walk section); `Kind::Named` never reaches the renderer. *(Interim:
-  until Ogham gains function self-recursion (decided, above), `field_node` is
+  until Masque gains function self-recursion (decided, above), `field_node` is
   9-tier-unrolled, so the cap is raised 3→9 rather than removed; it vanishes for
   real once recursion lands.)*
 - **Per-pane hand-written inspector projections** (`scenes.rs` / `characters.rs` /
   `abilities.rs` / …) → the migration `schema_form` started, completed onto the
   nested derived read.
-- **The flat `field_row` match** (`common.ogh:183`; the inner `match line.kind` at
+- **The flat `field_row` match** (`common.masque:183`; the inner `match line.kind` at
   line 190, 3 arms, no default) → the
   recursive `field_node`.
 
@@ -737,7 +737,7 @@ with `FieldOp::Set`, which parses); **labels** default to the field name with an
   positional-label (`"0"`) rule, and **uniform `children`** (every container nests
   under one key; `field_node` is a single `for node.children` loop) are decided,
   worked end to end on `Scene`, and **implemented in step 3** (`inspector/node_tree.rs`
-  visitor + `field_node.ogh`, parity-tested against a live `Scene`). The `.ogh`
+  visitor + `field_node.masque`, parity-tested against a live `Scene`). The `.masque`
   `field_node` is interim-tiered until the recursion enablement (step 3.5).
 - **[RESOLVED] Write wire format** (§4) — **six named, typed events** (not a generic
   op-map). Four exist and are proven in the frozen panes; the nested model adds only
@@ -761,8 +761,8 @@ with `FieldOp::Set`, which parses); **labels** default to the field name with an
   host bag. Scoped/declared reads cost threading and fight moddability (a core
   value), and the isolation benefit only matters at a scale we don't have. Revisit
   only on concrete isolation pain, as an opt-in that leaves ambient undisturbed.
-- **[RESOLVED] Ogham-facing trait facade** — dropped. Read lives in `editable`'s
-  own derive; the host builds the `Value`; no `OghamRead`/`OghamWrite`, no
+- **[RESOLVED] Masque-facing trait facade** — dropped. Read lives in `editable`'s
+  own derive; the host builds the `Value`; no `MasqueRead`/`MasqueWrite`, no
   capability crate.
 - **[RESOLVED] Local-state slimming** (INTENT §9) — *consequential to the lifecycle
   cut*, not a redesign: when lifecycle/effects go, delete `EffectSlot` /
@@ -771,13 +771,13 @@ with `FieldOp::Set`, which parses); **labels** default to the field name with an
   component-state independence and reorder survival).
 
 **Execution sequence** (cut/build/migrate order — keeps two inspectors from ever
-coexisting). This spans **three repos** — `ogham`, `lorekeeper` (the `editable` /
+coexisting). This spans **three repos** — `masque`, `lorekeeper` (the `editable` /
 `editable-derive` leaf crates), and `small_mercies` (the editor host) — so each
 step is tagged with where it lands and what gates it.
 
 > **Progress (2026-06-08c):** Steps **1, 2a, 2b, 3 are DONE and committed** across
-> all three repos, each reviewed and green (`ogham` 522 tests; `editable` 42,
-> `ruleset` 64; `content-core` 185, `editor` 198). **Remaining:** the Ogham
+> all three repos, each reviewed and green (`masque` 522 tests; `editable` 42,
+> `ruleset` 64; `content-core` 185, `editor` 198). **Remaining:** the Masque
 > function-recursion enablement (new step **3.5**, decided §4), then **4** (migrate
 > panes) and **5** (delete the flat machinery). Two notable as-built deviations are
 > recorded where they occurred: the `$variant` blast radius was ~3× the estimate and
@@ -786,8 +786,8 @@ step is tagged with where it lands and what gates it.
 >
 > **Progress (2026-06-08d):** Steps **3.5, 4, and 5 are now DONE and committed** —
 > the migration is complete. Each step was built, independently reviewed, and
-> committed (`ogham cbb72c8`; `small_mercies b3253e7`/`579b51d`/`d91d452`/`e82eacd`/
-> `17e1337`). Final state: `ogham` 527 tests; `content-core` 185, `editor` 190.
+> committed (`masque cbb72c8`; `small_mercies b3253e7`/`579b51d`/`d91d452`/`e82eacd`/
+> `17e1337`). Final state: `masque` 527 tests; `content-core` 185, `editor` 190.
 > **3.5** — function self-recursion landed (the one-line slot-0 bind needed a
 > companion change: the `let name = fn …` declaration path now threads the binding
 > name through, since function literals don't carry it; anonymous `fn` keep the
@@ -812,10 +812,10 @@ step is tagged with where it lands and what gates it.
 > to `editable` before relying on map authoring in anger. Conversations' gate
 > downgraded from the structured atom buffer to a raw-formula leaf (no data loss).
 
-1. **[`ogham`] — safe-immediate cuts** ✅ **[DONE]** (independent, 0–1 sites; grep-verify no
-   hidden consumer first): the `OghamState`/`OghamMsg` traits + manifest matching +
-   `ogham check` + the typed half of `ogham-derive` (**split, not delete** — keep
-   the `.ogh`-source `ModuleSchema` + `parser/typed_bindings.rs` parser per §2's
+1. **[`masque`] — safe-immediate cuts** ✅ **[DONE]** (independent, 0–1 sites; grep-verify no
+   hidden consumer first): the `MasqueState`/`MasqueMsg` traits + manifest matching +
+   `masque check` + the typed half of `masque-derive` (**split, not delete** — keep
+   the `.masque`-source `ModuleSchema` + `parser/typed_bindings.rs` parser per §2's
    caveat); lifecycle/effects + machinery (the slimming above); `mutation`; `svg`;
    dead scaffolding. Fold in the `compile_increment` upvalue-bug fix. *Gate: none.*
 2. **[`lorekeeper`] — the `editable` seam, leaf side.** ✅ **[DONE — 2a & 2b]** (a) Flip `$variant` in both
@@ -834,11 +834,11 @@ step is tagged with where it lands and what gates it.
    `option` kind rendering + the two new write events (`add_map_entry` /
    `remove_map_entry`). The `PaneAction`→`FieldOp` decode extracted into
    `editor/src/edit_apply.rs`. *Gate: step 2b — met.*
-3.5. **[`ogham`] — function self-recursion** ✅ **[DONE]** Bind the
+3.5. **[`masque`] — function self-recursion** ✅ **[DONE]** Bind the
    callee slot to the function name in `compile_function` (§4 render-consequence
    note) **+ thread the binding name through the `let name = fn …` declaration path**
    (function literals don't carry their name); replaced `recursive_function_not_supported`
-   with positive tests; covered self-capturing closures + nested components. `ogham`
+   with positive tests; covered self-capturing closures + nested components. `masque`
    527 tests. *Gate: none — was a prerequisite for finalizing step 4's `field_node`.*
 4. **[`small_mercies`] — migrate** the panes onto the derived read. ✅ **[DONE]** All
    11 inspector-bearing panes migrated (scenes, abilities, ruleset, characters,

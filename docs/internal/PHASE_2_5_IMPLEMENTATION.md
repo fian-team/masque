@@ -24,7 +24,7 @@
 |---|---|---|---|---|---|
 | P25-M0 | Portal layer system + viewport-absolute coords | ~700 | ~15 | High | Reworking the per-frame portal_layer into named/priority layers without breaking existing tests |
 | P25-M1 | Cursor coordination signal | ~150 | ~6 | Low | Defining the per-portal/per-widget cursor declaration semantics |
-| P25-M2 | Focus management script API + key suppression contract | ~400 | ~12 | Medium | Crosses ogham/lorekeeper boundary; key-suppression contract design |
+| P25-M2 | Focus management script API + key suppression contract | ~400 | ~12 | Medium | Crosses masque/lorekeeper boundary; key-suppression contract design |
 | P25-M3 | Drain-time unmount refinement + hot-reload reset | ~250 | ~8 | Medium | The mid-exit-cancel edge case — finally proper drain-time semantics |
 | P25-M4 | Timer primitive (audit + ship if missing) | 0–200 | ~5 | Low | Probably a non-event; pre-audit may show it exists |
 | P25-M5 | Docs graduation + UL adoption-ready validation | ~50 docs | — | Low | Capturing decisions; writing the "Phase 2.5 ships" checklist |
@@ -47,7 +47,7 @@ shipped. We've documented the "path-disappear" semantics as a
 deviation; this is where we honor the design's actual contract.
 
 Timer primitive (M4) is pre-gated on an audit — `panel_transition`
-in UL's `main.ogh:10–15` implies scheduled interpolation already
+in UL's `main.masque:10–15` implies scheduled interpolation already
 exists somewhere. May be a no-op merge if the audit shows the
 primitive's already in place.
 
@@ -255,7 +255,7 @@ composition gets one cleaner signal to consume.
 - `Runtime::wants_cursor_free() -> bool` walks active portals'
   layers and the focused widget's cursor preference. Returns
   true if anything declares Free.
-- `Ogham::wants_cursor_free()` public forwarder (mirrors
+- `Masque::wants_cursor_free()` public forwarder (mirrors
   `has_input_blocking_portal`).
 
 ### Implementation steps
@@ -275,7 +275,7 @@ composition gets one cleaner signal to consume.
    `cursor: Free`. Then walk the currently-focused widget
    (via `ui.get_focused()`) and check its
    `cursor_preference()`.
-7. **`Ogham::wants_cursor_free()`** public method.
+7. **`Masque::wants_cursor_free()`** public method.
 
 ### Test matrix
 
@@ -305,7 +305,7 @@ composition gets one cleaner signal to consume.
 
 - All M0 + M1 tests pass.
 - UL builds clean.
-- Smoke: `Ogham::wants_cursor_free()` returns the expected
+- Smoke: `Masque::wants_cursor_free()` returns the expected
   value for each canonical scenario.
 
 ---
@@ -314,7 +314,7 @@ composition gets one cleaner signal to consume.
 
 ### Goal
 
-Expose focus management to `.ogh` scripts. Land the
+Expose focus management to `.masque` scripts. Land the
 key-suppression contract (runtime consumes
 `Key::Character(_)` for focused text widgets before the
 game-side input pump). Crosses into lorekeeper for the
@@ -322,7 +322,7 @@ input-pump side.
 
 ### Deliverables
 
-**Ogham side:**
+**Masque side:**
 - New built-in: `focused_widget()` — returns a widget-ref
   value or `Void` if nothing focused.
 - New built-in: `focus(widget_ref)` — programmatic focus
@@ -332,7 +332,7 @@ input-pump side.
   focused widget claims `Key::Character(_)` events.
   Currently only `TextInputWidget` does.
 - `Runtime::input_unfiltered() -> bool` — opt-out flag for
-  editors that need raw input. Settable via Ogham config or
+  editors that need raw input. Settable via Masque config or
   per-call query.
 
 **Lorekeeper side:**
@@ -369,7 +369,7 @@ input-pump side.
    `claims_character_keys(&self) -> bool` (default false).
 6. **TextInputWidget override**: returns true.
 7. **Lorekeeper input-pump change**: in the Character-event
-   handling path, query `ogham.runtime.consumes_character_key()`
+   handling path, query `masque.runtime.consumes_character_key()`
    and skip `pressed()` population if true.
 8. **`pressed_unfiltered(...)`**: parallel query that always
    returns the raw event.
@@ -402,7 +402,7 @@ input-pump side.
 
 ### P25-M2 open questions
 
-1. **Widget ref representation in Ogham values.** New
+1. **Widget ref representation in Masque values.** New
    `Value::WidgetRef(u64)` variant vs reusing
    `Value::Integer`? Recommend a new variant for type safety
    — the runtime already gates other types via Value variants.
@@ -458,7 +458,7 @@ M1 deferred to "path-disappear" semantics. Also wire
   `execute_module` is replaced — instead of computing
   path-disappear diff, defer to the drain queue. The diff
   becomes a candidate set; actual flush waits on drain.
-- `Ogham::reload_file` and `Ogham::recompile_from_source`
+- `Masque::reload_file` and `Masque::recompile_from_source`
   call `ui.clear_lifecycle_state()` before swapping in the
   new UI.
 
@@ -483,14 +483,14 @@ M1 deferred to "path-disappear" semantics. Also wire
    the StateManager helpers.
 6. **Wire into the host frame loop**: process_drain_queues runs
    *between* tick_animations and the next render. New
-   `Ogham::tick(dt)` method (or extend update) that runs:
+   `Masque::tick(dt)` method (or extend update) that runs:
    tick_animations → process_drain_queues → reconcile if
    needed.
 7. **Replace queue_disappeared_unmounts**: candidate set now
    stored on StateManager; actual flush waits on drain
    notification.
 8. **Wire `clear_lifecycle_state` into reload paths** —
-   `Ogham::reload_file` and `recompile_from_source` clear
+   `Masque::reload_file` and `recompile_from_source` clear
    the old UI's lifecycle state before swapping in the new
    one. The new UI starts clean.
 
@@ -535,7 +535,7 @@ M1 deferred to "path-disappear" semantics. Also wire
    stack / portal_layer / pending queues. With this merge,
    `clear_lifecycle_state` should be called from
    `set_module` too. But `set_module` is on Runtime, doesn't
-   have UI access. Actual hot-reload happens at the Ogham
+   have UI access. Actual hot-reload happens at the Masque
    facade — call there. Confirm there's no other call site
    to set_module that needs the reset.
 
@@ -553,7 +553,7 @@ M1 deferred to "path-disappear" semantics. Also wire
 - UL builds clean.
 - Smoke: a Portal-housed dialog with `exit:` style fades out,
   then unmount fires (visible via `event("test_log", "...")`
-  in the .ogh).
+  in the .masque).
 
 ---
 
@@ -562,7 +562,7 @@ M1 deferred to "path-disappear" semantics. Also wire
 ### Goal
 
 Audit existing scheduling infrastructure (`panel_transition`
-in UL's `main.ogh:10–15` implies it exists). If missing,
+in UL's `main.masque:10–15` implies it exists). If missing,
 ship `set_timeout` / `set_interval` / `clear_*` as runtime
 built-ins with auto-cancel on widget unmount.
 
@@ -678,7 +678,7 @@ UL is unblocked for its Pass 2 migration work.
 3. **Update readiness doc.** Mark each §2 gap as closed.
    Re-verify §4 per-UI verdicts against the new surface.
 4. **UL-side smoke** (this is checking, not changing UL): run
-   `cargo build` on UL; manually verify a small `.ogh`
+   `cargo build` on UL; manually verify a small `.masque`
    exercising the new layers + cursor + focus + timer
    compiles and runs.
 5. **Memory update.** Add Phase 2.5 status memo.
@@ -719,7 +719,7 @@ future agents' mental model fast.
 
 Phase 2's API was `Portal { open, focus_trap, children }`.
 Phase 2.5 adds `layer` (with default `OverlayModal`). Existing
-`.ogh` code that doesn't specify a layer continues to work
+`.masque` code that doesn't specify a layer continues to work
 — layer defaults to `OverlayModal`, which is the moral
 equivalent of Phase 2's behavior (modal in front).
 
@@ -744,11 +744,11 @@ pump. Coordinate the change with lorekeeper's owner; both
 repos need to land the change atomically (or with a feature
 flag).
 
-If lorekeeper lands first: ogham's
+If lorekeeper lands first: masque's
 `runtime.consumes_character_key()` returns false until M2
 implements it; lorekeeper's check is a no-op; safe.
 
-If ogham lands first: ogham starts returning true for
+If masque lands first: masque starts returning true for
 focused TextInputs; lorekeeper still pumps Character events
 to game; UL's editors continue to work as before; M2's
 benefit unrealized but no regression.
@@ -778,7 +778,7 @@ Consolidated risks with mitigation per merge.
 | # | Risk | Probability | Severity | Mitigation | Owner merge |
 |---|---|---|---|---|---|
 | 1 | Layer rework breaks Phase 2 portal tests | High | Medium | Phase 2 tests audited and updated as part of M0; backward-compat default layer `OverlayModal` matches Phase 2 single-layer behavior | M0 |
-| 2 | Viewport-absolute coords ripple — translate accumulation has subtle bugs | Medium | High | Dedicated test file (`portal_coords.rs`) with parent-chain scenarios; manual smoke with a deeply-nested portal in test .ogh | M0 |
+| 2 | Viewport-absolute coords ripple — translate accumulation has subtle bugs | Medium | High | Dedicated test file (`portal_coords.rs`) with parent-chain scenarios; manual smoke with a deeply-nested portal in test .masque | M0 |
 | 3 | Block policy interaction with hit-test propagation has edge cases | Medium | Medium | Tests #5 and #6 in M0 cover the basic block/none distinction; fuzz with click positions outside any portal but with portals open | M0 |
 | 4 | Cursor coordination semantic confusion (when does Free vs Inherit win?) | Low | Low | Doc cleanly: any-Free-wins; explicit-property-overrides-layer-default | M1 |
 | 5 | Focus script API: WidgetId stability across reconcile | Medium | Medium | Reuse the existing reconcile-key infrastructure; widget IDs stable when key stays the same; new IDs on key change | M2 |
@@ -820,13 +820,13 @@ the audit trail.
    banners, design contract → live contract on completion.
 2. **Phase 3 sequencing.** ✓ **Phase 3 (drag events) ships
    immediately after Phase 2.5**, *before* UL adoption begins.
-   Plus a separate docs + Ogham-skill revision pass between
+   Plus a separate docs + Masque-skill revision pass between
    Phase 3 and UL adoption (see §"What follows Phase 2.5"
    below). Order: Phase 2.5 → Phase 3 (drag) → docs/skill
    revision → UL Pass 2.
 3. **Portal `layer` representation.** ✓ Enum internally
    (`PortalLayer { Main, OverlayModal, ... }`), string in
-   `.ogh` source. Parser maps string → enum; unknown names
+   `.masque` source. Parser maps string → enum; unknown names
    rejected with the canonical diagnostic.
 4. **WidgetId allocation.** ✓ Per-`UI` counter (allocated by
    `WidgetTree` on construction); IDs are only meaningful
@@ -852,20 +852,20 @@ deferred from Phase 2.5; gates UL's inventory drag-drop.
 ~700 LOC. Will need its own implementation plan doc when
 P25-M5 graduates.
 
-### Docs + Ogham-skill revision pass (between Phase 3 and UL adoption)
+### Docs + Masque-skill revision pass (between Phase 3 and UL adoption)
 
 Once Phase 3 ships, the entire surface UL needs is in place
 — but the reference documentation is now spread across:
 
-- `ogham/AGENTS.md` (530 lines, the canonical language
+- `masque/AGENTS.md` (530 lines, the canonical language
   reference) — needs Portal-layers, lifecycle hooks, focus
   API, cursor coord, timer, drag.
-- `untold_lore/.agents/skills/ogham/SKILL.md` (62 lines, the
+- `untold_lore/.agents/skills/masque/SKILL.md` (62 lines, the
   pointer skill in UL's repo) — currently delegates entirely
   to `AGENTS.md`; the gotchas list (lines 43–57) needs a
   refresh against the new primitives (no mention of Portal,
   lifecycle, focus, cursor, drag, or timer today).
-- `ogham/README.md` — short marketing teaser; review for
+- `masque/README.md` — short marketing teaser; review for
   staleness.
 - The triplet docs (`LIFECYCLE_AND_PORTAL.md`,
   `LIFECYCLE_AND_PORTAL_UL_AUDIT.md`,
@@ -894,7 +894,7 @@ stable.
 Per `UL_ADOPTION_READINESS.md` §7's "Pass 2." OverlayStack
 migration → Settings save-on-close → escape menu Portal →
 inventory drag-drop → tooltip → backlog. UL-side work, not
-ogham-side.
+masque-side.
 
 If any of decisions 1–7 need re-litigation, do it before
 P25-M0.
@@ -911,7 +911,7 @@ When P25-M5's gate passes:
 - `Runtime::wants_cursor_free()` returns the right answer
   for: empty UI (false), open modal (true), open tooltip
   (false), focused TextInput (true).
-- `.ogh` source can call `focused_widget()` and `focus(ref)`
+- `.masque` source can call `focused_widget()` and `focus(ref)`
   built-ins. Focus rejects out-of-trap moves.
 - A focused TextInput consumes 'n' keypress; the same key
   with no focus reaches game-side input.
@@ -974,7 +974,7 @@ indexing failed first test run. One-line caught-by-test fix.
 - `Widget::cursor_preference_when_focused()` trait method
   (default None); `TextInputWidget` overrides → Free.
 - `UI::wants_cursor_free()` walks portal_layers + focused
-  widget. `Ogham::wants_cursor_free()` public forwarder.
+  widget. `Masque::wants_cursor_free()` public forwarder.
 - `Portal { cursor: "free" | "inherit" }` overrides the
   layer default.
 
@@ -988,7 +988,7 @@ indexing failed first test run. One-line caught-by-test fix.
 - `Widget::claims_character_keys()` trait method.
   `TextInputWidget` overrides → true.
 - `UI::consumes_character_key()` checks focused widget.
-- `Ogham::consumes_character_key()` public forwarder.
+- `Masque::consumes_character_key()` public forwarder.
 
 **Deviation:** Script-callable `focused_widget()` and
 `focus(ref)` built-ins **scoped out of M2.** UL's existing
@@ -1001,7 +1001,7 @@ the M2 commit message.
 ### P25-M3 — Hot-reload lifecycle reset — `55b2136`
 
 **Shipped (+119 LOC, 3 new tests):**
-- `Ogham::reload_file` and `recompile_from_source` call
+- `Masque::reload_file` and `recompile_from_source` call
   `ui.clear_lifecycle_state()` before swapping the new UI
   in. Prevents stale focus restoration into a torn-down
   tree.
@@ -1089,10 +1089,10 @@ section, the resolved sequencing is:
    - **Plus** the deferred timer primitive from M4 (if a
      concrete consumer surfaces by then; otherwise stays
      queued)
-2. **Docs + Ogham-skill revision pass** (~2 person-days)
-   - `ogham/AGENTS.md` — add Portal layers, lifecycle hooks,
+2. **Docs + Masque-skill revision pass** (~2 person-days)
+   - `masque/AGENTS.md` — add Portal layers, lifecycle hooks,
      focus API, cursor coord, drag, timer.
-   - `untold_lore/.agents/skills/ogham/SKILL.md` — refresh
+   - `untold_lore/.agents/skills/masque/SKILL.md` — refresh
      gotchas list against new primitives.
    - Triplet docs tidy-up.
 3. **UL Pass 2 — adoption** (~12 person-days per audit)

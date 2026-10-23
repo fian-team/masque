@@ -1,4 +1,4 @@
-use ogham::parser::*;
+use masque::parser::*;
 use tower_lsp::lsp_types::{Position, Range};
 
 struct Definition {

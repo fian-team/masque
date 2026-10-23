@@ -1,12 +1,12 @@
 //! Phase 2.5 M3 — hot-reload lifecycle reset tests.
 //!
-//! `Ogham::reload_file` and `Ogham::recompile_from_source`
+//! `Masque::reload_file` and `Masque::recompile_from_source`
 //! call `ui.clear_lifecycle_state()` before swapping in the
 //! new UI. Prevents stale focus restoration pointing at
 //! widgets that no longer exist in the reloaded tree.
 //!
 //! Note: directly poking the old UI's state to verify the
-//! clear isn't easy from outside the Ogham facade — once
+//! clear isn't easy from outside the Masque facade — once
 //! reload swaps `self.ui`, the old UI is dropped. Instead,
 //! these tests invoke clear_lifecycle_state on a UI directly
 //! (the load-bearing piece) and verify reload paths run
@@ -14,10 +14,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::portal_layer::PortalLayer;
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::{PortalEntry, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::portal_layer::PortalLayer;
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::{PortalEntry, WidgetRef, UI};
 
 fn make_flex() -> WidgetRef {
     Arc::new(Mutex::new(FlexWidget::new()))
@@ -40,10 +40,10 @@ fn clear_lifecycle_state_clears_all_three_pieces() {
     let modal = make_portal_with_focus_trap();
     ui.portal_layers.push(PortalEntry {
         widget: modal.clone(),
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer: PortalLayer::OverlayModal,
         focus_trap: true,
-        cursor: ogham::widget::portal_layer::CursorPreference::Free,
+        cursor: masque::widget::portal_layer::CursorPreference::Free,
     });
     ui.sync_focus_stack();
     ui.try_set_focus(modal.clone());
@@ -72,7 +72,7 @@ fn clear_lifecycle_state_idempotent() {
 }
 
 #[test]
-fn ogham_recompile_from_source_runs_cleanly() {
+fn masque_recompile_from_source_runs_cleanly() {
     // The integration: recompile_from_source should run
     // without panicking even when the old UI had focus
     // state. Hard to assert the OLD UI's clear directly
@@ -80,26 +80,26 @@ fn ogham_recompile_from_source_runs_cleanly() {
     // afterward.
     let src1 = "let main = fn () { Flex { children: [] } };";
     let src2 = "let main = fn () { Flex { children: [Flex { children: [] }] } };";
-    let mut ogham =
-        ogham::Ogham::from_source(src1, ogham::runtime::config::RuntimeConfig::default())
+    let mut masque =
+        masque::Masque::from_source(src1, masque::runtime::config::RuntimeConfig::default())
             .expect("create");
 
     // Force the OLD UI to have some focus state.
     let f = make_flex();
-    ogham.get_ui_mut().try_set_focus(f);
-    assert!(ogham.get_ui().get_focused().is_some());
+    masque.get_ui_mut().try_set_focus(f);
+    assert!(masque.get_ui().get_focused().is_some());
 
     // Recompile.
-    ogham.recompile_from_source(src2).expect("recompile");
+    masque.recompile_from_source(src2).expect("recompile");
 
     // New UI is clean. Note: the old UI's focus was on a
     // widget from the OLD tree that's no longer reachable —
     // clear_lifecycle_state on the old UI ensures we don't
     // try to restore that focus into the new tree.
     assert!(
-        ogham.get_ui().get_focused().is_none(),
+        masque.get_ui().get_focused().is_none(),
         "new UI should start with no focused widget"
     );
-    assert!(ogham.get_ui().focus_stack.is_empty());
-    assert!(ogham.get_ui().portal_layers.is_empty());
+    assert!(masque.get_ui().focus_stack.is_empty());
+    assert!(masque.get_ui().portal_layers.is_empty());
 }

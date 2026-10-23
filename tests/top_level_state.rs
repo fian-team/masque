@@ -1,4 +1,4 @@
-use ogham::runtime::value::Value;
+use masque::runtime::value::Value;
 
 /// Top-level `state` declarations should persist across rerenders.
 /// Regression test: previously `cleanup_unmounted_state` removed them
@@ -13,7 +13,7 @@ let main = fn () {
     counter
 };
 "#;
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).expect("from_source");
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
 
     let first = runtime.execute_module(&module).expect("first");
@@ -38,7 +38,7 @@ let main = fn () {
     step
 };
 "#;
-    let mut runtime = ogham::runtime::Runtime::from_source(source, None).expect("from_source");
+    let mut runtime = masque::runtime::Runtime::from_source(source, None).expect("from_source");
     let module = runtime.get_module().expect("module").clone();
 
     assert_eq!(

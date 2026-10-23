@@ -1,4 +1,4 @@
-//! Module schema — the resolved form of a `.ogh` module's
+//! Module schema — the resolved form of a `.masque` module's
 //! typed-bindings declarations (`record`, `host_state`, `events`).
 //!
 //! The parser produces an AST under
@@ -8,8 +8,8 @@
 //! - The compiler (M2): strict-mode identifier resolution,
 //!   field-access checking, event-call signature checking.
 //! - The LSP (M3): hover, completion, go-to-definition.
-//! - `TypedOgham::watch_typed` (M5): startup schema-match check
-//!   against `#[derive(OghamState)]` / `#[derive(OghamMsg)]` Rust
+//! - `TypedMasque::watch_typed` (M5): startup schema-match check
+//!   against `#[derive(MasqueState)]` / `#[derive(MasqueMsg)]` Rust
 //!   types.
 //!
 //! ## Schema construction is two-pass
@@ -21,7 +21,7 @@
 //! record name. Pass 2 also detects direct self-references.
 //!
 //! Cross-module record imports (`import { Item } from
-//! "./inv.ogh"`) arrive in the supplied `imports` map, which the
+//! "./inv.masque"`) arrive in the supplied `imports` map, which the
 //! resolver trusts. Who fills it is
 //! [`crate::runtime::imports`], the one walk of the graph; every
 //! entry point here that reads a *file* (rather than a string)
@@ -50,7 +50,7 @@ use crate::scanner::Scanner;
 
 // Re-export the type-universe items so callers (and the
 // derive macros) have one canonical import path:
-// `use ogham::runtime::schema::{TypeRef, PrimType, KeyType, ...};`.
+// `use masque::runtime::schema::{TypeRef, PrimType, KeyType, ...};`.
 pub use crate::parser::typed_bindings::{KeyType, PrimType, SchemaLiteral, TypeRef};
 use crate::parser::{Function, Statement};
 
@@ -71,7 +71,7 @@ pub struct ModuleSchema {
     /// it reads the same fields wherever the helper lives. An `events {}`
     /// block in a shared module is that module's whole vocabulary — the
     /// union over every mount, because the file has to compile under all
-    /// of them — and regency's `stationery.ogh` is the proof: it declares
+    /// of them — and regency's `stationery.masque` is the proof: it declares
     /// `join`, which only the foyer accepts, beside `confirm`, which only
     /// the table does. Crossing it would have each document claiming
     /// raises it never makes, and both would refuse.
@@ -312,7 +312,7 @@ impl ModuleSchema {
     /// Check this module's screens against the ids a host's route table
     /// registered. A registered id with no `screen` block, or a block
     /// with no registered id, is an error naming both — the drift that
-    /// is silent today, where a `.ogh` accumulates modes nobody routes
+    /// is silent today, where a `.masque` accumulates modes nobody routes
     /// to and a router names modes nobody drew.
     ///
     /// Called once at load. A module that declares no screens at all is
@@ -829,7 +829,7 @@ impl std::fmt::Display for SchemaValueError {
 
 impl ModuleSchema {
     /// Validate a host-injected state map against this module's
-    /// declared `host_state {}` schema. The `.ogh` declaration is
+    /// declared `host_state {}` schema. The `.masque` declaration is
     /// the single source of truth (INTENT: no rival Rust-side
     /// description); this walk lets a host's tests assert its
     /// injected `Value` trees conform — the runtime-value
@@ -1089,12 +1089,12 @@ impl From<SyntaxError> for SchemaLoadError {
     }
 }
 
-/// Read a `.ogh` file from disk and produce its [`ModuleSchema`]
+/// Read a `.masque` file from disk and produce its [`ModuleSchema`]
 /// without compiling bytecode. Used by:
 ///
 /// - The LSP for cross-module record imports (so hover and
 ///   completion work across files).
-/// - `Ogham::watch_typed` (M5) at startup, alongside the normal
+/// - `Masque::watch_typed` (M5) at startup, alongside the normal
 ///   compilation path, to obtain the schema for the schema-match
 ///   check.
 ///
@@ -1112,7 +1112,7 @@ pub fn load_schema(path: &Path) -> Result<ModuleSchema, SchemaLoadError> {
 /// (`APPLICATION_BUILD.md` WP-3.1).
 ///
 /// The bare [`load_schema`] roots the space at the document's own
-/// directory, which is where a `./sibling.ogh` lives in every shipped
+/// directory, which is where a `./sibling.masque` lives in every shipped
 /// document today. A host that maps prefixes or embeds its sources passes
 /// its own space and gets its own answers.
 pub fn load_schema_in(path: &Path, space: &ImportSpace) -> Result<ModuleSchema, SchemaLoadError> {

@@ -1,7 +1,7 @@
 //! **The drag gesture** — the decision that a press has become a drag, and
 //! everything that follows from it, made inside [`UI::call_event`].
 //!
-//! Before 2026-10-11 ogham shipped the dispatch (`dispatch_drag_start`,
+//! Before 2026-10-11 masque shipped the dispatch (`dispatch_drag_start`,
 //! `_move`, `_end`), the drop hit test and the cursor-attached preview, and
 //! nothing that called them: `DragState`'s doc credited the dead-zone state
 //! machine to a host input pump that did not exist. Each host that wanted a

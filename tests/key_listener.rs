@@ -8,11 +8,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::event::{Event, KeyModifiers};
-use ogham::widget::point::Point;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::event::{Event, KeyModifiers};
+use masque::widget::point::Point;
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -53,7 +53,7 @@ let main = fn () {
 };
 "#;
 
-fn mounted(src: &str) -> (Ogham, Log) {
+fn mounted(src: &str) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let mut config = RuntimeConfig::new();
     for name in [
@@ -75,12 +75,12 @@ fn mounted(src: &str) -> (Ogham, Log) {
             Ok(Value::Void)
         });
     }
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     o.frame(W, H, DT).expect("frame");
     (o, log)
 }
 
-fn focus(o: &mut Ogham, x: f32, y: f32) {
+fn focus(o: &mut Masque, x: f32, y: f32) {
     o.get_ui_mut().call_event(&Event::with_point(
         "mouse_down".to_string(),
         Point::new(x, y),
@@ -97,7 +97,7 @@ fn ctrl() -> KeyModifiers {
     }
 }
 
-fn key(o: &mut Ogham, code: u32, modifiers: KeyModifiers) -> bool {
+fn key(o: &mut Masque, code: u32, modifiers: KeyModifiers) -> bool {
     o.get_ui_mut()
         .call_event(&Event::keydown(code, None, modifiers))
 }
@@ -194,7 +194,7 @@ fn a_chord_that_names_no_key_is_a_build_error() {
     let src = r#"let main = fn () { Flex { keydown: { hyper_k: fn () { 1 } } } };"#;
     let err = format!(
         "{:?}",
-        Ogham::from_source(src, RuntimeConfig::new())
+        Masque::from_source(src, RuntimeConfig::new())
             .err()
             .expect("refused")
     );
@@ -204,7 +204,7 @@ fn a_chord_that_names_no_key_is_a_build_error() {
     let src = r#"let main = fn () { Flex { keydown: fn () { 1 } } };"#;
     let err = format!(
         "{:?}",
-        Ogham::from_source(src, RuntimeConfig::new())
+        Masque::from_source(src, RuntimeConfig::new())
             .err()
             .expect("a bare closure is refused")
     );

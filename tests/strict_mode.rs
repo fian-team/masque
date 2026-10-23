@@ -1,6 +1,6 @@
 //! Phase 1 (M2) — strict-mode resolution tests.
 //!
-//! Each test compiles a `.ogh` source string and asserts either:
+//! Each test compiles a `.masque` source string and asserts either:
 //! - the compile succeeds (positive case), or
 //! - the compile fails with `VMError::StrictMode(SyntaxError)`
 //!   carrying expected `message` / `note` / `help` content.
@@ -8,10 +8,10 @@
 //! Loose-mode tests confirm that modules without a `host_state {}`
 //! declaration still compile exactly as they always did.
 
-use ogham::parser::Parser;
-use ogham::runtime::compiler::Compiler;
-use ogham::runtime::error::VMError;
-use ogham::scanner::Scanner;
+use masque::parser::Parser;
+use masque::runtime::compiler::Compiler;
+use masque::runtime::error::VMError;
+use masque::scanner::Scanner;
 
 fn compile(source: &str) -> Result<(), VMError> {
     let tokens = Scanner::new(source.to_string()).scan();
@@ -19,7 +19,7 @@ fn compile(source: &str) -> Result<(), VMError> {
     Compiler::compile_module(&module).map(|_| ())
 }
 
-fn compile_strict_err(source: &str) -> ogham::parser::SyntaxError {
+fn compile_strict_err(source: &str) -> masque::parser::SyntaxError {
     match compile(source) {
         Err(VMError::StrictMode(err)) => err,
         Err(other) => panic!("expected StrictMode error, got {:?}", other),

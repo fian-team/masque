@@ -1,4 +1,4 @@
-# Ogham — Architecture at a Glance
+# Masque — Architecture at a Glance
 
 > **Status: Live contract.**
 >
@@ -15,7 +15,7 @@
 
 ```mermaid
 flowchart LR
-    src[".ogh source"]
+    src[".masque source"]
     tok["Token stream<br/>(scanner/)"]
     ast["AST<br/>(parser/)"]
     bc["Bytecode<br/>FunctionProto<br/>(runtime/compiler.rs)"]
@@ -45,7 +45,7 @@ flowchart TB
         cfg["RuntimeConfig<br/>· host_state<br/>· event_handlers<br/>· custom_widgets<br/>· fonts"]
     end
 
-    subgraph ogham["Ogham instance (lib.rs)"]
+    subgraph masque["Masque instance (lib.rs)"]
         rt["Runtime<br/>(runtime/mod.rs)"]
         uitree["UI<br/>(widget/mod.rs)"]
         fw["FileWatcher<br/>(file_watcher.rs)"]
@@ -54,16 +54,16 @@ flowchart TB
     surface["Surface impl<br/>(skia.rs or custom)"]
 
     rust -- "RuntimeConfig::new()<br/>.with_host_state()<br/>.with_event_handler()" --> cfg
-    cfg -- "Ogham::watch / from_source" --> rt
+    cfg -- "Masque::watch / from_source" --> rt
     rt -- "VM produces Value::Widget" --> uitree
     fw -. "file changed → reload" .-> rt
-    rust -- "tick(inject)<br/>set_screen_size()<br/>call_event()" --> ogham
+    rust -- "tick(inject)<br/>set_screen_size()<br/>call_event()" --> masque
     rust -- "event(name, ...)<br/>(via handler)" --- rt
     uitree -- "UI::layout(w, h)" --> uitree
     surface -- "draw(&mut UI)" --> uitree
 ```
 
-Host writes; Ogham reads. From the `.ogh` side, host state is
+Host writes; Masque reads. From the `.masque` side, host state is
 observable but immutable; mutations leave as `event(...)` calls
 the host's registered handlers receive. See
 [INTENT §2](INTENT.md#2-host-state-flows-in-events-flow-out) and
@@ -81,28 +81,28 @@ injection, and reconciles the tree if a rerender is pending. Returns
 sequenceDiagram
     autonumber
     participant Host
-    participant Ogham
+    participant Masque
     participant RT as Runtime
     participant UI
     participant SF as Surface
 
-    Host->>Ogham: tick(inject)
-    Ogham->>Ogham: file_watcher.check_for_changes()
+    Host->>Masque: tick(inject)
+    Masque->>Masque: file_watcher.check_for_changes()
     alt watcher reports change
-        Ogham->>RT: reload (fresh Runtime from disk)
+        Masque->>RT: reload (fresh Runtime from disk)
     end
-    Ogham->>RT: inject(&mut runtime) — host state push
+    Masque->>RT: inject(&mut runtime) — host state push
     Note over RT: set_host_state diffs;<br/>request_rerender if changed
-    Ogham->>RT: needs_rerender()?
+    Masque->>RT: needs_rerender()?
     alt yes
         RT->>RT: rerender() → Value::Widget
-        Ogham->>UI: reconcile(new_root)
-        UI-->>Ogham: UpdateResult { needs_layout, needs_boundary_layout, needs_repaint }
+        Masque->>UI: reconcile(new_root)
+        UI-->>Masque: UpdateResult { needs_layout, needs_boundary_layout, needs_repaint }
     end
-    Host->>Ogham: tick_animations(dt)
-    Ogham->>UI: tick_animations(dt) — springs + smooth scroll
-    Host->>Ogham: layout(w, h)
-    Ogham->>UI: UI::layout(w, h) — full pass, boundary pass, or nothing
+    Host->>Masque: tick_animations(dt)
+    Masque->>UI: tick_animations(dt) — springs + smooth scroll
+    Host->>Masque: layout(w, h)
+    Masque->>UI: UI::layout(w, h) — full pass, boundary pass, or nothing
     Host->>SF: draw(&mut ui)
     SF->>UI: walk tree, calling Widget::render
 ```
@@ -117,14 +117,14 @@ their stored constraints (`FLEX.md` *Relayout boundaries*).
 full passes per source, so a chronic over-marking regression
 shows up as a per-second warning.
 
-After draw the host calls `Ogham::process_drain_queues()` to
+After draw the host calls `Masque::process_drain_queues()` to
 flush any `on_unmount` / `cleanup` hooks owed by widgets that
 settled their exit animation in this tick — the drain machinery
 crosses the UI/Runtime seam and is the reason `tick_animations`
 threads a `TickContext` (carrying `drained_path_prefixes` and
 `cancelled_unmount_prefixes`) rather than a bare `dt`. Drag and
 context-menu dispatch take their own paths
-(`Ogham::dispatch_drag_*` / `dispatch_contextmenu`) — see
+(`Masque::dispatch_drag_*` / `dispatch_contextmenu`) — see
 [EVENTS.md](EVENTS.md).
 
 **Read next:** [`WIDGET_TREE.md`](WIDGET_TREE.md) for what
@@ -140,7 +140,7 @@ queues and host-state injection.
 ```mermaid
 flowchart TB
     subgraph src["src/"]
-        lib["lib.rs<br/>Ogham (top-level facade)"]
+        lib["lib.rs<br/>Masque (top-level facade)"]
 
         subgraph scanner["scanner/"]
             sc["mod.rs · token.rs · token_type.rs"]
@@ -162,19 +162,19 @@ flowchart TB
             dg["check.rs · diagnostic.rs · manifest.rs<br/>(schema-diagnostic engine)"]
         end
 
-        subgraph cli["cli/ (binary: ogham)"]
+        subgraph cli["cli/ (binary: masque)"]
             cli_files["check.rs · render.rs · main.rs"]
         end
 
-        subgraph lsp["lsp/ (binary: ogham-lsp)"]
+        subgraph lsp["lsp/ (binary: masque-lsp)"]
             l["server.rs · document.rs · hover.rs<br/>goto_definition.rs · semantic_tokens.rs<br/>document_symbols.rs · main.rs"]
         end
 
-        subgraph client["client/ (binary: ogham browser)"]
-            c["standalone .ogh viewer"]
+        subgraph client["client/ (binary: masque browser)"]
+            c["standalone .masque viewer"]
         end
 
-        typed["typed.rs<br/>(TypedOgham&lt;S, M&gt;)"]
+        typed["typed.rs<br/>(TypedMasque&lt;S, M&gt;)"]
         skia_mod["skia.rs<br/>(SkiaEnv : Surface)"]
         fw["file_watcher.rs"]
     end
@@ -207,7 +207,7 @@ side-effect-free; see [LSP.md](LSP.md) and
 
 ```mermaid
 flowchart LR
-    subgraph runtime["Runtime (one per Ogham instance)"]
+    subgraph runtime["Runtime (one per Masque instance)"]
         hs["host_state<br/>HashMap&lt;String, Value&gt;"]
         cs["state.component_state<br/>HashMap&lt;path:name, Value&gt;"]
         lh["state.lifecycle hooks<br/>(mount / unmount / effect / cleanup<br/>per call-stack path)"]
@@ -248,7 +248,7 @@ when the source changes). Everything else persists across
 rerenders — that persistence is what makes spring animations and
 state-driven UI work.
 
-**Watch out:** `Ogham::reload` and `recompile_from_source` build
+**Watch out:** `Masque::reload` and `recompile_from_source` build
 a *new* `Runtime`, so component state and the lifecycle-hook
 registry are dropped on hot reload (the reload path also calls
 `UI::clear_lifecycle_state` to scrub any pending drain queues

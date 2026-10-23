@@ -7,13 +7,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use common::execute_file;
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
 
 #[test]
 fn import_all_produces_widget() {
-    let value = execute_file("examples/import/importer.ogh");
+    let value = execute_file("examples/import/importer.masque");
     assert!(
         matches!(value, Value::Widget(_)),
         "expected a Widget from import-all example, got {:?}",
@@ -23,7 +23,7 @@ fn import_all_produces_widget() {
 
 #[test]
 fn named_import_produces_widget() {
-    let value = execute_file("examples/import/importer_named.ogh");
+    let value = execute_file("examples/import/importer_named.masque");
     assert!(
         matches!(value, Value::Widget(_)),
         "expected a Widget from named-import example, got {:?}",
@@ -33,7 +33,7 @@ fn named_import_produces_widget() {
 
 #[test]
 fn diamond_imports_produce_widget() {
-    let value = execute_file("examples/state_across_closures/main.ogh");
+    let value = execute_file("examples/state_across_closures/main.masque");
     assert!(
         matches!(value, Value::Widget(_)),
         "expected a Widget from diamond-import example, got {:?}",
@@ -42,24 +42,24 @@ fn diamond_imports_produce_widget() {
 }
 
 /// Embedded (in-memory) sources resolve `import "..."` with NO filesystem —
-/// the path a binary takes when it carries its `.ogh` library via `include_str!`.
+/// the path a binary takes when it carries its `.masque` library via `include_str!`.
 /// Exercises transitive imports (entry → lib → dep) entirely from the map.
 #[test]
 fn embedded_imports_resolve_without_filesystem() {
     let mut sources = HashMap::new();
     // entry → lib → dep, all in-memory. lib re-exports dep's value.
     sources.insert(
-        PathBuf::from("./lib.ogh"),
-        "import \"./dep.ogh\";\nlet greeting = prefix;".to_string(),
+        PathBuf::from("./lib.masque"),
+        "import \"./dep.masque\";\nlet greeting = prefix;".to_string(),
     );
     sources.insert(
-        PathBuf::from("./dep.ogh"),
+        PathBuf::from("./dep.masque"),
         "let prefix = \"hello\";".to_string(),
     );
     let config = RuntimeConfig::new().with_embedded_sources(sources);
 
     // Note: no project_root, no files — resolution must come from the map alone.
-    let entry = "import \"./lib.ogh\";\nText { text: greeting, style: {} }";
+    let entry = "import \"./lib.masque\";\nText { text: greeting, style: {} }";
     let mut runtime =
         Runtime::from_source(entry, Some(config)).expect("from_source with embedded imports");
     let module = runtime.get_module().expect("entry module").clone();
@@ -83,13 +83,13 @@ fn embedded_imports_resolve_without_filesystem() {
 fn a_strict_module_can_call_an_imported_helper() {
     let mut sources = HashMap::new();
     sources.insert(
-        PathBuf::from("./panel.ogh"),
+        PathBuf::from("./panel.masque"),
         "let panel_title = fn (t: string) { Text { text: t, style: {} } };".to_string(),
     );
     let config = RuntimeConfig::new().with_embedded_sources(sources);
 
     let entry = r#"
-import "./panel.ogh";
+import "./panel.masque";
 host_state { title: string };
 let main = fn () { panel_title(title) };
 main()
@@ -114,13 +114,13 @@ main()
 fn a_strict_module_still_rejects_unknown_identifiers_beside_imports() {
     let mut sources = HashMap::new();
     sources.insert(
-        PathBuf::from("./panel.ogh"),
+        PathBuf::from("./panel.masque"),
         "let panel_title = fn (t: string) { Text { text: t, style: {} } };".to_string(),
     );
     let config = RuntimeConfig::new().with_embedded_sources(sources);
 
     let entry = r#"
-import "./panel.ogh";
+import "./panel.masque";
 host_state { title: string };
 let main = fn () { panel_titel(title) };
 main()

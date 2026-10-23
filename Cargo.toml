@@ -6,26 +6,26 @@ default-members = ["."]
 resolver = "2"
 
 [package]
-name = "ogham"
+name = "masque"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.80"
 description = "Embeddable UI language and runtime for Rust applications: bytecode VM, reconciling widget tree, Skia rendering backend"
 license = "MIT"
-repository = "https://github.com/fian-team/ogham"
+repository = "https://github.com/fian-team/masque"
 keywords = ["ui", "framework", "language", "flexbox"]
 categories = ["gui"]
 
 [[bin]]
-name = "ogham-lsp"
+name = "masque-lsp"
 path = "src/lsp/main.rs"
 
 [[bin]]
-name = "ogham-vocab"
+name = "masque-vocab"
 path = "src/bin/vocab.rs"
 
 [lib]
-name = "ogham"
+name = "masque"
 path = "src/lib.rs"
 
 [dependencies]

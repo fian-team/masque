@@ -3,11 +3,11 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::event::Event;
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::point::Point;
-use ogham::widget::rect::Rect;
-use ogham::widget::{WidgetRef, UI};
+use masque::widget::event::Event;
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::point::Point;
+use masque::widget::rect::Rect;
+use masque::widget::{WidgetRef, UI};
 
 #[test]
 fn contextmenu_fires_on_widget_at_cursor() {
@@ -93,9 +93,9 @@ fn contextmenu_suppressed_under_block_policy_portal() {
     // base tree. dispatch_contextmenu uses the same hit-test
     // walker; verifies the suppression applies to right-click
     // dispatch too, not just left-click.
-    use ogham::widget::portal_layer::{CursorPreference, PortalLayer};
-    use ogham::widget::rect::Rect;
-    use ogham::widget::PortalEntry;
+    use masque::widget::portal_layer::{CursorPreference, PortalLayer};
+    use masque::widget::rect::Rect;
+    use masque::widget::PortalEntry;
 
     // Base-tree widget with a contextmenu listener that
     // SHOULD NOT fire when a Block-policy portal is open.

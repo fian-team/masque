@@ -1,20 +1,20 @@
 [package]
-name = "ogham-web"
+name = "masque-web"
 version = "0.0.0"
 edition = "2021"
 publish = false
-description = "The browser stage: Ogham's VM and Skia raster renderer behind a C-shaped API for emscripten"
+description = "The browser stage: Masque's VM and Skia raster renderer behind a C-shaped API for emscripten"
 
 [lib]
-name = "ogham_web"
+name = "masque_web"
 path = "src/lib.rs"
 
-# The emscripten build of this binary is the stage: `ogham_stage.js` +
-# `ogham_stage.wasm` (`web/build.sh`). Natively it does nothing; the
+# The emscripten build of this binary is the stage: `masque_stage.js` +
+# `masque_stage.wasm` (`web/build.sh`). Natively it does nothing; the
 # library's tests are the native half.
 [[bin]]
-name = "ogham_stage"
+name = "masque_stage"
 path = "src/main.rs"
 
 [dependencies]
-ogham = { path = ".." }
+masque = { path = ".." }

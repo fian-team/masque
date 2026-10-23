@@ -2,18 +2,18 @@
 
 ## Project Overview
 
-Ogham is a UI language and framework for Rust applications. It provides:
+Masque is a UI language and framework for Rust applications. It provides:
 
-- A custom language (`.ogh` files) for declarative UI development.
+- A custom language (`.masque` files) for declarative UI development.
 - A scanner and recursive-descent parser that produce an AST.
 - A bytecode compiler and stack-based VM runtime.
 - A Flexbox-based widget tree with reconciliation (React-style diffing).
 - A Skia rendering backend, with a `Surface` trait for custom backends.
 
-Ogham operates in three modes:
+Masque operates in three modes:
 
-1. **Library** -- embed Ogham UIs inside a Rust application (the primary use case).
-2. **Standalone browser** -- the `client` binary opens `.ogh` files directly.
+1. **Library** -- embed Masque UIs inside a Rust application (the primary use case).
+2. **Standalone browser** -- the `client` binary opens `.masque` files directly.
 3. **Web stage** -- `web/` compiles the VM and Skia raster renderer to
    `wasm32-unknown-emscripten` for the website's live demo
    (`docs/internal/WEB_STAGE.md`). Not a user-facing feature yet. Build
@@ -21,14 +21,14 @@ Ogham operates in three modes:
    source), gate with `web/test.sh`, which compares the wasm render with
    the native one pixel for pixel.
 
-### Ogham depends on nothing of the router, and the router on nothing of Ogham
+### Masque depends on nothing of the router, and the router on nothing of Masque
 
-Ogham is one of two independent libraries. The other is the router and
-scoped store, which is the `structure` crate (working name) in its own
-repository at `../structure`, with an empty `[dependencies]`. Neither
+Masque is one of two independent libraries. The other is the router and
+scoped store, which is the `carte` crate in its own
+repository at `../carte`, with an empty `[dependencies]`. Neither
 depends on the other in either direction: `cargo tree` for this crate
-shows no `structure`, and `cargo tree` there shows nothing at all. Keep
-it that way. Never add `structure` to this crate's dependencies.
+shows no `carte`, and `cargo tree` there shows nothing at all. Keep
+it that way. Never add `carte` to this crate's dependencies.
 
 Everything that joins the two lives in lorekeeper:
 
@@ -40,16 +40,16 @@ Everything that joins the two lives in lorekeeper:
   `select` / `events {}` declarations checked against the store's
   schemas, plus the `Documents` harness a consumer runs under `cargo test`.
 
-What Ogham offers the binding is plain public API: `host_state {}`,
+What Masque offers the binding is plain public API: `host_state {}`,
 `select` and `events {}` declarations readable through
 `runtime::schema`, `runtime::imports`, host state as name-to-`Value`
-maps, and the `Ogham::reload_if` gate. The design record is
+maps, and the `Masque::reload_if` gate. The design record is
 `docs/internal/APPLICATION.md`. Its paths predate the split.
 
 ## Architecture
 
 ```
-Source (.ogh)
+Source (.masque)
   -> Scanner (src/scanner/)      -- lexical analysis, produces tokens
   -> Parser  (src/parser/)       -- recursive-descent, produces AST
   -> Compiler (src/runtime/compiler.rs) -- compiles AST to bytecode
@@ -64,7 +64,7 @@ Source (.ogh)
 
 | Path | Purpose |
 |------|---------|
-| `src/lib.rs` | Top-level `Ogham` struct; owns runtime, UI tree, and file watcher |
+| `src/lib.rs` | Top-level `Masque` struct; owns runtime, UI tree, and file watcher |
 | `src/scanner/` | Lexer -- converts source text to tokens |
 | `src/parser/` | Parser -- builds AST from tokens |
 | `src/runtime/mod.rs` | `Runtime` -- execution state, host state, imports, rerenders |
@@ -93,32 +93,32 @@ Source (.ogh)
 | `src/widget/animation.rs` | Spring math + per-property animation state used by transitions |
 | `src/widget/event.rs` | Event types (`Event`, `EventContext`, `TickContext`, `DragState`) |
 | `src/skia.rs` | Skia rendering backend (implements `Surface`) |
-| `src/typed.rs` | `TypedOgham` handle for `#[derive(OghamState)]` / `#[derive(OghamMsg)]` integration |
-| `src/diagnostics/` | Schema-diagnostic engine used by `ogham check` and the LSP |
-| `src/cli/` | `ogham` CLI binary (currently `check`; `render.rs` is the diagnostic-formatting helper, not a subcommand) |
-| `src/lsp/` | `ogham-lsp` language server binary |
+| `src/typed.rs` | `TypedMasque` handle for `#[derive(MasqueState)]` / `#[derive(MasqueMsg)]` integration |
+| `src/diagnostics/` | Schema-diagnostic engine used by `masque check` and the LSP |
+| `src/cli/` | `masque` CLI binary (currently `check`; `render.rs` is the diagnostic-formatting helper, not a subcommand) |
+| `src/lsp/` | `masque-lsp` language server binary |
 | `src/runtime/imports.rs` | The import graph: where a path resolves from (`ImportSpace`), what crosses an import (`Crossing`), and the one transitive walk the compiler, the schema and the watcher all read |
 | `src/runtime/reads.rs` | Which dotted paths a document reads off the names it binds — syntax only, shadow-aware, stopping wherever a chain stops being literal. It grades nothing; the contract crate resolves the paths against the provider's reflection |
 | `src/file_watcher.rs` | File watching for hot-reload |
-| `crates/ogham-derive/` | `#[derive(OghamState)]` / `#[derive(OghamMsg)]` proc macros |
+| `crates/masque-derive/` | `#[derive(MasqueState)]` / `#[derive(MasqueMsg)]` proc macros |
 | `web/` | The browser stage: `Stage` (one document in a CPU raster surface, native-tested) behind `extern "C"` exports for emscripten; `build.sh`, `test.sh`, `env.sh`; embeds Geist |
 
 ## LSP Server
 
-The `ogham-lsp` binary implements the Language Server Protocol for `.ogh` files,
+The `masque-lsp` binary implements the Language Server Protocol for `.masque` files,
 enabling editor support and AI-assisted development.
 
 ### Building and running
 
 ```sh
-cargo build --bin ogham-lsp        # build
-./target/debug/ogham-lsp           # run (stdin/stdout transport)
+cargo build --bin masque-lsp        # build
+./target/debug/masque-lsp           # run (stdin/stdout transport)
 ```
 
 ### VSCode integration
 
-The extension lives in `editors/vscode/`. Set `ogham.lspPath` in VSCode settings
-to the path of the built binary (defaults to `"ogham-lsp"` on PATH).
+The extension lives in `editors/vscode/`. Set `masque.lspPath` in VSCode settings
+to the path of the built binary (defaults to `"masque-lsp"` on PATH).
 
 ### Capabilities
 
@@ -134,7 +134,7 @@ to the path of the built binary (defaults to `"ogham-lsp"` on PATH).
 
 ### Using the LSP as an agent
 
-When working on `.ogh` files, prefer LSP over grep for:
+When working on `.masque` files, prefer LSP over grep for:
 - **Go to Definition** — resolves scope correctly; grep does not handle shadowing
 - **Document Symbols** — get file outline without reading every line
 - **Diagnostics** — verify edits introduced no syntax errors
@@ -167,24 +167,24 @@ The `Value` enum (`src/runtime/value.rs`) represents all dynamic types:
 | `Widget(WidgetDescriptor)` | | A widget produced during execution |
 | `WidgetRef(u64)` | `u64` | Opaque widget identity handle (Phase 2.5+) |
 | `Mutation(Rc<RefCell<MutationState>>)` | | Reactive `state` cell handle |
-| `BoundTrigger(Rc<RefCell<MutationState>>)` | | Reactive trigger bound from Rust via `TypedOgham` |
+| `BoundTrigger(Rc<RefCell<MutationState>>)` | | Reactive trigger bound from Rust via `TypedMasque` |
 | `Void` | | Unit / no value |
 
-When injecting state from Rust, build values using these constructors directly, e.g. `Value::String("hello".to_string())`, `Value::Integer(42)`, `Value::Array(vec![...])`, `Value::Map(map)`. For typed host state, prefer `#[derive(OghamState)]` + `TypedOgham` (see *Typed bindings* below) — it generates the conversion plus a compile-time schema the `ogham check` CLI and LSP can validate `.ogh` files against.
+When injecting state from Rust, build values using these constructors directly, e.g. `Value::String("hello".to_string())`, `Value::Integer(42)`, `Value::Array(vec![...])`, `Value::Map(map)`. For typed host state, prefer `#[derive(MasqueState)]` + `TypedMasque` (see *Typed bindings* below) — it generates the conversion plus a compile-time schema the `masque check` CLI and LSP can validate `.masque` files against.
 
-## Ogham Language Quick Reference
+## Masque Language Quick Reference
 
 ### Variables and state
 
-```ogh
+```masque
 let x = 5;
-let name = "Ogham";
+let name = "Masque";
 state count = 0;          // persists across rerenders
 ```
 
 ### Functions
 
-```ogh
+```masque
 let greet = fn (name: string): string {
   "Hello, " + name
 };
@@ -201,7 +201,7 @@ Built-in widget types: `Flex`, `Text`, `TextInput`, `Svg`, `Image`, `Grid`, `Pre
 
 Sizing: `width`/`height` take `"grow"`, `"shrink"`, a number (fixed px), or a percent. One pinned interaction (`flex_widget.rs` tests): while a `shrink` parent measures itself along an axis, `grow` descendants on that axis contribute their *content* size — a shrink parent has no leftover space to grow into — and are stretched to the parent's resolved size during the real layout pass. So a full-height accent bar (`height: "grow"`, no children) inside a `height: "shrink"` row contributes nothing to the row's height and then spans it exactly.
 
-```ogh
+```masque
 Flex {
   style: {
     width: "grow",
@@ -226,7 +226,7 @@ Flex {
 
 Dispatch events to the host Rust application:
 
-```ogh
+```masque
 Flex {
   mouse_down: fn () {
     event("tool_selected", tool_name);
@@ -256,7 +256,7 @@ Escape (and untold_lore's library takes Ctrl+Z/Y/S) before any tree.
 Details and the key-name list: `docs/internal/EVENTS.md` → *Key
 chords*.
 
-```ogh
+```masque
 Flex {
   keydown: { ctrl_k: fn () { event("palette"); }, escape: fn () { event("close"); } },
   children: [ … ],
@@ -274,7 +274,7 @@ is for a host whose window lost the pointer. `docs/internal/EVENTS.md`
 
 #### `Slider`
 
-```ogh
+```masque
 Slider {
   value: volume, min: 0, max: 100, step: 5,           // value is controlled
   on_change: fn (v: float) { event("set_volume", v); },
@@ -311,7 +311,7 @@ hand-rolling on `mouse_down` / `mouse_enter` / `mouse_leave`. They
 share a payload through `EventContext` and let any widget declare
 itself a drop target via an `accepts_drop` predicate.
 
-```ogh
+```masque
 Flex {
   drag_payload: { kind: "item", id: 7 },     // marks this widget a drag source
   drag_dead_zone: 6,                          // optional; defaults to 4px
@@ -333,9 +333,9 @@ The host Rust pump (which owns the dead-zone state machine) drives
 dispatch through the runtime API:
 
 ```rust
-let mut state = ogham.dispatch_drag_start(origin_widget_ref, payload, point);
-ogham.dispatch_drag_move(&mut state, point);   // each subsequent mouse_move
-ogham.dispatch_drag_end(&mut state, point);    // on mouse_up; clears the preview
+let mut state = masque.dispatch_drag_start(origin_widget_ref, payload, point);
+masque.dispatch_drag_move(&mut state, point);   // each subsequent mouse_move
+masque.dispatch_drag_end(&mut state, point);    // on mouse_up; clears the preview
 ```
 
 `dispatch_drag_end` walks open portal layers high-priority-to-low
@@ -348,12 +348,12 @@ cursor; give it explicit `width` / `height` for a sensible result.
 #### `contextmenu` event
 
 `contextmenu` is dispatched by the host on right-click via
-`Ogham::dispatch_contextmenu(point)`. It fires on the deepest
+`Masque::dispatch_contextmenu(point)`. It fires on the deepest
 widget at the cursor (no automatic bubble — wrap if needed).
 Use it instead of overloading `mouse_down` so you can route left
 and right clicks differently.
 
-```ogh
+```masque
 Flex {
   mouse_down:  fn () { event("select", item_id); },
   contextmenu: fn () { event("show_menu", item_id); },
@@ -372,7 +372,7 @@ guide).
 
 Style transitions, entry animations, and exit animations are first-class on `Flex`. Three pieces work together: a `transition:` declaration in the style enabling spring interpolation, optional `initial:` / `exit:` widget-level styles for entry/exit animations, and a `key:` for stable identity across reconciles.
 
-```ogh
+```masque
 Flex {
   key: "save-button",
   initial: { opacity: 0, transform: { translate_y: -12 } },
@@ -412,7 +412,7 @@ Flex {
 
 Wrap a swap point (e.g., page transitions) in `Presence` to give the outgoing content an exit animation when `key` changes:
 
-```ogh
+```masque
 Presence {
   key: current_route_id,
   mode: "wait",   // optional; default "pop"
@@ -437,7 +437,7 @@ A translation is logical pixels, or a **percentage of the widget's own laid-out 
 
 `backdrop_filter: { blur: N }` (default `None`) blurs the canvas content already painted under the widget's border box. The widget's own background image / colour and any descendants composite *on top of* the blurred capture; the border draws sharp on the main canvas. `N` is Gaussian sigma in unscaled px — values of 8–16 read as "frosted glass" over typical UI imagery; values above ~32 collapse to a near-uniform tint. Backends that don't support backdrop sampling fall back to no-op via the trait defaults; the panel still renders, just without the frost.
 
-```ogh
+```masque
 Flex {
   style: {
     background_color: { r: 22, g: 24, b: 28, a: 80 },
@@ -459,7 +459,7 @@ changes. Identity is path-based — every `(call_stack, hook_id)`
 pair is a fresh slot, so hooks survive reorder and re-render
 without re-firing unless their dependencies actually change.
 
-```ogh
+```masque
 let panel = fn () {
   state count = 0;
 
@@ -504,37 +504,37 @@ identity. Restructure to put the condition inside the body.
 ### Typed bindings (Phase 1)
 
 Two `#[derive(...)]` macros generate the bridge code between Rust
-host types and the Ogham runtime, plus a compile-time schema
-manifest the `ogham check` CLI validates `.ogh` files against
+host types and the Masque runtime, plus a compile-time schema
+manifest the `masque check` CLI validates `.masque` files against
 (LSP integration of the schema-diagnostic engine in
 `src/diagnostics/` is on the roadmap but not yet wired):
 
 ```rust
-use ogham_derive::{OghamState, OghamMsg};
+use masque_derive::{MasqueState, MasqueMsg};
 
-#[derive(OghamState)]
-#[ogham_state(binding_module = "settings")]    // exposes module name to ogham check
+#[derive(MasqueState)]
+#[masque_state(binding_module = "settings")]    // exposes module name to masque check
 struct SettingsState {
     volume: f32,                // -> Float
     label:  String,             // -> String
     items:  Vec<String>,        // -> Array<String>
 }
 
-#[derive(OghamMsg)]
+#[derive(MasqueMsg)]
 enum SettingsMsg {
-    SetVolume(f32),             // .ogh: event("set_volume", v)
-    Reset,                      // .ogh: event("reset")
+    SetVolume(f32),             // .masque: event("set_volume", v)
+    Reset,                      // .masque: event("reset")
 }
 ```
 
-Mount via the `TypedOgham` handle (re-exported from the crate
+Mount via the `TypedMasque` handle (re-exported from the crate
 root):
 
 ```rust
-use ogham::TypedOgham;
+use masque::TypedMasque;
 
-let handle: TypedOgham<SettingsState, SettingsMsg> =
-    TypedOgham::watch("./data/settings.ogh", SettingsState::default(), config)?;
+let handle: TypedMasque<SettingsState, SettingsMsg> =
+    TypedMasque::watch("./data/settings.masque", SettingsState::default(), config)?;
 
 // set_state takes a full S; the wrapper diffs against the
 // previous frame and only injects changed fields.
@@ -549,9 +549,9 @@ while let Some(msg) = handle.poll_msg() {       // typed event recv
 // for msg in handle.drain_msgs() { ... }
 ```
 
-In the `.ogh` file, top-level identifiers `volume`, `label`,
+In the `.masque` file, top-level identifiers `volume`, `label`,
 `items` resolve to the host state directly; events fire through
-`event("set_volume", value)`. `ogham check` cross-references
+`event("set_volume", value)`. `masque check` cross-references
 the manifest at analysis time, so a typo in
 `event("setvolume", ...)` flags as an error before run. (LSP
 integration of the schema-diagnostic engine is on the
@@ -566,7 +566,7 @@ The consumer's half of the state contract
 *reads*; their shapes, optionality and at-mount values are the
 providing scope's declarations, not the document's.
 
-```ogh
+```masque
 select manor { hud, hotbar, search, tip };   // from the `manor` node's scope
 select { sea_panel, sea_duration };          // a fragment: from wherever this mounts
 ```
@@ -593,7 +593,7 @@ that costs a debugging cycle when it is not known:
 - **`events {}` does not cross either**, and the asymmetry with the
   `select` beside it is deliberate. A shared module's vocabulary is the
   *union over every mount*, because the file compiles under all of
-  them — regency's `stationery.ogh` declares `join`, which only the
+  them — regency's `stationery.masque` declares `join`, which only the
   foyer accepts, beside `confirm`, which only the table does. Handing
   that union to each importer would have both claiming raises they
   never make. A module's raises are checked where they are written, for
@@ -628,7 +628,7 @@ into a named per-frame **layer**. Layout-wise the Portal node
 contributes nothing to the parent's flow — children paint into
 the viewport in a second pass.
 
-```ogh
+```masque
 Portal {
   open: show_modal,
   focus_trap: true,                   // input is gated to this subtree while open
@@ -660,7 +660,7 @@ press outside its entries and fires each entry's `dismiss:` listener
 — light dismiss with no catch child. A Portal overrides its layer's
 default with `backdrop: "none" | "dismiss" | "block"`.
 
-```ogh
+```masque
 Portal {
   open: menu_open,
   layer: "popover",
@@ -671,12 +671,12 @@ Portal {
 ```
 
 **Focus trap.** When `focus_trap: true`, focus moves outside
-the portal's subtree are rejected; `Ogham::has_input_blocking_portal()`
+the portal's subtree are rejected; `Masque::has_input_blocking_portal()`
 returns true while any open trapping portal exists.
 
 **Cursor preference.** `cursor: "free"` declares the layer
 wants a visible system cursor; `cursor: "inherit"` lets the
-host decide. `Ogham::wants_cursor_free()` aggregates across
+host decide. `Masque::wants_cursor_free()` aggregates across
 open portals + the focused widget.
 
 **Composition.** Backdrop styling and Escape-to-dismiss are *not*
@@ -684,7 +684,7 @@ Portal properties — they're consumer composition with regular
 widgets (Escape: a `keydown: { escape: … }` listener, reached only
 when the host declines the key). Dismiss-on-outside-click *was*
 composition and is now the `dismiss` policy above. See
-`examples/portals/components.ogh` for `Modal`, `Tooltip`, and
+`examples/portals/components.masque` for `Modal`, `Tooltip`, and
 `Dropdown` reference functions.
 
 ### Anchored portals
@@ -694,35 +694,35 @@ point **your host sets** — or, with `anchor: "parent"`, from the
 laid-out box of the widget it is declared inside, with no host
 coordinates at all (below) — instead of from the slot it was declared
 in. It's the seam for chrome that has to follow something the host
-knows about and Ogham doesn't: the pointer, an entity's projected
+knows about and Masque doesn't: the pointer, an entity's projected
 screen position, the field a popover belongs to.
 
-```ogh
+```masque
 Portal {
   layer: "tooltip",
   open: tooltip_open,
   anchor: "action-tooltip",         // names a host-set anchor
   anchor_policy: "flip",            // "clamp" (default) | "flip" | "raw"
   anchor_offset: { x: 14, y: 22 },  // applied BEFORE the policy
-  children: [ /* ordinary ogham chrome */ ],
+  children: [ /* ordinary masque chrome */ ],
 }
 ```
 
 ```rust
 // Per frame, or only when the thing moves — anchors are host state,
 // not frame state, and persist until changed.
-ogham.set_anchor("action-tooltip", Point::new(cursor_x, cursor_y));
-ogham.clear_anchor("action-tooltip");   // the thing is gone
-ogham.clear_anchors();                  // all of them
-let p: Option<Point> = ogham.anchor("action-tooltip");
+masque.set_anchor("action-tooltip", Point::new(cursor_x, cursor_y));
+masque.clear_anchor("action-tooltip");   // the thing is gone
+masque.clear_anchors();                  // all of them
+let p: Option<Point> = masque.anchor("action-tooltip");
 ```
 
-Run `examples/portals/anchored_tooltip.ogh` in the `client` binary
+Run `examples/portals/anchored_tooltip.masque` in the `client` binary
 (ctrl+O) and move the mouse; the previewer publishes every pointer
 move as the `"cursor"` anchor.
 
 **Why it's a Portal property and not a composition pattern.** The
-policies need the subtree's *measured* size, which `.ogh` cannot
+policies need the subtree's *measured* size, which `.masque` cannot
 see. "Flip above the pointer when the card would overrun the
 bottom" is not expressible by any arrangement of widgets, which is
 why the rule lives in the renderer, applied after layout.
@@ -751,9 +751,9 @@ id is distinguishable from a host with nothing to point at.
 |---|---|
 | Coordinates | The same viewport coordinates layout runs in — the ones you pass to `frame(width, height, dt)`. Logical pixels, not device. |
 | Lifetime | Host state. Persists until `clear_anchor` / `clear_anchors` / a **hot reload** (INTENT §7 — a reload drops anchors, so a host that sets one *once* must re-set it after). |
-| World-space chrome | Project world → screen host-side and pass the result. Ogham does not know what a camera is. |
+| World-space chrome | Project world → screen host-side and pass the result. Masque does not know what a camera is. |
 | `focus_trap` | **Rejected at build time** with `anchor`. A focus trap that follows a host-set point can strand input over chrome the user can't reach. |
-| Reserved ids | Ids starting with `__` are the runtime's (the drag preview lives at `__drag_preview`) and are rejected in `.ogh`. |
+| Reserved ids | Ids starting with `__` are the runtime's (the drag preview lives at `__drag_preview`) and are rejected in `.masque`. |
 | Unknown `anchor_policy` | `BridgeError::InvalidPropertyType` listing the three valid names — not a silent fall back to the default. |
 | Measured size | The **union of the portal's children's** laid-out rects — not the Portal's own rect, which is `grow`/`grow`. Give an anchored Portal *one* content child. A full-viewport backdrop sibling (the `Modal` composition pattern) makes the measured box the viewport, and `clamp` then pins it to the corner. |
 | Collision | Policies resolve against the *viewport* only. Two anchored tooltips overlapping is the host's problem. |
@@ -767,9 +767,9 @@ arcs, wedges, gradients along a path, blend modes, anything the typed
 `RenderContext` primitives can't express — while its geometry comes
 from flex layout like any other widget. Use it when host-drawn content
 is **widget-sized and has siblings**. A full-screen host surface under
-a transparent Ogham root already works and does not need this.
+a transparent Masque root already works and does not need this.
 
-```ogh
+```masque
 Canvas {
   painter: "wheel_dial",                       // required; names a host painter
   props: { charge: charge, dancing: dancing }, // optional; handed to the painter verbatim
@@ -783,8 +783,8 @@ Canvas {
 ```
 
 ```rust
-use ogham::runtime::config::RuntimeConfig;
-use ogham::skia_safe::{Paint, PaintStyle};      // re-exported: use THIS skia-safe
+use masque::runtime::config::RuntimeConfig;
+use masque::skia_safe::{Paint, PaintStyle};      // re-exported: use THIS skia-safe
 
 let state = shared_state.clone();               // an Arc<Mutex<…>>, as with event handlers
 let config = RuntimeConfig::new()
@@ -801,9 +801,9 @@ let config = RuntimeConfig::new()
     });
 ```
 
-Run `examples/canvas.ogh` in the previewer (`cargo run -p ogham_preview`
+Run `examples/canvas.masque` in the previewer (`cargo run -p masque_preview`
 in `../lorekeeper`, Ctrl+O) for a working one; its painter is `demo_dial`
-in lorekeeper's `ogham_preview/src/main.rs`.
+in lorekeeper's `masque_preview/src/main.rs`.
 
 **The painter contract.**
 
@@ -812,8 +812,8 @@ in lorekeeper's `ogham_preview/src/main.rs`.
 | Signature | `Fn(&mut Painter, &Value) + Send + Sync + 'static` |
 | Registration | `RuntimeConfig::with_painter(name, f)` — **on the config, never on a live `Runtime`** |
 | Name matching | Exact (unlike widget type names, which are lowercased) |
-| `props` | The `.ogh` `props:` value verbatim, fresh each frame. Defaults to an empty map. **The only channel from `.ogh` into the painter** — live host data comes from handles the closure captured at registration. |
-| Nothing flows out | A painter draws and returns. It has no route back into the runtime; state changes leave `.ogh` as `event(...)` calls, as always. |
+| `props` | The `.masque` `props:` value verbatim, fresh each frame. Defaults to an empty map. **The only channel from `.masque` into the painter** — live host data comes from handles the closure captured at registration. |
+| Nothing flows out | A painter draws and returns. It has no route back into the runtime; state changes leave `.masque` as `event(...)` calls, as always. |
 | Children | None. `Canvas` is a leaf. Chrome that must sit over painted content is a sibling with `position: { type: "absolute" }`, or a `Portal`. |
 
 **The coordinate space** is the reason this is worth using:
@@ -826,7 +826,7 @@ in lorekeeper's `ogham_preview/src/main.rs`.
   that wants device pixels.
 - **`margin` is subtracted from the painter's rect; padding and border
   are not.** This is the opposite of CSS and it catches everyone once:
-  Ogham's layout rect is `width × height` *including* insets
+  Masque's layout rect is `width × height` *including* insets
   ([`FLEX.md`](docs/internal/FLEX.md) §Insets), so
   `width: 180, height: 194, margin: { bottom: 14 }` hands the painter
   **180 × 180**, not 180 × 194 with a gap below. Declare the box as
@@ -841,7 +841,7 @@ in lorekeeper's `ogham_preview/src/main.rs`.
   delete every seating constant.
 
 **Hot reload.** Painters registered on `RuntimeConfig` survive a hot
-reload for exactly the same reason event handlers do: `Ogham::reload`
+reload for exactly the same reason event handlers do: `Masque::reload`
 rebuilds the `Runtime` *from the config*. A painter poked into a live
 `Runtime` after construction would work until the first file save and
 then vanish, silently — so there is no API to do that.
@@ -854,8 +854,8 @@ then vanish, silently — so there is no API to do that.
 | Named a painter that isn't registered | `BridgeError::InvalidPropertyType` at build time, **listing every registered name**. Surfaces through whatever channel your host already shows bridge errors in. |
 | Registered on a live `Runtime` instead of the config | Works once, disappears on the next hot reload. Don't. |
 | Rendering backend doesn't implement `with_local_canvas` | The `Canvas` paints nothing (its layout still happens) and debug builds log once per painter name. `SkiaEnv` implements it, so this only bites custom backends. |
-| Your painter panics | **The panic propagates.** It is host code on the host's render thread; Ogham does not `catch_unwind` it, because swallowing it would hide your bug behind a blank rectangle. |
-| Depended on `skia-safe` directly instead of `ogham::skia_safe` | Two copies of the crate in one binary; `p.canvas()` stops typechecking with an error that blames the wrong thing. Use the re-export. |
+| Your painter panics | **The panic propagates.** It is host code on the host's render thread; Masque does not `catch_unwind` it, because swallowing it would hide your bug behind a blank rectangle. |
+| Depended on `skia-safe` directly instead of `masque::skia_safe` | Two copies of the crate in one binary; `p.canvas()` stops typechecking with an error that blames the wrong thing. Use the re-export. |
 
 **Occlusion.** A `Canvas` with a `mouse_down` / `mouse_up` /
 `contextmenu` listener consumes presses and reports `true` from
@@ -884,14 +884,14 @@ exception this carves out of "`Surface` is the only rendering seam".
 
 ### Imports
 
-```ogh
-import "./button.ogh";
-import { ComponentName } from "./components.ogh";
+```masque
+import "./button.masque";
+import { ComponentName } from "./components.masque";
 ```
 
 ### Control flow
 
-```ogh
+```masque
 if (x > 0) { "positive" } else { "non-positive" };
 
 match value {
@@ -906,13 +906,13 @@ for (i in 0..items.length()) {
 
 ### Debugging
 
-```ogh
+```masque
 log expression;  // prints value to stderr
 ```
 
 ## Strict Vocabulary
 
-Ogham drops what it does not recognise — **keys and values alike**. A
+Masque drops what it does not recognise — **keys and values alike**. A
 widget with a misspelled property parses, lays out, draws, and is wrong,
 with no error and nothing in a test: `on_click` where the listener is
 `mouse_down`, `font_size` where the text style key is `size`, `wrap`
@@ -925,12 +925,12 @@ where the closed set has no such member and the builder reads `start`.
 **A source scan**, which knows where things are:
 
 ```bash
-cargo run -p ogham --bin ogham-vocab -- data/ui/*.ogh
+cargo run -p masque --bin masque-vocab -- data/ui/*.masque
 ```
 
 ```rust
 let source = std::fs::read_to_string(path)?;
-let found = ogham::widget::vocabulary::scan_source(path, &source);
+let found = masque::widget::vocabulary::scan_source(path, &source);
 assert!(found.is_empty(), "{found:#?}");   // the shape a repo's test takes
 ```
 
@@ -943,8 +943,8 @@ gets a lint switched off.
 
 ```rust
 let config = RuntimeConfig::new().with_strict_vocabulary();
-let ogham = Ogham::from_source(src, config)?;
-assert!(ogham.vocabulary_violations().is_empty());
+let masque = Masque::from_source(src, config)?;
+assert!(masque.vocabulary_violations().is_empty());
 ```
 
 Off by default. Turning it on changes nothing about what is drawn — a key
@@ -971,7 +971,7 @@ the one place both halves are known.
 
 A route that mounts an editor from another crate declares
 `Route::brings_own_document`, and comes out of the screen half — its
-surface is in another `.ogh` and the shared one is right not to declare
+surface is in another `.masque` and the shared one is right not to declare
 it.
 
 It reports rather than refuses, and `Chrome::validation()` is what a test
@@ -979,41 +979,41 @@ asserts on.
 
 ## Integration Guide
 
-This section uses examples from [Untold Lore](../untold_lore), a game client that uses Ogham for all of its UI.
+This section uses examples from [Untold Lore](../untold_lore), a game client that uses Masque for all of its UI.
 
 ### 1. Initialization
 
-Use `RuntimeConfig` to configure host state and event handlers, then create an `Ogham` instance.
+Use `RuntimeConfig` to configure host state and event handlers, then create an `Masque` instance.
 
 **Simple example** (from Untold Lore's escape menu):
 
 ```rust
-use ogham::runtime::config::RuntimeConfig;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::Masque;
 
-const ESCAPE_UI_PATH: &str = "./data/escape_menu.ogh";
+const ESCAPE_UI_PATH: &str = "./data/escape_menu.masque";
 
 let config = RuntimeConfig::new()
     .with_event_handler("continue", move |_| {
-        // handle "continue" event from .ogh
+        // handle "continue" event from .masque
         true
     })
     .with_event_handler("exit_to_main_menu", move |_| {
-        // handle "exit_to_main_menu" event from .ogh
+        // handle "exit_to_main_menu" event from .masque
         true
     });
 
-let ogham = Ogham::watch(ESCAPE_UI_PATH.to_string(), config)
-    .expect("Failed to create Ogham");
+let masque = Masque::watch(ESCAPE_UI_PATH.to_string(), config)
+    .expect("Failed to create Masque");
 ```
 
 **With initial host state** (from Untold Lore's multiplayer menu):
 
 ```rust
 use std::collections::HashMap;
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::Masque;
 
 let initial_state = {
     let mut state = HashMap::new();
@@ -1042,18 +1042,18 @@ let config = RuntimeConfig::new()
         true
     });
 
-let ogham = Ogham::watch("./data/multiplayer_menu.ogh".to_string(), config)
-    .expect("Failed to create Ogham");
+let masque = Masque::watch("./data/multiplayer_menu.masque".to_string(), config)
+    .expect("Failed to create Masque");
 ```
 
-Use `Ogham::from_source()` instead of `Ogham::watch()` when loading UI from a string rather than a file (no hot-reload).
+Use `Masque::from_source()` instead of `Masque::watch()` when loading UI from a string rather than a file (no hot-reload).
 
 ### 2. Injecting state per frame
 
 After initialization, inject updated state each frame via the runtime:
 
 ```rust
-let runtime = ogham.get_runtime().clone();
+let runtime = masque.get_runtime().clone();
 let mut rt = runtime.lock().unwrap();
 
 rt.inject_host_state("is_connected".to_string(), Value::Boolean(true));
@@ -1074,11 +1074,11 @@ rt.inject_host_state_if_changed("server_name".to_string(), Value::String(name));
 rt.request_rerender();
 ```
 
-Host state values are accessible as top-level variables in `.ogh` files. For example, after injecting `"player_count"`, the `.ogh` file can reference `player_count` directly.
+Host state values are accessible as top-level variables in `.masque` files. For example, after injecting `"player_count"`, the `.masque` file can reference `player_count` directly.
 
 ### 3. Event handling
 
-Events flow from `.ogh` files to Rust via `event("name", args...)`. Register handlers with `with_event_handler`:
+Events flow from `.masque` files to Rust via `event("name", args...)`. Register handlers with `with_event_handler`:
 
 ```rust
 .with_event_handler("tool_selected", move |args| {
@@ -1093,17 +1093,17 @@ Handlers receive `&[Value]` and return `bool`. A common pattern is to set flags 
 
 ### 4. Hot-reload loop
 
-When using `Ogham::watch()`, check for file changes each frame:
+When using `Masque::watch()`, check for file changes each frame:
 
 ```rust
-if ogham.check_for_changes() {
-    if let Err(err) = ogham.reload() {
+if masque.check_for_changes() {
+    if let Err(err) = masque.reload() {
         eprintln!("Error reloading: {}", err);
     }
 }
 ```
 
-The watcher monitors both the main `.ogh` file and all imported files.
+The watcher monitors both the main `.masque` file and all imported files.
 
 ### 5. Rendering pipeline
 
@@ -1115,7 +1115,7 @@ drain-time unmount / effect-cleanup hooks fire in the same frame.
 
 ```rust
 // 1. Update (rerender + bridge + reconcile + drain, only if needed)
-let rerendered = ogham.update()?;
+let rerendered = masque.update()?;
 
 // 2. Tick animations forward by the real elapsed time (in seconds).
 //    Required for style transitions, entry/exit animations, Presence
@@ -1123,19 +1123,19 @@ let rerendered = ogham.update()?;
 //    surface their owning paths to UI's pending vecs here). Cap dt to
 //    ~33ms so a stalled frame doesn't skip through a whole animation
 //    in one step.
-ogham.get_ui_mut().tick_animations(dt);
+masque.get_ui_mut().tick_animations(dt);
 
 // 3. Layout (also runs the drag-preview's layout pass if a drag is
 //    in flight — see Drag dispatch below)
-ogham.get_ui_mut().layout(window_width, window_height);
+masque.get_ui_mut().layout(window_width, window_height);
 
 // 4. Draw using a Surface implementation
-surface.draw(ogham.get_ui_mut());
+surface.draw(masque.get_ui_mut());
 
 // 5. Optional: drain again. tick_animations may have queued drain
 //    prefixes (settled exit animations); call process_drain_queues
 //    to flush their unmount hooks before the next frame starts.
-ogham.process_drain_queues();
+masque.process_drain_queues();
 ```
 
 **Important**: `tick_animations` must run *every* frame, not just when `update()`
@@ -1148,11 +1148,11 @@ defers drain-time unmount hooks indefinitely.
 Route input events (clicks, keyboard) to the UI tree:
 
 ```rust
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
 
 let event = Event::with_point("mouse_down".to_string(), Point::new(x, y));
-ogham.get_ui_mut().call_event(&event);
+masque.get_ui_mut().call_event(&event);
 ```
 
 For the dedicated drag + contextmenu paths added in Phase 3, the
@@ -1162,26 +1162,26 @@ dispatch* below.
 
 ### 7. Drag dispatch (Phase 3)
 
-The host owns the dead-zone state machine; Ogham provides the
+The host owns the dead-zone state machine; Masque provides the
 event-emission and drop-target hit-test. Typical flow:
 
 ```rust
-use ogham::widget::event::DragState;
+use masque::widget::event::DragState;
 
 // On mouse_down past the per-widget dead-zone (4px default):
-let target = ogham.get_ui_mut().hit_test_drag_target(&Point::new(x, y));
+let target = masque.get_ui_mut().hit_test_drag_target(&Point::new(x, y));
 let mut drag_state = if let Some(origin) = target {
-    Some(ogham.dispatch_drag_start(origin, payload, Point::new(x, y)))
+    Some(masque.dispatch_drag_start(origin, payload, Point::new(x, y)))
 } else { None };
 
 // Each subsequent mouse_move while a drag is in flight:
 if let Some(state) = drag_state.as_mut() {
-    ogham.dispatch_drag_move(state, Point::new(x, y));
+    masque.dispatch_drag_move(state, Point::new(x, y));
 }
 
 // On mouse_up:
 if let Some(state) = drag_state.as_mut() {
-    ogham.dispatch_drag_end(state, Point::new(x, y));
+    masque.dispatch_drag_end(state, Point::new(x, y));
 }
 drag_state = None;
 ```
@@ -1193,36 +1193,36 @@ originator. The drag preview (if the source widget declared
 `drag_preview:`) renders into the `cursor-attached` portal layer
 at the cursor position; clear it from the host on drag end.
 
-`Ogham::hit_test_drop_target(payload, point)` is exposed for
+`Masque::hit_test_drop_target(payload, point)` is exposed for
 hover-style highlighting (e.g. "is the cursor currently over a
 valid drop target?") without firing an event.
 
 For right-click → contextmenu:
 
 ```rust
-ogham.dispatch_contextmenu(Point::new(x, y));
+masque.dispatch_contextmenu(Point::new(x, y));
 ```
 
 ### 8. Cursor and key signals
 
-Three Ogham-side accessors let the host coordinate input
+Three Masque-side accessors let the host coordinate input
 without manually tracking modal / focus state:
 
 ```rust
 // True if any open portal has focus_trap: true. Use as a single
 // source of truth for "should game input be blocked?".
-let blocked = ogham.has_input_blocking_portal();
+let blocked = masque.has_input_blocking_portal();
 
 // True if any active portal in overlay-modal / popover OR the
 // focused widget declares cursor-free. Use to release a locked
 // pointer cursor.
-let cursor_free = ogham.wants_cursor_free();
+let cursor_free = masque.wants_cursor_free();
 
 // True if the focused widget consumes Key::Character(_) events
 // (TextInput is the canonical case). Use BEFORE feeding the key
 // into game pressed() / held() queries so typing into a field
 // doesn't trigger hotkeys.
-let typing = ogham.consumes_character_key();
+let typing = masque.consumes_character_key();
 ```
 
 ### 9. Custom rendering backends
@@ -1302,13 +1302,13 @@ the full walker description.
 ## Project Structure
 
 ```
-ogham/
+masque/
   Cargo.toml
   README.md
   AGENTS.md
   rustfmt.toml
   src/
-    lib.rs                  -- library entry point, Ogham struct
+    lib.rs                  -- library entry point, Masque struct
     file_watcher.rs         -- hot-reload file watching
     skia.rs                 -- Skia rendering backend
     scanner/                -- lexical analysis
@@ -1339,17 +1339,17 @@ ogham/
       portal_layer.rs       -- Named portal layers + backdrop / cursor policies
       animation.rs          -- Spring math + per-property animation state
       event.rs              -- Event, EventContext, TickContext, DragState
-    cli/                    -- `ogham` CLI (check subcommand; render.rs is the diagnostic formatter)
-    lsp/                    -- `ogham-lsp` language server
+    cli/                    -- `masque` CLI (check subcommand; render.rs is the diagnostic formatter)
+    lsp/                    -- `masque-lsp` language server
     diagnostics/            -- schema-diagnostic engine (used by CLI + LSP)
-    typed.rs                -- TypedOgham handle (typed host state + msg)
+    typed.rs                -- TypedMasque handle (typed host state + msg)
     client/
       main.rs               -- standalone browser binary entry point
       client.rs              -- client implementation
       app.rs                 -- application wrapper
   crates/
-    ogham-derive/           -- #[derive(OghamState)] / #[derive(OghamMsg)] proc macros
-  examples/                  -- .ogh example files (incl. portals/components.ogh)
+    masque-derive/           -- #[derive(MasqueState)] / #[derive(MasqueMsg)] proc macros
+  examples/                  -- .masque example files (incl. portals/components.masque)
   tests/                     -- integration tests
   docs/internal/             -- design docs + per-phase implementation trailers
 ```

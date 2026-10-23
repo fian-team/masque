@@ -161,7 +161,7 @@ impl SkiaEnv {
         self.surface.canvas()
     }
 
-    /// Configures `self.paint` and `self.text_style` from an Ogham `TextStyle`,
+    /// Configures `self.paint` and `self.text_style` from a Masque `TextStyle`,
     /// and sets the paragraph text alignment.
     ///
     /// Geometry is configured at the **logical** font size — text paints in
@@ -628,7 +628,7 @@ impl RenderContext for SkiaEnv {
             .collect();
         self.text_style.set_foreground_paint(&self.paint);
         let paragraph = self.build_laid_out_paragraph(text, width);
-        if std::env::var_os("OGHAM_TEXT_DEBUG").is_some() && paragraph.line_number() > 1 {
+        if std::env::var_os("MASQUE_TEXT_DEBUG").is_some() && paragraph.line_number() > 1 {
             eprintln!(
                 "[text] wrapped {:?} box_w={:.2} intrinsic={:.2} size={:.2} spacing={:.2} font={:?}",
                 text,
@@ -1215,7 +1215,7 @@ fn warn_missing_anchor_once(id: &str) {
     }
     warned.push(id.to_string());
     eprintln!(
-        "[ogham] Portal anchor {:?} has never been set by the host: the portal renders \
+        "[masque] Portal anchor {:?} has never been set by the host: the portal renders \
          nothing until `set_anchor({:?}, …)` is called",
         id, id
     );

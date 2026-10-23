@@ -2,7 +2,7 @@
 //
 // Each is a thin wrapper around the Portal primitive that
 // composes a common pattern. Authors copy these into their
-// own components.ogh-style file or import them directly.
+// own components.masque-style file or import them directly.
 //
 // These are LIBRARY CODE — not part of the language. The
 // Portal primitive is intentionally minimal (open + focus_trap

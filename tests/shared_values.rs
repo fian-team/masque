@@ -17,9 +17,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
 
 fn three_rows() -> Value {
     Value::array(

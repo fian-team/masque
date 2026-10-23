@@ -1,6 +1,6 @@
-// The manor's palette, verbatim from regency's `data/ui/client.ogh`
+// The manor's palette, verbatim from regency's `data/ui/client.masque`
 // (lines 304-323 at 2026-08-21). In regency's target document split
-// (`APPLICATION_BUILD.md` A.2) this is `stationery.ogh`, imported by both
+// (`APPLICATION_BUILD.md` A.2) this is `stationery.masque`, imported by both
 // instance documents; here it is one half of the pair a selection has to
 // leave untouched.
 

@@ -2,9 +2,9 @@
 //! the import graph (`docs/internal/APPLICATION_BUILD.md` Phase 3).
 //!
 //! The shapes here are the two target document splits Appendix A calls for
-//! and neither game can write today: regency's `stationery.ogh`, imported
+//! and neither game can write today: regency's `stationery.masque`, imported
 //! by the two instance documents its route table names, and celia's
-//! `paperwork.ogh`, imported by three. Both split the same three things out
+//! `paperwork.masque`, imported by three. Both split the same three things out
 //! of one file — a palette, a record shape, and a helper that draws with
 //! both — because those are what the split is *for*: a token edited once
 //! has to reach every document that mounts it.
@@ -16,9 +16,9 @@
 
 use std::path::{Path, PathBuf};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::Masque;
 
 // ── the shared module ──────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ let plate = fn (card: Card) {
 fn document(title: &str) -> String {
     format!(
         r#"
-import "./stationery.ogh";
+import "./stationery.masque";
 
 host_state {{
   card: Card,
@@ -63,7 +63,7 @@ let main = fn () {{
 }
 
 fn scratch(tag: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ogham-modules-{}-{tag}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("masque-modules-{}-{tag}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("scratch dir");
     dir
@@ -76,14 +76,14 @@ fn write(dir: &Path, name: &str, source: &str) -> PathBuf {
 }
 
 /// The config a host builds for a document with imports: a project root, so
-/// `./stationery.ogh` resolves the same way at run time as it does in the
+/// `./stationery.masque` resolves the same way at run time as it does in the
 /// schema.
 fn rooted(dir: &Path) -> RuntimeConfig {
     RuntimeConfig::new().with_project_root(dir.to_path_buf())
 }
 
-fn mounted(path: &Path, dir: &Path) -> Ogham {
-    Ogham::watch(path.to_string_lossy().into_owned(), rooted(dir)).expect("the document mounts")
+fn mounted(path: &Path, dir: &Path) -> Masque {
+    Masque::watch(path.to_string_lossy().into_owned(), rooted(dir)).expect("the document mounts")
 }
 
 /// Save an edit, then drive frames until `settled` answers — or fail
@@ -115,7 +115,7 @@ fn saving(path: &Path, source: &str, what: &str, mut settled: impl FnMut() -> bo
 /// An imported module's top-level names land in host state when the import
 /// executes, which is how a document reads `ink` as an ordinary identifier;
 /// reading it back the same way is how a test sees the file two hops away.
-fn token(ui: &Ogham) -> Option<String> {
+fn token(ui: &Masque) -> Option<String> {
     match ui.with_runtime_mut(|rt| rt.get_host_state("ink")) {
         Some(Value::String(s)) => Some(s),
         _ => None,
@@ -124,14 +124,14 @@ fn token(ui: &Ogham) -> Option<String> {
 
 // ── the split, as the two games need it ────────────────────────────────
 
-/// regency's target split (Appendix A.2): one `stationery.ogh`, imported by
-/// the two instance documents — `foyer.ogh` and `table.ogh`.
+/// regency's target split (Appendix A.2): one `stationery.masque`, imported by
+/// the two instance documents — `foyer.masque` and `table.masque`.
 #[test]
 fn regencys_stationery_is_imported_by_two_instance_documents() {
     let dir = scratch("regency");
-    write(&dir, "stationery.ogh", STATIONERY);
-    let foyer = write(&dir, "foyer.ogh", &document("the foyer"));
-    let table = write(&dir, "table.ogh", &document("the table"));
+    write(&dir, "stationery.masque", STATIONERY);
+    let foyer = write(&dir, "foyer.masque", &document("the foyer"));
+    let table = write(&dir, "table.masque", &document("the table"));
 
     for path in [&foyer, &table] {
         let ui = mounted(path, &dir);
@@ -146,13 +146,13 @@ fn regencys_stationery_is_imported_by_two_instance_documents() {
     }
 }
 
-/// celia's target split (Appendix A.1): one `paperwork.ogh`, imported by
-/// three documents — `menu.ogh`, `lobby.ogh` and `arena.ogh`.
+/// celia's target split (Appendix A.1): one `paperwork.masque`, imported by
+/// three documents — `menu.masque`, `lobby.masque` and `arena.masque`.
 #[test]
 fn celias_paperwork_is_imported_by_three_documents() {
     let dir = scratch("celia");
-    write(&dir, "stationery.ogh", STATIONERY);
-    let documents: Vec<PathBuf> = ["menu.ogh", "lobby.ogh", "arena.ogh"]
+    write(&dir, "stationery.masque", STATIONERY);
+    let documents: Vec<PathBuf> = ["menu.masque", "lobby.masque", "arena.masque"]
         .iter()
         .map(|name| write(&dir, name, &document(name)))
         .collect();
@@ -171,9 +171,9 @@ fn celias_paperwork_is_imported_by_three_documents() {
 #[test]
 fn a_palette_token_edited_in_the_shared_module_reaches_every_mounting_document() {
     let dir = scratch("propagate");
-    let shared = write(&dir, "stationery.ogh", STATIONERY);
-    let foyer = write(&dir, "foyer.ogh", &document("the foyer"));
-    let table = write(&dir, "table.ogh", &document("the table"));
+    let shared = write(&dir, "stationery.masque", STATIONERY);
+    let foyer = write(&dir, "foyer.masque", &document("the foyer"));
+    let table = write(&dir, "table.masque", &document("the table"));
 
     let mut instances = [mounted(&foyer, &dir), mounted(&table, &dir)];
     for ui in &instances {
@@ -201,17 +201,17 @@ fn a_palette_token_edited_in_the_shared_module_reaches_every_mounting_document()
 #[test]
 fn a_module_a_hot_edit_adds_is_watched_from_then_on() {
     let dir = scratch("added");
-    let shared = write(&dir, "stationery.ogh", STATIONERY);
+    let shared = write(&dir, "stationery.masque", STATIONERY);
     let path = write(
         &dir,
-        "foyer.ogh",
+        "foyer.masque",
         "let main = fn () { Text { text: \"no stationery yet\" } };\n",
     );
     let mut ui = mounted(&path, &dir);
     assert_eq!(token(&ui), None, "the document imports nothing yet");
 
     // The edit that acquires the module.
-    let acquires = "import \"./stationery.ogh\";\nlet main = fn () { Text { text: ink } };\n";
+    let acquires = "import \"./stationery.masque\";\nlet main = fn () { Text { text: ink } };\n";
     saving(&path, acquires, "the import that was added", || {
         ui.frame(640.0, 480.0, 1.0 / 60.0).expect("frame");
         token(&ui).as_deref() == Some("#101010")
@@ -235,9 +235,9 @@ fn a_module_a_hot_edit_adds_is_watched_from_then_on() {
 
 /// A `select` in a module does not make its importers strict.
 ///
-/// The shape untold_lore hit twice: `front.ogh` is a loose document that
+/// The shape untold_lore hit twice: `front.masque` is a loose document that
 /// reads `continue_world` out of the root's host state, and the whole of
-/// its migration was adding a `select` to `settings.ogh`, a file it
+/// its migration was adding a `select` to `settings.masque`, a file it
 /// imports. A selection crosses the import — that is §4.7's fragment, and
 /// the mount is what checks it — but strictness is not a thing an import
 /// confers. It was, and the refusal named an identifier in a file nobody
@@ -248,13 +248,13 @@ fn a_select_in_a_module_leaves_the_document_that_imports_it_alone() {
     let dir = scratch("infectious");
     write(
         &dir,
-        "settings.ogh",
+        "settings.masque",
         "select settings { options };\nlet panel = fn () { Text { text: options } };\n",
     );
     let path = write(
         &dir,
-        "front.ogh",
-        "import \"./settings.ogh\";\n\
+        "front.masque",
+        "import \"./settings.masque\";\n\
          let main = fn () { Text { text: continue_world } };\n",
     );
 
@@ -266,7 +266,7 @@ fn a_select_in_a_module_leaves_the_document_that_imports_it_alone() {
         ),
     ]));
 
-    Ogham::watch(path.to_string_lossy().into_owned(), config)
+    Masque::watch(path.to_string_lossy().into_owned(), config)
         .expect("a loose document stays loose when the module it imports selects");
 }
 
@@ -283,17 +283,17 @@ fn a_module_that_selects_declares_the_events_it_raises() {
     let dir = scratch("raises");
     write(
         &dir,
-        "pause.ogh",
+        "pause.masque",
         "select pause { rows };\n\
          let body = fn () { Text { text: rows, on_click: fn () { event(\"menu\", \"quit\") } } };\n",
     );
     let path = write(
         &dir,
-        "root.ogh",
-        "import \"./pause.ogh\";\nevents { menu(string) };\nlet main = fn () { body() };\n",
+        "root.masque",
+        "import \"./pause.masque\";\nevents { menu(string) };\nlet main = fn () { body() };\n",
     );
 
-    let why = match Ogham::watch(path.to_string_lossy().into_owned(), rooted(&dir)) {
+    let why = match Masque::watch(path.to_string_lossy().into_owned(), rooted(&dir)) {
         Err(e) => format!("{e:?}"),
         Ok(_) => panic!("the module raises an intent it has not declared"),
     };
@@ -316,7 +316,7 @@ fn a_module_that_selects_declares_the_events_it_raises() {
 /// vocabulary is the **union over its mounts** — it has to be, because the
 /// file compiles under all of them — so handing it to each mounting
 /// document would have every one of them claiming raises it never makes.
-/// regency's `stationery.ogh` is the live case: `join` is the foyer's and
+/// regency's `stationery.masque` is the live case: `join` is the foyer's and
 /// `confirm` is the table's, and both are declared in the one file both
 /// import.
 #[test]
@@ -324,18 +324,18 @@ fn a_shared_modules_vocabulary_stays_its_own() {
     let dir = scratch("vocabulary");
     write(
         &dir,
-        "stationery.ogh",
+        "stationery.masque",
         "events { join(), confirm() };\n\
          let joiner = fn () { Text { text: \"Join\", on_click: fn () { event(\"join\") } } };\n\
          let sealer = fn () { Text { text: \"Seal\", on_click: fn () { event(\"confirm\") } } };\n",
     );
     let path = write(
         &dir,
-        "foyer.ogh",
-        "import \"./stationery.ogh\";\nevents { join() };\nlet main = fn () { joiner() };\n",
+        "foyer.masque",
+        "import \"./stationery.masque\";\nevents { join() };\nlet main = fn () { joiner() };\n",
     );
 
-    let ui = Ogham::watch(path.to_string_lossy().into_owned(), rooted(&dir)).expect("mounts");
+    let ui = Masque::watch(path.to_string_lossy().into_owned(), rooted(&dir)).expect("mounts");
     let schema = ui
         .module_schema()
         .expect("the mounted document has a schema");

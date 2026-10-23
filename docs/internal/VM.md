@@ -1,4 +1,4 @@
-# Ogham — Compiler and Bytecode VM
+# Masque — Compiler and Bytecode VM
 
 > **Status: Live contract.**
 >
@@ -270,7 +270,7 @@ These are hard caps; exceeding any of them errors out cleanly
 
   *Why:* mutations are the request/response shape that bridges
   the host-state-immutable rule. A `BoundTrigger` *looks* like a
-  callable so authors can write `m.trigger(arg)` in `.ogh`, but
+  callable so authors can write `m.trigger(arg)` in `.masque`, but
   it short-circuits the call into the host's event dispatch
   machinery.
 
@@ -483,7 +483,7 @@ runtime fields the VM reaches into:
   needed or whether the runtime state is sufficient.
 - **`OpCode::Import` lifts imports into `host_state` so that
   `GetState` finds them.** This is the one place the "host
-  state is read-only from .ogh" rule has an internal exception.
+  state is read-only from .masque" rule has an internal exception.
   See `INTENT §2` and audit whether the cleaner design would be
   a separate `import_state` map (or just an `Environment`
   lookup before host state in `GetState`).

@@ -1,7 +1,7 @@
 //! The vocabulary the language actually recognises, and what to say when
 //! a document misses it.
 //!
-//! ogham drops what it does not recognise — **keys and values alike** —
+//! masque drops what it does not recognise — **keys and values alike** —
 //! and the widget then parses, lays out, draws, and is wrong. Nothing
 //! errors, nothing warns, nothing fails a test. Five instances were found
 //! by hand in a single afternoon of one game's UI: `on_click` for
@@ -13,9 +13,9 @@
 //! This module is the vocabulary written down once, beside the code that
 //! consumes it. Two things read it:
 //!
-//! - [`scan_source`] — a parse of a `.ogh` file, reporting file, line and
+//! - [`scan_source`] — a parse of a `.masque` file, reporting file, line and
 //!   column. Sees only what an author literally wrote, which is most of
-//!   it, and is what a repo turns into a test over its own `.ogh`.
+//!   it, and is what a repo turns into a test over its own `.masque`.
 //! - The widget builder, when [`RuntimeConfig::with_strict_vocabulary`]
 //!   is on. Sees the *materialized* map however it was assembled — a
 //!   `let`-bound style map, a match arm, a host-injected value — so it
@@ -928,7 +928,7 @@ impl<'a> Check<'a> {
 // Feeder 1: a parsed source file.
 // ---------------------------------------------------------------------
 
-/// Every violation in one `.ogh` source, with file, line and column.
+/// Every violation in one `.masque` source, with file, line and column.
 ///
 /// Sees what the author literally wrote: a widget's properties, and a
 /// style map given as a literal. A style map reached through a `let` is
@@ -1101,7 +1101,7 @@ impl Sink {
         if !self.seen.insert(violation.signature()) {
             return;
         }
-        eprintln!("[ogham] {violation}");
+        eprintln!("[masque] {violation}");
         self.violations.push(violation);
     }
 
@@ -1160,7 +1160,7 @@ mod tests {
         crate::parser::Parser::new(tokens)
             .parse()
             .unwrap_or_else(|e| panic!("fixture does not parse: {e:?}"));
-        scan_source("t.ogh", source)
+        scan_source("t.masque", source)
             .iter()
             .map(|v| format!("{}|{:?}|{}", v.path, v.kind, v.found))
             .collect()
@@ -1184,7 +1184,7 @@ mod tests {
         assert_eq!(found, vec!["style.wrap|Key|wrap"]);
         assert_eq!(
             scan_source(
-                "t.ogh",
+                "t.masque",
                 r#"let main = fn () { Flex { style: { wrap: "wrap" } } };"#
             )[0]
             .suggestion,

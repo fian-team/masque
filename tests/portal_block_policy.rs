@@ -11,11 +11,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::portal_layer::{BackdropPolicy, PortalLayer};
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::rect::Rect;
-use ogham::widget::{PortalEntry, Widget, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::portal_layer::{BackdropPolicy, PortalLayer};
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::rect::Rect;
+use masque::widget::{PortalEntry, Widget, WidgetRef, UI};
 
 fn make_flex() -> WidgetRef {
     Arc::new(Mutex::new(FlexWidget::new()))
@@ -88,7 +88,7 @@ fn portal_layer_priority_drives_paint_order() {
 
 #[test]
 fn entries_in_returns_only_specified_layer() {
-    use ogham::widget::PortalLayers;
+    use masque::widget::PortalLayers;
     let mut layers = PortalLayers::new();
     let modal = make_portal_in_layer(PortalLayer::OverlayModal);
     let tooltip = make_portal_in_layer(PortalLayer::Tooltip);
@@ -97,14 +97,14 @@ fn entries_in_returns_only_specified_layer() {
         viewport_rect: Rect::zero(),
         layer: PortalLayer::OverlayModal,
         focus_trap: true,
-        cursor: ogham::widget::portal_layer::CursorPreference::Free,
+        cursor: masque::widget::portal_layer::CursorPreference::Free,
     });
     layers.push(PortalEntry {
         widget: tooltip.clone(),
         viewport_rect: Rect::zero(),
         layer: PortalLayer::Tooltip,
         focus_trap: false,
-        cursor: ogham::widget::portal_layer::CursorPreference::Inherit,
+        cursor: masque::widget::portal_layer::CursorPreference::Inherit,
     });
 
     assert_eq!(layers.entries_in(PortalLayer::OverlayModal).len(), 1);

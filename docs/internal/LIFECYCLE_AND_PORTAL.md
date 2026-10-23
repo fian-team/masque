@@ -1,4 +1,4 @@
-# Ogham — Lifecycle Hooks + Portal Widget
+# Masque — Lifecycle Hooks + Portal Widget
 
 > **Status: Live contract.** Phase 2 (lifecycle hooks
 > `on_mount` / `on_unmount` / `effect` / `cleanup` and the
@@ -94,13 +94,13 @@ overrides its own with `backdrop: "none" | "dismiss" | "block"` and
 listens with `dismiss: fn () {…}`. See *The dismiss policy* below.
 The same day `anchor: "parent"` landed (`ANCHORED_PORTALS.md` §7).
 
-Two new `Ogham`-side coordination signals shipped with the
+Two new `Masque`-side coordination signals shipped with the
 layer work:
 
-- `Ogham::wants_cursor_free()` — `true` if any active Portal
+- `Masque::wants_cursor_free()` — `true` if any active Portal
   in the `overlay-modal` / `popover` layers, or the focused
   widget, declares `cursor: "free"`.
-- `Ogham::consumes_character_key()` — `true` if the focused
+- `Masque::consumes_character_key()` — `true` if the focused
   widget consumes `Key::Character(_)` events (`TextInput`).
   Used by hosts to gate game hotkeys while the user is typing.
 
@@ -125,10 +125,10 @@ now takes a `TickContext` (`src/widget/event.rs`) carrying
 its exit) and `cancelled_unmount_prefixes` (populated by
 `cancel_exit` cascades). `UI::tick_animations` drains the
 context into per-frame pending vecs, and
-`Runtime::process_drain_queues` (called by `Ogham::update`
+`Runtime::process_drain_queues` (called by `Masque::update`
 after reconcile) promotes drained paths from
 `candidate_unmounts` to fired hooks while removing cancelled
-prefixes from the candidate set. `Ogham::process_drain_queues`
+prefixes from the candidate set. `Masque::process_drain_queues`
 is also exposed for hosts that want to flush hooks
 explicitly.
 
@@ -142,7 +142,7 @@ resolution:
 - `Event.payload: Option<Value>` carries the drag payload
   through the gesture; `EventContext.drag_state` stashes the
   per-frame `DragState` for widgets to read during dispatch.
-- `Ogham::dispatch_drag_start` / `dispatch_drag_move` /
+- `Masque::dispatch_drag_start` / `dispatch_drag_move` /
   `dispatch_drag_end` / `hit_test_drop_target` — the primitives
   `UI::call_event`'s drag gesture is built on (`widget::drag_gesture`,
   2026-10-11); before then the host's input pump was meant to drive
@@ -150,7 +150,7 @@ resolution:
 - `drag_preview` widgets render via a synthesized
   `cursor-attached` portal entry — no manual Portal needed.
 
-`Ogham::dispatch_contextmenu(point) -> bool` fires the
+`Masque::dispatch_contextmenu(point) -> bool` fires the
 `contextmenu` event on the deepest widget at the cursor (no
 auto-bubble) so right-click and left-click route
 independently.
@@ -189,7 +189,7 @@ to ship them as one phase is mechanical:
 
 - **Lifecycle without Portal is still useful** — typed UIs
   can do cleanup; the Settings UI's "save on close" pattern
-  moves from `actions.rs` into the `.ogh` itself; per-UI
+  moves from `actions.rs` into the `.masque` itself; per-UI
   setup that today lives in `new()` constructors becomes
   declarative. So lifecycle ships first and stands on its
   own. Portal then composes onto it.
@@ -210,7 +210,7 @@ plumbing), then a UL validation pass (M5).
 Two pieces of state-of-the-world from the exploration pass
 inform every decision below.
 
-**Ogham today**
+**Masque today**
 
 - Single Skia canvas, strict tree, depth-first render, no
   z-index. Per-widget clip via `push_clip_rect` /
@@ -236,13 +236,13 @@ inform every decision below.
   there's nothing to clean up yet).
 - Escape menu's overlay is a full-screen `Flex` with
   `background_color: colors.backdrop` (alpha-160 black) at
-  `escape_menu.ogh:100`. Input gating is a `bool overlay_active`
+  `escape_menu.masque:100`. Input gating is a `bool overlay_active`
   in `update.rs:347` checked at `update.rs:1469` — not an
-  Ogham concept at all.
+  Masque concept at all.
 - Zero tooltips. Zero dropdowns (settings uses inline
   segmented buttons because there's no popover primitive).
-  Zero context menus (DM HUD comment at `dm_hud.ogh:16–20`
-  explicitly says "Ogham doesn't have a positioned-popover
+  Zero context menus (DM HUD comment at `dm_hud.masque:16–20`
+  explicitly says "Masque doesn't have a positioned-popover
   primitive").
 - Modal-on-modal (escape menu's disconnect confirm) is done
   by swapping subtrees on a `confirm_disconnect: bool` flag.
@@ -253,7 +253,7 @@ inform every decision below.
 small in raw lines (one `client_settings.save()`) but the
 ceiling is high — every UI's setup-in-Rust pattern (event
 handler chains, host_state seeding) is something authors
-would pull into `.ogh` if there were a place for it. The
+would pull into `.masque` if there were a place for it. The
 Portal payoff is concretely large: tooltips (currently not
 done), dropdowns (currently faked), context menus (currently
 not done), and *the escape menu* itself (which would shed
@@ -269,7 +269,7 @@ A one-page mental model.
 function definition that the runtime fires at structured
 moments in the function's path-lifetime:
 
-```ogh
+```masque
 let panel = fn () {
   on_mount   { /* fires when this path first becomes active   */ };
   on_unmount { /* fires when this path stops being active     */ };
@@ -296,7 +296,7 @@ its children's paint and hit-test out of the parent's clip
 and order, rendering them into the viewport at the parent's
 slot:
 
-```ogh
+```masque
 Portal {
   open: state.open,
   focus_trap: true,    // optional
@@ -326,7 +326,7 @@ existing surface is changed in a breaking way.
 
 | Surface | Existing | Phase 2 adds |
 |---|---|---|
-| `.ogh` grammar | `let`, `state`, `fn`, `if`, `match`, `for`, widget literals, etc. | `on_mount` block, `on_unmount` block, `effect (deps) { ... }`, `cleanup { ... }` |
+| `.masque` grammar | `let`, `state`, `fn`, `if`, `match`, `for`, widget literals, etc. | `on_mount` block, `on_unmount` block, `effect (deps) { ... }`, `cleanup { ... }` |
 | Widget set | `Flex`, `Text`, `Image`, `Grid`, `Presence`, `Context`, custom widgets | `Portal` (built-in) |
 | Runtime API | `Runtime::set_host_state`, `register_event_handler`, `inject_host_state`, etc. | `Runtime::has_input_blocking_portal() -> bool` |
 | LSP | Phase 1 typed-bindings diagnostics, hover, semantic tokens | Lifecycle keyword highlighting, hook + Portal hover, conditional-hook warnings, malformed-deps errors |
@@ -345,7 +345,7 @@ Three new statement forms inside `fn` bodies.
 
 ### `on_mount`
 
-```ogh
+```masque
 on_mount {
   // statements
 };
@@ -365,7 +365,7 @@ legal.
 
 ### `on_unmount`
 
-```ogh
+```masque
 on_unmount {
   // statements
 };
@@ -379,7 +379,7 @@ render's locals and parameters). See the
 
 ### `effect`
 
-```ogh
+```masque
 effect (dep_a, dep_b) {
   // statements
   cleanup {
@@ -408,7 +408,7 @@ see whatever the body computed.
 
 A function may freely mix all three:
 
-```ogh
+```masque
 let timer_panel = fn () {
   state elapsed = 0;
 
@@ -468,7 +468,7 @@ conditional hook causes all subsequent indices to shift,
 returning the wrong cell. The "no conditional hooks" rule is
 a structural constraint that keeps the array indexing valid.
 
-Ogham's `state` is keyed by `(path, varname)` — name-based,
+Masque's `state` is keyed by `(path, varname)` — name-based,
 not order-based. The lifecycle proposal extends this:
 hooks are keyed by `(path, hook_id)` where `hook_id` is a
 compile-time disambiguator analogous to a state cell's name.
@@ -477,7 +477,7 @@ frame; the map handles it cleanly.
 
 That said, conditional hooks expose a *semantic* foot-gun:
 
-```ogh
+```masque
 if is_admin {
   on_mount { fetch_admin_dashboard() };
 }
@@ -502,7 +502,7 @@ confusion at write time.
 
 A function may declare multiple hooks of the same kind:
 
-```ogh
+```masque
 let panel = fn () {
   on_mount { setup_a(); };
   on_mount { setup_b(); };
@@ -590,7 +590,7 @@ cancelled widget's prefix goes into
 two vecs onto `UI.pending_drained_prefixes` /
 `UI.pending_cancelled_prefixes`. The next render's
 `Runtime::process_drain_queues` (called from
-`Ogham::update` after reconcile) consumes them: cancelled
+`Masque::update` after reconcile) consumes them: cancelled
 prefixes drop matching entries from `candidate_unmounts`
 first, then drained prefixes promote any remaining matches
 to fired hooks. `Runtime::flush_remaining_unmount_candidates`
@@ -701,7 +701,7 @@ be a cleanup function (React-style) — was rejected for
 two reasons:
 
 - Block-return-values aren't otherwise semantically
-  meaningful in Ogham. Adding a special case for effect
+  meaningful in Masque. Adding a special case for effect
   bodies would be inconsistent.
 - Visual scanning is easier with an explicit `cleanup { }`
   delimiter than with `return fn () { }` at the end of a
@@ -735,7 +735,7 @@ frame.
 If a hook body needs async work, it dispatches an event to
 Rust:
 
-```ogh
+```masque
 on_mount {
   event("load_inventory_for", character_id);
 };
@@ -743,10 +743,10 @@ on_mount {
 
 Rust does the I/O and pushes the result back via
 `set_host_state`. This is exactly today's pattern, just
-initiated from `.ogh` instead of from `actions.rs`.
+initiated from `.masque` instead of from `actions.rs`.
 
 Cost: no first-class "load this image once on mount"
-inside `.ogh`. Mitigation: this is what typed events are
+inside `.masque`. Mitigation: this is what typed events are
 for — `event("load_image", url)` is now type-checked by
 Phase 1, so the round-trip to Rust is no longer the
 ergonomic regression it would have been pre-Phase-1.
@@ -801,7 +801,7 @@ What this means for each hook kind:
 
 ### Widgets evaluated in a body are discarded
 
-```ogh
+```masque
 on_mount {
   Tooltip { ... }    // evaluated, then dropped
 };
@@ -814,7 +814,7 @@ There's no special-case rejection; it's quietly useless,
 and the
 [LSP](#lsp-integration) does not emit a diagnostic for it.
 
-Authors who write this are confused about Ogham's model
+Authors who write this are confused about Masque's model
 (widgets must be in the function's *return* tree to render);
 the design doc and tutorials should make this clear, but
 the runtime does not enforce it.
@@ -838,7 +838,7 @@ Allowed via normal `SetState` opcodes, which flag
   natural shape for save-on-close logic in `on_unmount`
   is **dispatch an event**, not write state:
 
-  ```ogh
+  ```masque
   // CORRECT: Rust handler does the I/O.
   on_unmount {
     event("save_settings", form);
@@ -872,7 +872,7 @@ mostly be calling host events, not tree-building functions.
 
 ## Portal: API surface
 
-```ogh
+```masque
 Portal {
   open: state.open,
   focus_trap: true,
@@ -903,7 +903,7 @@ declared slot.
 | `open` | `bool` | `false` | When `true`, children are mounted into the portal layer. When `false`, children are reconciled out (entry/exit animations apply normally). |
 | `focus_trap` | `bool` | `false` | When `true`, focus cannot leave this portal's subtree while it is open. Push/pop on the focus stack is bound to this portal's mount/unmount. |
 | `layer` | `string` | `"overlay-modal"` | Which named layer to paint into. One of `"main"`, `"overlay-modal"`, `"popover"`, `"tooltip"`, `"toast"`, `"cursor-attached"` (Phase 2.5). The layer determines paint priority, default backdrop policy, and default cursor preference. |
-| `cursor` | `string` | layer default | `"free"` requests a visible system cursor; `"inherit"` defers to the host. Aggregated by `Ogham::wants_cursor_free()`. |
+| `cursor` | `string` | layer default | `"free"` requests a visible system cursor; `"inherit"` defers to the host. Aggregated by `Masque::wants_cursor_free()`. |
 | `children` | `array<widget>` | `[]` | The widgets to render in the portal layer. Layout starts at the parent's slot rect; transforms apply normally. |
 | `anchor` | `string` | none | Names a host-set anchor point, or `"parent"` for the laid-out box of the widget the Portal is declared inside (`ANCHORED_PORTALS.md` §7). When present, the entry's viewport origin comes from the anchor instead of from Pass-A translate accumulation. See *The anchor contract* below. |
 | `backdrop` | `string` | layer default | This entry's outside-press policy: `"none"`, `"dismiss"`, `"block"`. See *The dismiss policy*. |
@@ -915,7 +915,7 @@ declared slot.
 
 Anchoring is the one exception to *"positioning is composition"*
 below, and it earns the exception on a specific technical ground:
-**the policies need the subtree's measured size, and `.ogh` cannot
+**the policies need the subtree's measured size, and `.masque` cannot
 see it.** A card that flips above the pointer when it would overrun
 the bottom of the window is not expressible by any arrangement of
 widgets, at any amount of author effort, because the author has no
@@ -976,7 +976,7 @@ framework's standing habit of silent degradation:
   `position: "relative"`, which parses and silently does nothing.
 
 Ids beginning with `__` are reserved for the runtime and rejected in
-`.ogh`. The drag preview lives at `__drag_preview` and since M4 is
+`.masque`. The drag preview lives at `__drag_preview` and since M4 is
 an ordinary anchored `cursor-attached` entry seated through exactly
 this path — the special case the mechanism was generalised from no
 longer exists as a separate code path.
@@ -1081,7 +1081,7 @@ input-blocking needs.
 | `anchor: WidgetRef` | Rejected as a *reference*; shipped as `anchor: "parent"` on 2026-09-07 — the one widget a Portal can name without a query is the one it is declared inside, and the Pass-A walk is already standing on that widget's box. `ANCHORED_PORTALS.md` §7. |
 | `z_index: int` | Phase 2 said multiple portals stack last-opened-on-top; Phase 2.5 made the priority explicit via the named-layer set. Six layers cover every use case the UL audit found, with a fixed enum keeping the priority math obvious. |
 | `layer: string` (Phase 2.5) | Added. The audit showed tooltip / popover / overlay-modal / toast / cursor-attached have genuinely different priorities and backdrop policies; encoding them in a fixed-set enum is simpler than a free-form `z_index`. |
-| `cursor: string` (Phase 2.5) | Added. Modal-style overlays need to release a host's pointer lock; per-Portal declaration aggregates through `Ogham::wants_cursor_free()`. |
+| `cursor: string` (Phase 2.5) | Added. Modal-style overlays need to release a host's pointer lock; per-Portal declaration aggregates through `Masque::wants_cursor_free()`. |
 
 ---
 
@@ -1228,7 +1228,7 @@ The focus push/pop is naturally driven by the portal's
 own `on_mount` / `on_unmount` — same machinery as any
 other lifecycle hook. The Portal widget internally
 registers these hooks as part of its widget construction;
-they are not visible to the consumer's `.ogh` code.
+they are not visible to the consumer's `.masque` code.
 
 ---
 
@@ -1240,7 +1240,7 @@ drain machinery in `flex_widget.rs` runs on the children's
 declared `exit:` styles, just like any other reconciled
 removal.
 
-```ogh
+```masque
 Portal {
   open: state.open,
   children: [
@@ -1296,7 +1296,7 @@ transform. Uses the dedicated `tooltip` layer (priority 300,
 `None` backdrop, cursor `Inherit`) so it paints over modals
 and popovers without trapping input.
 
-```ogh
+```masque
 Portal {
   open: state.hover,
   layer: "tooltip",
@@ -1325,7 +1325,7 @@ backdrop and stops click fall-through; the consumer's own
 backdrop child layers styled chrome (color/opacity/animation)
 on top and handles dismiss.
 
-```ogh
+```masque
 Portal {
   open: state.modal_open,
   focus_trap: true,
@@ -1362,7 +1362,7 @@ backdrop, cursor `Free`) so the dropdown paints above modal
 backdrops without itself being modal. Backdrop child
 dismisses on outside-click.
 
-```ogh
+```masque
 let dropdown = fn (label, items, open) {
   Flex {
     children: [
@@ -1399,11 +1399,11 @@ let dropdown = fn (label, items, open) {
 ### Context menu
 
 Trigger via the dedicated `contextmenu` event (Phase 3,
-fired by `Ogham::dispatch_contextmenu(point)` from the
+fired by `Masque::dispatch_contextmenu(point)` from the
 host's right-click handler), position by the click's
 coordinates. Uses the `popover` layer.
 
-```ogh
+```masque
 Flex {
   contextmenu: fn () {
     state.menu = { open: true, x: cursor.x, y: cursor.y };
@@ -1433,28 +1433,28 @@ Portal {
 > overload `mouse_down` with right-click detection. Phase 3
 > M2 split `contextmenu` into a dedicated event so left- and
 > right-click route independently with no host-side
-> reinterpretation needed. `Ogham::dispatch_contextmenu` is
+> reinterpretation needed. `Masque::dispatch_contextmenu` is
 > the host-facing entry point; the deepest widget at the
 > cursor receives the event with no automatic bubble.
 
 ### What ships in `examples/`
 
 M5 ships `Modal()`, `Tooltip()`, and `Dropdown()` `fn`
-wrappers in `examples/portals/components.ogh` so consumers
+wrappers in `examples/portals/components.masque` so consumers
 can adopt them without re-deriving the boilerplate. They
 are **library code, not language**. (`Dropdown()` was
 added based on the UL audit — Settings is an immediate
-consumer; the implementation is ~30 LOC of `.ogh` over
+consumer; the implementation is ~30 LOC of `.masque` over
 the bare Portal primitive.)
 
 ---
 
 ## Runtime API additions
 
-Phase 2 adds one Rust-facing API on `Ogham`:
+Phase 2 adds one Rust-facing API on `Masque`:
 
 ```rust
-impl Ogham {
+impl Masque {
     /// Returns true if any active portal in the tree has
     /// `focus_trap: true`. Used by hosts to derive their
     /// own input-gating booleans.
@@ -1462,11 +1462,11 @@ impl Ogham {
 }
 ```
 
-Phase 2.5 and Phase 3 added six more, all on the same `Ogham`
+Phase 2.5 and Phase 3 added six more, all on the same `Masque`
 facade. The full surface as it ships today:
 
 ```rust
-impl Ogham {
+impl Masque {
     // Phase 2 — focus trap signal.
     pub fn has_input_blocking_portal(&self) -> bool;
 
@@ -1475,7 +1475,7 @@ impl Ogham {
     pub fn consumes_character_key(&self) -> bool;
 
     // Phase 3 — drag dispatch (host owns the dead-zone
-    // state machine; Ogham owns hit-test + event emission).
+    // state machine; Masque owns hit-test + event emission).
     pub fn dispatch_drag_start(
         &mut self,
         origin: WidgetRef,
@@ -1502,7 +1502,7 @@ impl Ogham {
     pub fn dispatch_contextmenu(&mut self, point: Point) -> bool;
 
     // Phase 3 — explicit drain queue flush.
-    // (Ogham::update calls this automatically after reconcile;
+    // (Masque::update calls this automatically after reconcile;
     // hosts may call it directly after tick_animations to
     // drain hooks before the next render boundary.)
     pub fn process_drain_queues(&mut self);
@@ -1543,7 +1543,7 @@ public API names.
 ## Compiled artifact additions
 
 This section names exactly what changes in the compiled
-output of an `.ogh` module under Phase 2.
+output of an `.masque` module under Phase 2.
 
 ### New opcodes
 
@@ -1884,7 +1884,7 @@ fn hit_test(&self, point: Point) -> Option<WidgetRef> {
 }
 ```
 
-`Ogham::dispatch_drag_end` and `hit_test_drop_target` use
+`Masque::dispatch_drag_end` and `hit_test_drop_target` use
 the same layer-walk to find the deepest accepting drop
 target.
 
@@ -2011,12 +2011,12 @@ UL gains, by layer:
 
 | UL today | After Phase 2 |
 |---|---|
-| `CloseSettings` action calls `client_settings.save()` | `on_unmount` in `settings.ogh` fires `save_settings` event; Rust handler calls `.save()` |
+| `CloseSettings` action calls `client_settings.save()` | `on_unmount` in `settings.masque` fires `save_settings` event; Rust handler calls `.save()` |
 | Escape menu = full-screen Flex w/ hardcoded backdrop | Escape menu = `Portal { focus_trap: true }` whose first child is the backdrop Flex |
 | Confirm-disconnect = inline subtree swap on `bool` | Confirm-disconnect = nested `Portal` whose children center-align a styled dialog Flex |
 | DM HUD context menu = "future Skia" | `Portal { open: state.context_menu_open }` whose child Flex uses `transform: { translate_x: click.x, translate_y: click.y }` |
 | Inventory item details inline in grid | `Portal` over the hovered cell; child uses `transform: { translate_y: cell.h }` to appear below |
-| `overlay_active: bool` tracked manually | `overlay_active = ogham.has_input_blocking_portal()` |
+| `overlay_active: bool` tracked manually | `overlay_active = masque.has_input_blocking_portal()` |
 | Settings dropdowns faked w/ segmented buttons | True dropdowns: `Portal` whose child Flex translates below the trigger |
 | 17 UIs each register handlers in `new()` | Hand-pickable: setup that's purely UI moves into `on_mount`; setup that needs Rust resources stays |
 
@@ -2040,9 +2040,9 @@ nested portal for confirm-disconnect.
 
 ### Today
 
-`escape_menu.ogh:100`:
+`escape_menu.masque:100`:
 
-```ogh
+```masque
 let escape_menu = fn () {
   if !show_overlay { return Flex {}; }
 
@@ -2089,9 +2089,9 @@ if !self.overlay_active {
 
 ### After Phase 2
 
-`escape_menu.ogh`:
+`escape_menu.masque`:
 
-```ogh
+```masque
 let escape_menu = fn () {
   state confirm_disconnect = false;
 
@@ -2153,7 +2153,7 @@ one derivation:
 
 ```rust
 fn update(&mut self, dt: f32) {
-    let overlay_active = self.ogham.has_input_blocking_portal();
+    let overlay_active = self.masque.has_input_blocking_portal();
     if !overlay_active {
         self.handle_world_input(input);
     }
@@ -2165,11 +2165,11 @@ The Escape-to-dismiss handler, which today lives in
 `update.rs:1480`, stays in Rust — it dispatches the
 `hide_escape_menu` event when the user presses Escape and
 the menu is open. Phase 2 does not require moving keyboard
-handling into `.ogh`.
+handling into `.masque`.
 
 ### What changed mechanically
 
-- `escape_menu.ogh` shrinks slightly (the conditional
+- `escape_menu.masque` shrinks slightly (the conditional
   early-return at top is replaced by `open:`).
 - The hardcoded `position: absolute` plus `w/h: 100%`
   pattern is gone — Portal handles the viewport mounting.
@@ -2207,7 +2207,7 @@ these.
 | 3 | Cleanup lives only inside `effect`, not `on_mount` | Two ways to express teardown is confusing; can add to `on_mount` later if needed |
 | 4 | Sync only in v1; async dispatches via `event(...)` | Async opens scope we're not ready for; matches today's pattern |
 | 5 | `on_unmount` fires at drain-time, after exit animation completes | Avoids "is it gone yet" ambiguity; cancellation cancels pending unmount |
-| 6 | Callback bodies allow widget expressions; values discarded | No special-case rejection; consistent with how Ogham treats other unused values |
+| 6 | Callback bodies allow widget expressions; values discarded | No special-case rejection; consistent with how Masque treats other unused values |
 | 7 | Effect deps explicit; React-17-style | Auto-tracking is Shift C / signal territory; explicit deps are well-understood |
 | 8 | Effect deps must be primitive or record values; compile-time error otherwise | Function refs / opaque values can't be compared; reject at module-load |
 | 9 | Portal API: `open` + `focus_trap` + `children` only | Each primitive does one thing; backdrop / dismiss / anchor compose from existing widgets |
@@ -2239,18 +2239,18 @@ the rest are still deferred. Status updated 2026-05-09.
   `drag_payload` / `drag_dead_zone` / `accepts_drop` /
   `drag_preview` on `Flex`, the `drag_start` / `drag_move` /
   `drag_end` listeners, and the host-facing
-  `Ogham::dispatch_drag_*` surface. See
+  `Masque::dispatch_drag_*` surface. See
   [`PHASE_3_IMPLEMENTATION.md`](PHASE_3_IMPLEMENTATION.md).
 - ✅ **Right-click / contextmenu primitive.** Phase 3 added
   the dedicated `contextmenu` event and
-  `Ogham::dispatch_contextmenu`.
+  `Masque::dispatch_contextmenu`.
 - ✅ **Cursor + key coordination signals.** Phase 2.5 added
-  `Ogham::wants_cursor_free()` and
-  `Ogham::consumes_character_key()`.
+  `Masque::wants_cursor_free()` and
+  `Masque::consumes_character_key()`.
 - ⏳ **Scenes / routing (Shift B)** — lifecycle hooks are
   the prerequisite, but the routing layer itself
   (lazy-mounted scenes, scene-scoped state, scene-level
-  transitions) is Phase 4+. The 17 Ogham instances in UL
+  transitions) is Phase 4+. The 17 Masque instances in UL
   stay 17 instances for now.
 - ⏳ **Signals / fine-grained reactivity (Shift C)** —
   effects today use coarse path-based identity, not
@@ -2348,7 +2348,7 @@ status noted inline.
    and the portal layer entries before the new runtime
    swaps in. Tested in `hot_reload_lifecycle.rs`.
 7. **Drain-time unmount and module reload.** When the
-   `.ogh` file changes mid-frame and the module reloads,
+   `.masque` file changes mid-frame and the module reloads,
    pending unmounts are tied to the OLD module's
    compiled artifact. Likely they should fire-and-flush
    before the reload swaps in, but the timing is
@@ -2400,7 +2400,7 @@ status noted inline.
 | Runtime API | `Runtime::has_input_blocking_portal() -> bool`, `lifecycle_error_count() -> usize`, `lifecycle_error_log() -> &[String]` |
 | LSP | 5 new diagnostics; 3 new hover variants + `cleanup` keyword hover; 4 new keyword tokens |
 | Tests | ~50 new tests across the three layers (lifecycle plumbing, hook semantics, portal paint/hit, focus stack, UL escape menu integration) |
-| `examples/` | `Modal()`, `Tooltip()`, and `Dropdown()` library `fn`s in `examples/portals/components.ogh` |
+| `examples/` | `Modal()`, `Tooltip()`, and `Dropdown()` library `fn`s in `examples/portals/components.masque` |
 | Docs | `LIFECYCLE_AND_PORTAL.md` (this file, promoted to "Live contract" at M5); `LIFECYCLE_AND_PORTAL_UL_AUDIT.md`; `LIFECYCLE_AND_PORTAL_IMPLEMENTATION.md`; cross-doc index updates |
 | UL migration | Settings save-on-close (M5); escape menu → Portal (M5); one tooltip as worked example (M5) |
 
@@ -2414,11 +2414,11 @@ The detailed per-merge breakdown lives in
   appropriately; the strict-mode resolver type-checks
   effect deps.
 - `Portal` is a built-in widget; tooltips and modals are
-  expressible in `.ogh`.
-- `Ogham::has_input_blocking_portal()` is documented
+  expressible in `.masque`.
+- `Masque::has_input_blocking_portal()` is documented
   and ready for UL to derive its overlay-active boolean
   during UL Pass 2.
-- `examples/portals/components.ogh` ships with `Modal()`,
+- `examples/portals/components.masque` ships with `Modal()`,
   `Tooltip()`, and `Dropdown()` reference wrappers.
 - All Phase 1 functionality continues to work unchanged.
 - Hot reload flushes lifecycle state deterministically
@@ -2433,7 +2433,7 @@ The detailed per-merge breakdown lives in
   Portal properties: `layer` and `cursor`.
 - Viewport-absolute `PortalEntry` coordinates (closes the
   Phase 2 nested-portal positioning gap).
-- `Ogham::wants_cursor_free()`, `Ogham::consumes_character_key()`
+- `Masque::wants_cursor_free()`, `Masque::consumes_character_key()`
   cursor / key coordination signals.
 - `UI::clear_lifecycle_state()` on hot reload (resolves
   open questions #6 and #7).
@@ -2446,10 +2446,10 @@ The detailed per-merge breakdown lives in
 - Drag events: `drag_payload`, `drag_dead_zone`,
   `accepts_drop`, `drag_preview` properties; `drag_start` /
   `drag_move` / `drag_end` listeners; `Event.payload`
-  field; `Ogham::dispatch_drag_*` and `hit_test_drop_target`
+  field; `Masque::dispatch_drag_*` and `hit_test_drop_target`
   on the host facade.
-- `contextmenu` event + `Ogham::dispatch_contextmenu`.
-- `Ogham::process_drain_queues` host-facing flush.
+- `contextmenu` event + `Masque::dispatch_contextmenu`.
+- `Masque::process_drain_queues` host-facing flush.
 
 ---
 
@@ -2483,7 +2483,7 @@ requires breaking changes to the surfaces shipped here.
 
 ## Migration cookbook
 
-Common patterns translating UL Rust scaffolding to `.ogh`
+Common patterns translating UL Rust scaffolding to `.masque`
 hooks. Pick the row that matches your situation.
 
 ### "Set up host state when this UI opens"
@@ -2491,13 +2491,13 @@ hooks. Pick the row that matches your situation.
 **Today (Rust, in some `new_<UI>()` function):**
 
 ```rust
-ogham.set_host_state("inventory_items", load_items());
-ogham.set_host_state("inventory_filter", "all");
+masque.set_host_state("inventory_items", load_items());
+masque.set_host_state("inventory_filter", "all");
 ```
 
-**After Phase 2 (`.ogh`):**
+**After Phase 2 (`.masque`):**
 
-```ogh
+```masque
 on_mount {
   event("load_inventory_items");
   // host_state.inventory_filter has its own default.
@@ -2515,7 +2515,7 @@ self.client_settings.save();
 
 **After Phase 2:**
 
-```ogh
+```masque
 on_unmount {
   event("save_settings", form);
 };
@@ -2530,7 +2530,7 @@ nothing forces cleanup.
 
 **After Phase 2:**
 
-```ogh
+```masque
 effect () {
   let id = event("start_timer", 1000);
   cleanup { event("cancel_timer", id); };
@@ -2546,7 +2546,7 @@ The empty dep list runs the body once on mount; the
 
 **After Phase 2:**
 
-```ogh
+```masque
 effect (host_state.player_health) {
   if host_state.player_health < 20 {
     event("play_low_health_sfx");
@@ -2560,7 +2560,7 @@ effect (host_state.player_health) {
 
 **After Phase 2:**
 
-```ogh
+```masque
 let with_tooltip = fn (text, child) {
   state hover = false;
   Flex {
@@ -2586,7 +2586,7 @@ let with_tooltip = fn (text, child) {
 
 **Today (UL escape menu disconnect-confirm):**
 
-```ogh
+```masque
 if confirm_disconnect {
   // inline subtree; bounded by parent panel
   disconnect_dialog()
@@ -2595,7 +2595,7 @@ if confirm_disconnect {
 
 **After Phase 2:**
 
-```ogh
+```masque
 if confirm_disconnect {
   Portal {
     open: true,
@@ -2620,7 +2620,7 @@ self.overlay_active = matches!(self.current_ui,
 **After Phase 2:**
 
 ```rust
-let overlay_active = self.ogham.has_input_blocking_portal();
+let overlay_active = self.masque.has_input_blocking_portal();
 ```
 
 ### "Hook into a `Presence` generation transition"
@@ -2629,7 +2629,7 @@ Use the existing `Presence` container — Phase 2 doesn't
 add anything new for this. Pair `Presence` with hooks if
 you want side effects per generation:
 
-```ogh
+```masque
 Presence {
   children: [
     settings_panel(state.tab),  // hooks fire per-generation

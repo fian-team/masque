@@ -1,4 +1,4 @@
-# Ogham — The Application Build
+# Masque — The Application Build
 
 > **Status: implementation plan for `APPLICATION.md`.** Written
 > 2026-08-20 from the four-repo consumer audit. Audience: an
@@ -17,31 +17,31 @@ Last updated 2026-08-21, during Phase 7.
 
 | package | state | commits |
 |---|---|---|
-| WP-0.1 | **landed** | ogham `dc30634`, lorekeeper `b9d0dc5` |
-| WP-1.1 | **landed** (acceptance amended, below) | ogham `6c8c847` + consumer lockfiles `d0d689a` / `1508f05` / `0eb1a95` / `7f29d20` |
-| WP-1.2 | **landed** | ogham `fa7092e` |
+| WP-0.1 | **landed** | masque `dc30634`, lorekeeper `b9d0dc5` |
+| WP-1.1 | **landed** (acceptance amended, below) | masque `6c8c847` + consumer lockfiles `d0d689a` / `1508f05` / `0eb1a95` / `7f29d20` |
+| WP-1.2 | **landed** | masque `fa7092e` |
 | **Phase 1 gate** | **passed** 2026-08-20 | — |
-| WP-2.1 | **landed** | ogham `8f76f9c` + `e0dca27` (parser cut), lorekeeper `cb33238` + `f5dbb6b` |
-| WP-2.2 | **landed** | ogham `a21c05e` |
-| WP-2.3 | **landed** (+ the at-mount fix) | ogham `c04b25a`, `dd375c8`; lorekeeper `d20c774`, `0f51ba6` |
-| WP-2.4 | **landed** | ogham `d292cea`, `ba65ae2` |
+| WP-2.1 | **landed** | masque `8f76f9c` + `e0dca27` (parser cut), lorekeeper `cb33238` + `f5dbb6b` |
+| WP-2.2 | **landed** | masque `a21c05e` |
+| WP-2.3 | **landed** (+ the at-mount fix) | masque `c04b25a`, `dd375c8`; lorekeeper `d20c774`, `0f51ba6` |
+| WP-2.4 | **landed** | masque `d292cea`, `ba65ae2` |
 | **Phase 2 gate** | **passed** 2026-08-21 | — |
-| WP-3.1 / 3.2 / 3.3 | **landed** | ogham `6c46c7e`, `e8344ec`, `1792a89`, `8f57cba` |
-| WP-4.1 – 4.5 | **landed** | ogham `03d895f`, `ac04252`; lorekeeper `34b13d5`, `027a320`, `5d8ee11`, `2489d8f`, `953adaa`; lockfiles regency `19cfb4b`, celia `dedec38` |
+| WP-3.1 / 3.2 / 3.3 | **landed** | masque `6c46c7e`, `e8344ec`, `1792a89`, `8f57cba` |
+| WP-4.1 – 4.5 | **landed** | masque `03d895f`, `ac04252`; lorekeeper `34b13d5`, `027a320`, `5d8ee11`, `2489d8f`, `953adaa`; lockfiles regency `19cfb4b`, celia `dedec38` |
 | **P3+P4 gate** | **passed** 2026-08-21 | — |
-| the contract crate | **landed** (maintainer-ruled, below) | ogham `e4397cc`, `a65b886`; lorekeeper `8a0bc4c` |
-| WP-5.1 / 5.2 / 5.3 | **landed** (three amendments, below) | lorekeeper `94ae5a3`, `d073feb`, `d7e61be`, `5bb8fa6`; ogham `80f0ae3`, `5279a1f`; lockfiles regency `90191b1`, celia `aee27b4` |
+| the contract crate | **landed** (maintainer-ruled, below) | masque `e4397cc`, `a65b886`; lorekeeper `8a0bc4c` |
+| WP-5.1 / 5.2 / 5.3 | **landed** (three amendments, below) | lorekeeper `94ae5a3`, `d073feb`, `d7e61be`, `5bb8fa6`; masque `80f0ae3`, `5279a1f`; lockfiles regency `90191b1`, celia `aee27b4` |
 | re-seed on reload | not started | — |
-| re-seed on reload | **landed** | ogham `be0779c`; lorekeeper `338d2ca` |
+| re-seed on reload | **landed** | masque `be0779c`; lorekeeper `338d2ca` |
 | **P6C celia** | **landed, complete** | celia `7b93b5e`, `85bc49f`, `fa4abdc`, `41cd2f9` |
 | **P6U untold_lore** | **landed, and a live regression is open against it** (below) | ul `1393641` … `2beffd0` (21 commits) |
 | **P6R regency** | **landed** | regency `7a95348` … `c16237e` (13 commits) |
-| **driver gaps package** | **landed, all five** | lorekeeper `8919ed5`, `b883b67`+`14094f9`, `e280e0c`, `2c13ad7`+`2e7640f`, `9b6053e`+`5f8111c`; ogham `9b6053e`, `2c13ad7`, `b883b67`, `1809915` |
+| **driver gaps package** | **landed, all five** | lorekeeper `8919ed5`, `b883b67`+`14094f9`, `e280e0c`, `2c13ad7`+`2e7640f`, `9b6053e`+`5f8111c`; masque `9b6053e`, `2c13ad7`, `b883b67`, `1809915` |
 | **P6S shell deletion** | **landed** | lorekeeper `6f00d42` |
-| **P6 gate** | **one criterion not met** (the `ogham → structure` edge, below) | — |
-| P7 the docs settle | **in flight, stopped short of the header** | lorekeeper `ea39cf1`, `8b296e7`, `bde48ae`, `bd1b2d3`, `0dc5341`, `5d3370a`; ogham `00253bd`; regency `1ca13a8`, `43bbf44`; celia `ddf6771`; ul `3ac12c4`, `91f6709`, `00c82bb` |
+| **P6 gate** | **one criterion not met** (the `masque → carte` edge, below) | — |
+| P7 the docs settle | **in flight, stopped short of the header** | lorekeeper `ea39cf1`, `8b296e7`, `bde48ae`, `bd1b2d3`, `0dc5341`, `5d3370a`; masque `00253bd`; regency `1ca13a8`, `43bbf44`; celia `ddf6771`; ul `3ac12c4`, `91f6709`, `00c82bb` |
 
-**Phase 1 gate, as run:** ogham, untold_lore, regency and
+**Phase 1 gate, as run:** masque, untold_lore, regency and
 stargazer-celia-game all green; lorekeeper green except the baseline
 red below. Consumers compile **unchanged** against the re-export.
 
@@ -55,7 +55,7 @@ these, not against zero — the standing rule in §0):
 - `lorekeeper cook` `generated::tests::a_generated_source_reads_with_no_source_tree`
   — fails in full-workspace runs only, passes under
   `cargo test -p cook --lib`.
-- ogham clippy/fmt debt. Deltas at the Phase 1 gate: clippy 110→108,
+- masque clippy/fmt debt. Deltas at the Phase 1 gate: clippy 110→108,
   fmt diffs 26→24 (both improved; nothing added).
 
 **Pre-build repairs** (done before WP-0.1, so the baseline was a
@@ -72,43 +72,43 @@ to `main` per §0's single-branch rule. **Nothing has been pushed.**
 ### The WP-1.1 acceptance amendment (decided 2026-08-20)
 
 WP-1.1's two acceptance criteria are mechanically contradictory:
-Rust has no way for `ogham` to `pub use` a `structure` item without
-declaring the dependency, so "`cargo tree -p ogham` shows no
-structure" and "consumers compile via the re-export" cannot both
+Rust has no way for `masque` to `pub use` a `carte` item without
+declaring the dependency, so "`cargo tree -p masque` shows no
+carte" and "consumers compile via the re-export" cannot both
 hold. This document's own text prescribes the re-export ("Until P4
 lands, `front::RouterHost` keeps working against a thin
 re-export"), so the edge is prescribed with it. Resolution:
 
-- `cargo tree -p structure` shows no ogham — **holds absolutely**,
-  and it is the load-bearing half of §2 (the structure framework
+- `cargo tree -p carte` shows no masque — **holds absolutely**,
+  and it is the load-bearing half of §2 (Carte
   depends on nothing of the surface framework). The crate has an
   empty `[dependencies]`.
-- The `ogham → structure` edge is **declared scaffolding**, marked
+- The `masque → carte` edge is **declared scaffolding**, marked
   at the dependency line and in `route/mod.rs`'s module doc, and
-  the "`cargo tree -p ogham` clean" check **moves to the P4 phase
-  gate** — where WP-4.1 deletes ogham's route remainder anyway.
+  the "`cargo tree -p masque` clean" check **moves to the P4 phase
+  gate** — where WP-4.1 deletes masque's route remainder anyway.
 
 A second finding sharpened the same seam: the `Route` trait cannot
-leave ogham today at all, because its signatures concretely name
+leave masque today at all, because its signatures concretely name
 surface types (`read_state` returns `Value`s, `RouteEvent::Input`
-carries a widget event, `own_ui` names `Ogham` itself) and four
+carries a widget event, `own_ui` names `Masque` itself) and four
 repos' `impl Route<Cx, A>` blocks repeat them. That is coherent
 with the plan's end state — `read_state` dies into the store (P2),
 `own_ui`/`draw` retire in WP-4.1/4.2 — so the trait, `RouteEvent`
-and `chrome.rs` stay ogham-side as scheduled scaffolding.
+and `chrome.rs` stay masque-side as scheduled scaffolding.
 
 Consequently WP-1.1 moved the router's **walk** as well as the
 table and outbox (rather than the minimal table+outbox move), so
-that WP-2.2's guard evaluation lands inside a structure-owned walk
-instead of being wired back through ogham's router. The walk is
+that WP-2.2's guard evaluation lands inside a Carte-owned walk
+instead of being wired back through masque's router. The walk is
 generic over a `Node<Cx, A>` bridge trait carrying the nine
-`Route` methods whose signatures name no surface type; ogham's
+`Route` methods whose signatures name no surface type; masque's
 `Router` is a newtype over it, keeping only `event` and `draw`
 dispatch. The bridge is scaffolding with the same P4 death date.
 
 ### What P2 inherits
 
-`structure/` (workspace member, `publish = false`, zero
+`carte/` (workspace member, `publish = false`, zero
 dependencies, 23 tests) holds: `table.rs` (`RouteTable`, `Tier`,
 `TableError`), `router.rs` (the walk + `Node`), `outbox.rs`,
 `guard.rs`, and the vocabulary in `lib.rs` (`RouteId`, `Area`,
@@ -141,11 +141,11 @@ WP-1.2's table API, for the packages that build on it:
 
 ### Phase 2, as it landed
 
-**Phase 2 gate, as run (2026-08-21):** ogham 810 passed; untold_lore,
+**Phase 2 gate, as run (2026-08-21):** masque 810 passed; untold_lore,
 regency and stargazer-celia-game all green; lorekeeper green except
-the one baseline red above. `cargo tree -p structure` still one line —
+the one baseline red above. `cargo tree -p carte` still one line —
 the crate reached the end of the store with an empty `[dependencies]`.
-`structure` went 23 tests → **101**.
+`carte` went 23 tests → **101**.
 
 **Three properties are now held by construction rather than by
 convention**, which is worth recording because each replaces a
@@ -208,10 +208,10 @@ can answer it.
 
 ### Phases 3 and 4, as they landed
 
-**P3+P4 gate, as run (2026-08-21):** ogham 852 passed; lorekeeper
+**P3+P4 gate, as run (2026-08-21):** masque 852 passed; lorekeeper
 green except the one baseline red; regency 54 and celia 49 green
 **with no source edits at all** — only lockfile bumps;
-`ogham_preview` runs on the four-method `driver::Host`.
+`masque_preview` runs on the four-method `driver::Host`.
 untold_lore was not gated on: it is mid-surgery in the
 maintainer's tree and does not compile
 (`ul-core/src/server.rs`), which is unrelated to this build.
@@ -242,7 +242,7 @@ one frame in would snap the picture.
 
 **§4.6's binding property is proved, not asserted.** WP-3.2's
 acceptance vendors regency's real in-manor HUD family verbatim from
-`client.ogh` and compiles it twice — once against the real 21-field
+`client.masque` and compiles it twice — once against the real 21-field
 `record Hud` plus `host_state {}`, once against `select manor {
 hud };` — asserting the two files are byte-identical after the
 declaration. If the selected arm needed one edit the two arms could
@@ -250,17 +250,17 @@ not share the file.
 
 ### The dependency-edge ruling (decided 2026-08-21)
 
-Phase 1 deferred "`cargo tree -p ogham` shows no structure" to the
+Phase 1 deferred "`cargo tree -p masque` shows no carte" to the
 P4 gate. **It cannot be met there**, and P4 correctly stopped rather
 than forcing it. Two things held the edge:
 
-1. `ogham/src/route/` — scaffolding as scheduled, but three games
-   hold ~90 `use ogham::route::{…}` sites and their own `impl
-   Route<Cx, A>` blocks, and ogham cannot re-export from a crate
+1. `masque/src/route/` — scaffolding as scheduled, but three games
+   hold ~90 `use masque::route::{…}` sites and their own `impl
+   Route<Cx, A>` blocks, and masque cannot re-export from a crate
    that depends on it. **This half of the criterion moves to the
    P6 gate**, where the `impl Route` blocks are rewritten anyway.
-2. `ogham/src/contract.rs` — **not scaffolding.** WP-2.4 put
-   document loading in `ogham` deliberately, so the harness would
+2. `masque/src/contract.rs` — **not scaffolding.** WP-2.4 put
+   document loading in `masque` deliberately, so the harness would
    need no platform tier.
 
 **Ruling on (2):** moving `contract.rs` into `driver` is rejected —
@@ -270,12 +270,12 @@ it for. Amending §2 is rejected — §2 is the spine. But §2 says
 *only the binding depends on both*, not *there is exactly one
 binding crate*, and `contract::Documents` needs the parser and the
 store, so **it is a binding by §2's own definition**. It became its
-own crate (`ogham/contract/`, `cargo tree --depth 1` = `ogham` +
-`structure`, nothing else). `src/route/` is now the sole rider on
+own crate (`masque/contract/`, `cargo tree --depth 1` = `masque` +
+`carte`, nothing else). `src/route/` is now the sole rider on
 the edge, and the manifest says so.
 
 `Chrome` had to split to make this work, which the ruling did not
-anticipate: `ogham` keeps the mechanism (`Chrome::frame_gated`,
+anticipate: `masque` keeps the mechanism (`Chrome::frame_gated`,
 `Chrome::refuse`) and `contract` supplies the question (`trait
 Checked`, with `check`/`frame_checked`). Call sites are
 byte-identical plus one `use`.
@@ -291,9 +291,9 @@ nothing said so. That is **a false expectation** — the one thing
 what that test held.
 
 Closed in the harness, the one place holding both the AST and the
-reflection: `ogham` collects every member-access path off a
+reflection: `masque` collects every member-access path off a
 top-level bound name onto `ModuleSchema.reads` (grading nothing —
-grading needs the reflection), and `contract`/`structure` resolve
+grading needs the reflection), and `contract`/`carte` resolve
 each path with `Kind::field_at`. Because both the harness and the
 reload gate read a `ModuleSchema`, **both moments get the check
 with no API change**.
@@ -309,7 +309,7 @@ bound is its own. A false refusal would be worse than the gap.
 
 ### Phase 5, as it landed — and three amendments to this document
 
-Green: lorekeeper (only the baseline red), ogham 853, regency and
+Green: lorekeeper (only the baseline red), masque 853, regency and
 celia **with no source edits at all**, lockfiles only. `front`
 went 17 → 24 tests.
 
@@ -354,7 +354,7 @@ starts, so a real read-back would retry and log every frame. The
 exception is for.
 
 **Ruled, not an amendment:** the stock pause *surface* was cut from
-`front.ogh`. Pause is a view under the game's roots, so its screen
+`front.masque`. Pause is a view under the game's roots, so its screen
 resolves against the game's document, and selecting `pause` from
 the front-of-house mount is a hard `Unmounted` refusal. Schema,
 vocabulary and producer stay — which is exactly what §8.2 says
@@ -363,7 +363,7 @@ vocabularies and the producers, never the surfaces*. All three
 games write their own pause view today.
 
 **Forced by §4.6, and worth knowing before the migrations:** a
-selected field binds a *top-level* name, and ogham refuses two
+selected field binds a *top-level* name, and masque refuses two
 bindings of one name in one document — so three `rows` fields in
 one front-of-house document is a parse error. Hence
 `TitleState.menu`, `SettingsState.options`, `SaveLoadState.slots`.
@@ -372,9 +372,9 @@ in-session document.
 
 **What Phase 4 did not reach, and Phase 5 had to add.** There was
 **no store→document path at all**: the binding projected
-`Route::read_state` and nothing else, and nothing in `structure`
+`Route::read_state` and nothing else, and nothing in `carte`
 can hand a dynamic consumer a value (turning a scope struct into
-an `ogham::Value` names both frameworks). `Binding::projecting`
+an `masque::Value` names both frameworks). `Binding::projecting`
 and `driver::facts` are that path. Seeding also turned out to be
 **mandatory, not optional** — a selected name is an ordinary
 host-state key and a module's top level runs at *construction*, so
@@ -412,7 +412,7 @@ truncated function bodies — a missing `};` in each of three
 screens — as named errors rather than blank screens at runtime.
 
 **P6U found a live bug of the exact class this build exists to
-prevent.** `world.ogh` declares `map_sea_color(string, int,
+prevent.** `world.masque` declares `map_sea_color(string, int,
 string)` — the third argument is the *text* a colour input
 committed — and `intent_from_raise` read it with `num(2)?`, which
 returns `None` for a `Str`. **Every RGB edit made from the
@@ -487,7 +487,7 @@ declined. **Gap 2 is what unblocks it.**
 
 The library cannot be an instance root today because `mounts()`
 makes the binding build the `Chrome` from `Assets`, while the
-library's tree is `ul_editor::EditorClient`'s own `Ogham` — it owns
+library's tree is `ul_editor::EditorClient`'s own `Masque` — it owns
 its runtime, registers ~40 handlers at construction, and
 hot-reloads itself. Handing that over *is* the editor contract
 migration, which WP-P6U-ED explicitly excludes.
@@ -533,13 +533,13 @@ eighty-one lines of it.
 >
 > **One cause, and it explains all three.** `readiness_note` and
 > `can_author` sat on the `worldbuilder` node's scope, but the
-> *dashboard* reads both — `choose.ogh` prints the note and gates the
+> *dashboard* reads both — `choose.masque` prints the note and gates the
 > whole "Edit world" row on `can_author`. `worldbuilder` is a child of
 > `roster`, on the path only once Edit world has been pressed, so at
 > the dashboard (`[session, roster]`) those two names were provided by
 > nothing and the outlet raised `UndefinedVariable` **before building
 > a single widget**. The pause screen reads neither, so it built fine;
-> and because ogham keeps the last tree it built when the next frame
+> and because masque keeps the last tree it built when the next frame
 > raises, the overlay stayed painted over the black after Escape had
 > already left the path — the route was gone, the picture was not.
 > Clicking Resume then raised at a `PauseRoute` no longer standing.
@@ -576,7 +576,7 @@ eighty-one lines of it.
 > walks the dashboard, pause up and down by key *and* by row (asserting
 > the overlay is gone from the picture and not merely off the walk),
 > the hub, creation, the wardrobe, the world, and the rooms; the other
-> two do the same for `client.ogh` and `library.ogh`. Verified failing
+> two do the same for `client.masque` and `library.masque`. Verified failing
 > before the fix and passing after.
 
 **P6S is done in one commit** (`6f00d42`): `shell/` deleted, 5,168
@@ -623,19 +623,19 @@ land whole.
 
 ### The P6 gate: one criterion did not come true
 
-`cargo tree -p ogham` showing no `structure` was deferred from the
+`cargo tree -p masque` showing no `carte` was deferred from the
 Phase 1 gate to the P4 gate, then ruled from the P4 gate to the P6
 gate, on the reasoning that P6 rewrites the three games' `impl Route`
 blocks anyway. **P6 rewrote them and the edge is still there**, and the
 reasoning is what was wrong rather than the execution: rewriting an
 `impl Route` block does not remove it. `front`'s six routes and all
-three games' nodes still implement `ogham::route::Route`, so
-`src/route/` still has consumers and ogham still declares
-`structure = { path = "structure" }`.
+three games' nodes still implement `masque::route::Route`, so
+`src/route/` still has consumers and masque still declares
+`carte = { path = "carte" }`.
 
-Today: `cargo tree -p structure` is **one line**, absolutely, which is
-§2's load-bearing half. `cargo tree -p contract --depth 1` is `ogham` +
-`structure` and nothing else. `cargo tree -p ogham | grep -c structure`
+Today: `cargo tree -p carte` is **one line**, absolutely, which is
+§2's load-bearing half. `cargo tree -p contract --depth 1` is `masque` +
+`carte` and nothing else. `cargo tree -p masque | grep -c structure`
 is **3** — one real edge, plus two `synstructure` lines that are a
 substring match inside the `skia-safe` subtree.
 
@@ -649,7 +649,7 @@ nobody had checked whether the reason would still apply.
 
 Landed: `lorekeeper/docs/{MP_SEAM,CANVAS_COMPOSITION,REFACTOR_PLAN,
 ROUTING}.md`, `regency/docs/history/player_client_outline.md`, the
-`front` module docs, and the `AGENTS.md`/`CLAUDE.md` of ogham,
+`front` module docs, and the `AGENTS.md`/`CLAUDE.md` of masque,
 lorekeeper, regency and celia. untold_lore's `CROSSING.md` (now `ul-client/src/crossing.rs`) and
 `ROOMS.md` took their amendments and three citations came off its lint
 allowlist before the regression above was reported; the rest of that
@@ -670,31 +670,31 @@ from a conversation.
 **Landed and verified:** P0–P5, the contract crate, the re-seed fix,
 all three game migrations, the five-gap driver package, P6S, and P7's
 documentation pass **except untold_lore's held corpus and the header**.
-Five repos green — ogham 871, lorekeeper 1304 (the one baseline red),
-untold_lore 1191, regency 383, celia 134. `cargo tree -p structure`
-prints one line; `cargo tree -p contract --depth 1` is `ogham` +
-`structure`. Roughly eighty commits are local and unpushed.
+Five repos green — masque 871, lorekeeper 1304 (the one baseline red),
+untold_lore 1191, regency 383, celia 134. `cargo tree -p carte`
+prints one line; `cargo tree -p contract --depth 1` is `masque` +
+`carte`. Roughly eighty commits are local and unpushed.
 
 **Three things remain, in order.**
 
-**1. The `ogham → structure` edge — closed 2026-10-18.** `src/route/`
+**1. The `masque → carte` edge — closed 2026-10-18.** `src/route/`
 moved whole into `lorekeeper/driver` as `driver::route` (consumers changed
-`ogham::route` to `driver::route`, and `From<&Value> for RaiseArg` became
+`masque::route` to `driver::route`, and `From<&Value> for RaiseArg` became
 `driver::route::raise_arg`, an orphan otherwise). `contract/` moved to
-`lorekeeper/contract`, and `structure/` left this repo for its own at
-`../structure`, history kept. `cargo tree -p ogham` shows no `structure`.
+`lorekeeper/contract`, and `carte/` left this repo for its own at
+`../carte`, history kept. `cargo tree -p masque` shows no `carte`.
 What follows is the record from before the move.
 
-**The criterion that did not come true.** `cargo tree -p ogham` showing no `structure` was deferred from
+**The criterion that did not come true.** `cargo tree -p masque` showing no `carte` was deferred from
 the P1 gate to P4, then ruled from P4 to P6 on the reasoning that P6
 rewrites the games' `impl Route` blocks. **P6 rewrote them and the
 edge is still there; the reasoning was wrong, not the execution.**
 `front`'s six routes and all three games' nodes still *implement*
-`ogham::route::Route`, so `src/route/` still has consumers. Closing it
+`masque::route::Route`, so `src/route/` still has consumers. Closing it
 means the `Route` trait moving into `driver`: consumer-visible across
 four repos, real work rather than cleanup. **Schedule it; do not defer
 it a fourth time.** This is the second half of §2 — the half saying the
-surface framework depends on nothing of the structure framework — and
+surface framework depends on nothing of Carte — and
 the first half has held absolutely since Phase 1.
 
 **2. The driver-seed gap, with its caveat.** `Binding::seed` resolves
@@ -742,12 +742,12 @@ regression's fix is likely to land, so it is sequenced after.
 implements some axiom of it; a subagent that has not read the
 axioms will reinvent the holes they patch.
 
-**Repos** (siblings of `~/Projects/ogham`):
+**Repos** (siblings of `~/Projects/masque`):
 
 | repo | role |
 |---|---|
-| `ogham` | surface framework + (today) the route tier |
-| `lorekeeper` | engine: `app`, `front`, `shell`, `shell-core`, `services`, `editable*`, `ogham_preview` |
+| `masque` | surface framework + (today) the route tier |
+| `lorekeeper` | engine: `app`, `front`, `shell`, `shell-core`, `services`, `editable*`, `masque_preview` |
 | `untold_lore` | consumer: `ul-client`, `ul-editor` |
 | `regency` | consumer: `regency-client`, `regency-core`, `regency-sheet` |
 | `stargazer-celia-game` | consumer: `celia-client`, `celia-core` |
@@ -758,7 +758,7 @@ axioms will reinvent the holes they patch.
   work package must leave its repo green (`cargo test`) when it
   lands. Order the packages so this is possible; where a package
   cannot land green alone, its section says what it pairs with.
-- Ogham CI is red at baseline (clippy/fmt debt). Measure clippy and
+- Masque CI is red at baseline (clippy/fmt debt). Measure clippy and
   fmt deltas against a stashed baseline, not against zero.
 - Commit messages are single declarative sentences in the repo's
   existing voice (read `git log --oneline -20` before writing one).
@@ -777,7 +777,7 @@ gate before starting the next. When a WP says **DECISION**, stop
 and put the question to the maintainer — do not resolve it by
 fiat.
 
-**Naming placeholder.** Crate names below (`structure`, `driver`)
+**Naming placeholder.** Crate names below (`carte`, `driver`)
 are working names. APPLICATION.md §8.4 defers real naming until
 the seam is settled; do not bikeshed names mid-build, and do not
 publish any crate.
@@ -785,8 +785,8 @@ publish any crate.
 ## 1. Phase graph
 
 ```
-P0 (ogham bug fixes)                          — lands alone, now
- └─ P1 (structure crate extraction)
+P0 (masque bug fixes)                          — lands alone, now
+ └─ P1 (carte crate extraction)
      └─ P2 (the store)
          ├─ P3 (surface framework: modules, selections)   ∥ with P4
          └─ P4 (driver: binding + crossing)               ∥ with P3
@@ -804,7 +804,7 @@ migrations are parallel with each other. P6S (deleting
 
 ---
 
-## Phase 0 — pre-plan bug fixes (repo: ogham + lorekeeper)
+## Phase 0 — pre-plan bug fixes (repo: masque + lorekeeper)
 
 These are bugs under the *current* design and land independently
 of everything else. Do them first so hot-reload behavior is sound
@@ -812,7 +812,7 @@ before the store inherits it.
 
 ### WP-0.1 Hot reload revalidates and re-projects — **landed**
 
-> ogham `dc30634`, lorekeeper `b9d0dc5`. `Ogham::frame` now returns a
+> masque `dc30634`, lorekeeper `b9d0dc5`. `Masque::frame` now returns a
 > `FrameReport { reloaded, rerendered }`; on a reload `Chrome` clears
 > the stale error, calls `forget_projection()` (its first caller
 > ever) and re-runs `validate` against the ids the mount remembered
@@ -824,15 +824,15 @@ before the store inherits it.
 > whose signature did not change.
 >
 > Finding: the "unchanged keys hold config defaults" half of the bug
-> was already mostly mitigated by `Ogham::carry_host_state_into`,
+> was already mostly mitigated by `Masque::carry_host_state_into`,
 > which copies live host state into the replacement runtime.
 > `forget_projection()` on reload is belt-and-braces; the genuinely
 > absent fix was the re-validation.
 
 Today validation runs once, at `RouterHost::new`
 (`lorekeeper/front/src/host.rs:91-119` →
-`ogham/src/route/chrome.rs:138-161`), and hot reload happens
-silently inside `Ogham::frame` (`ogham/src/lib.rs:547-556`).
+`masque/src/route/chrome.rs:138-161`), and hot reload happens
+silently inside `Masque::frame` (`masque/src/lib.rs:547-556`).
 Nothing re-runs validation after a reload, and
 `Chrome::forget_projection` (`chrome.rs:236-238`) — written
 because "a hot reload replaces the runtime, so every key has to be
@@ -841,33 +841,33 @@ a drift introduced by a hot edit is silent until restart, and
 `Chrome::last` (`chrome.rs:29`) survives the runtime swap, so
 unchanged keys leave the fresh document holding config defaults.
 
-Change: surface "a reload happened" from `Ogham::frame`'s return;
+Change: surface "a reload happened" from `Masque::frame`'s return;
 on reload, `Chrome` calls `forget_projection()` and re-runs
 `validate`/`validate_raises`, reporting by the existing path.
 
-Acceptance: a test in ogham proving that after a simulated reload
+Acceptance: a test in masque proving that after a simulated reload
 (a) every key re-projects, (b) an id/raise drift introduced by the
 edit produces a named report without restart. All existing tests
-green in ogham and lorekeeper.
+green in masque and lorekeeper.
 
 ---
 
-## Phase 1 — the structure crate (repo: ogham)
+## Phase 1 — the carte crate (repo: masque)
 
 ### WP-1.1 Extract routing from the surface framework — **landed, acceptance amended (§0.5)**
 
 Reverse the placement half of the routing plan's phase 8c:
-`ogham/src/route/{table,router,outbox}` moves to a new workspace
-crate (working name `structure`). `chrome.rs` splits three ways —
+`masque/src/route/{table,router,outbox}` moves to a new workspace
+crate (working name `carte`). `chrome.rs` splits three ways —
 its per-key diff/inject core (`chrome.rs:179-211`) is the seed of
 the store (stays behind, absorbed in P2); its validation
 (`chrome.rs:90-161`) becomes the selection checker (P2); its
-`Ogham`-touching remainder moves up into the driver (P4). Until P4
+`Masque`-touching remainder moves up into the driver (P4). Until P4
 lands, `front::RouterHost` keeps working against a thin re-export.
 
 The engineering guarantee is §2's dependency edge. Acceptance:
-`cargo tree -p structure` shows no dependency on ogham;
-`cargo tree -p ogham` shows no dependency on structure; all
+`cargo tree -p carte` shows no dependency on masque;
+`cargo tree -p masque` shows no dependency on carte; all
 consumers compile via the re-export; tests green.
 
 ### WP-1.2 The table grows tiers, areas, guards, documents — **landed** (`fa7092e`; API in §0.5)
@@ -899,20 +899,20 @@ Acceptance: table-construction tests for each; the tier/area/
 occlusion of every node queryable without instantiating any route
 object.
 
-**Phase gate:** ogham + lorekeeper + all three games compile and
+**Phase gate:** masque + lorekeeper + all three games compile and
 test green against the re-export. — **passed 2026-08-20**, against
 the baseline reds recorded in §0.5.
 
 ---
 
-## Phase 2 — the store (repo: ogham, crate `structure`)
+## Phase 2 — the store (repo: masque, crate `carte`)
 
 The order inside this phase matters; each WP builds on the last.
 
 ### WP-2.1 Schemas and derived reflection (§4.1, §4.3) — **landed**
 
 Extend the `#[derive(Editable)]` lineage
-(`lorekeeper/editable-derive`, `editable-ogham`) so a schema
+(`lorekeeper/editable-derive`, `editable-masque`) so a schema
 struct derives a **reflection**: field names, types, optionality,
 declared defaults, declared grain (§5.5). Typed consumers read the
 struct; the reflection is what document selections validate
@@ -963,14 +963,14 @@ tearing down the running instance — preserve the
 `celia-client/src/client.rs:139-173`). Coverage drift **reports**.
 Preserve the CI moment: ship a generic "load every shipped
 document against its schemas" test harness that each consumer
-instantiates — this is what lets the bespoke `.ogh`-string-parsing
+instantiates — this is what lets the bespoke `.masque`-string-parsing
 guard tests delete in P6 without regressing the guarantee from
 `cargo test` to first boot. Also validate the unread direction as
 a report ("provided but read by nothing" — celia's dead root
 `status` and arena `status` are the live examples).
 
-> **Landed** as `ogham::contract::Documents` (`src/contract.rs`) over
-> `structure`'s grading (`structure/src/validate.rs`) — the §2 edge
+> **Landed** as `masque::contract::Documents` (`src/contract.rs`) over
+> `carte`'s grading (`carte/src/validate.rs`) — the §2 edge
 > again: grading has no I/O and stays in the dependency-free crate,
 > while translation and file reading live where the parser is. A
 > consumer instantiates it with `Mount { document, scopes
@@ -979,7 +979,7 @@ a report ("provided but read by nothing" — celia's dead root
 > walk, the ids under the enclosing instance). It is a `cargo test`
 > guarantee because `Documents::new` takes a `Store` with only its
 > registrations run — no route walked, no scope mounted, no frame,
-> no window, no Skia surface — and parses the shipped `.ogh` files
+> no window, no Skia surface — and parses the shipped `.masque` files
 > without compiling bytecode.
 >
 > **Refusals:** `Unprovided`, `Shape`, `Unaccepted`, `Raise`,
@@ -1011,7 +1011,7 @@ a report ("provided but read by nothing" — celia's dead root
 
 ---
 
-## Phase 3 — the surface framework (repo: ogham) ∥ P4
+## Phase 3 — the surface framework (repo: masque) ∥ P4
 
 ### WP-3.1 Module system with transitive hot reload
 
@@ -1022,8 +1022,8 @@ across documents via import (`docs/internal/LANGUAGE.md:141,
 307-313` states top-level-only import), and the hot-reload watcher
 following the import graph — an edit to a shared module reloads
 every mounting document. Regency's target split has a
-`stationery.ogh` imported by two instance documents; celia's has
-`paperwork.ogh` imported by three. A palette token edited in the
+`stationery.masque` imported by two instance documents; celia's has
+`paperwork.masque` imported by three. A palette token edited in the
 shared module must propagate on save.
 
 ### WP-3.2 Selection replaces `host_state` (§4.1, §4.6, §4.7)
@@ -1039,7 +1039,7 @@ provider scope's reflection. Two properties are load-bearing:
   compiles against a selection with no body edits.
 - **Fragments (§4.7):** one selection stated once, validated
   against each providing scope at each mount (untold_lore's
-  `sea_panel.ogh` under world root and editor).
+  `sea_panel.masque` under world root and editor).
 
 `screen` blocks stay per-document (a selection is the consumer's
 own contract declaration) even when the view function they call is
@@ -1068,12 +1068,12 @@ before P6U needs it.
 (working name `driver`; decided 2026-08-20), not folded into
 `app`, so the minimal host trait (WP-4.5) is implementable
 without the platform tier. The binding mounts one
-`Ogham` instance per active instance root from the table's
+`Masque` instance per active instance root from the table's
 document names (§6.1) and holds the one store. Keep verbatim:
 the tick order's second resolve (`host.rs:198-223`) until §5.4's
 barrier subsumes it; presses-swallowed-during-crossing
 (`host.rs:329-333`); `app/src/routing.rs` stays platform-side
-(ogham event semantics, the routing plan's phase 3 finding).
+(masque event semantics, the routing plan's phase 3 finding).
 Delete: `own_ui`, `mounted_ui`, `ui_crossing`, `ui_departing`,
 `brings_own_document`, `HostCx::project_root`/`project_views`
 plumbing (§6.1). `FrontCx`'s getters dissolve in P5.
@@ -1099,7 +1099,7 @@ game-side `drive_crossing` diff idiom); **mount-before-sweep** is
 an invariant; per-edge override lands on `Departure` (promoted to
 the instance tier); host-painted instances ghost as captured
 composite frames (§5.6 — `Departure::Bleed`'s existing semantics,
-`ogham/src/route/mod.rs:268-276`). Freeze becomes unsubscription
+`masque/src/route/mod.rs:268-276`). Freeze becomes unsubscription
 (§5.6): the binding unsubscribes the departing instance at
 crossing start, drops it on settle; the parked-tree bookkeeping
 (`ul-client/src/client.rs:2152-2187` `departing_library`) becomes
@@ -1109,12 +1109,12 @@ binding-owned.
 
 Anchors (`set_anchor` sites: `regency-client/src/client.rs:1319`,
 `regency-client/src/manor.rs:6139`,
-`lorekeeper/ogham_preview/src/main.rs:140`) and painter payloads
+`lorekeeper/masque_preview/src/main.rs:140`) and painter payloads
 (regency's `DialHandle = Arc<Mutex<Option<DialPaint>>>`,
 `regency-client/src/client.rs:202`) become binding-owned,
 per-instance, name-validated channels. Image/font caches move to
 the binding, shared across instances — today `set_image_root` is
-per-`Ogham` (`celia-client/src/client.rs:156-159`) and celia's
+per-`Masque` (`celia-client/src/client.rs:156-159`) and celia's
 roster art is 5.4 MB; a crossing must not re-decode on the
 crossing frame (§6.5).
 
@@ -1122,13 +1122,13 @@ crossing frame (§6.5).
 
 `HostCx` minus the game-flavored methods: render-context-ready,
 window controls, tick-producers, gesture stream. `app` is one
-implementation; port `ogham_preview` (already hand-driving a
+implementation; port `masque_preview` (already hand-driving a
 single instance) as the second — it is the proof the trait
 carries no game opinions. Nothing naming a session, save, or
 capability may appear on it.
 
 **Phase gate (P3+P4):** lorekeeper green; the three games still
-green on compatibility shims; `ogham_preview` runs on the trait.
+green on compatibility shims; `masque_preview` runs on the trait.
 
 ---
 
@@ -1140,11 +1140,11 @@ green on compatibility shims; `ogham_preview` runs on the trait.
 `LoadingState` (all in `front/src/*.rs`) become published schema
 types with derived reflections and published intent vocabularies
 (`menu`, `setting`, `back`, `join`, `slot`, `address`). Delete the
-`record` blocks from `front/data/ui/front.ogh:17-33` — and note
+`record` blocks from `front/data/ui/front.masque:17-33` — and note
 for P6: the same shapes are hand-redeclared in all three games'
-documents (`ul-client/data/ui/client.ogh:47-54`,
-`celia-client/data/ui/client.ogh:62-105`,
-`regency/data/ui/client.ogh:217`); those copies die in the game
+documents (`ul-client/data/ui/client.masque:47-54`,
+`celia-client/data/ui/client.masque:62-105`,
+`regency/data/ui/client.masque:217`); those copies die in the game
 migrations. Games `pub use` the types for their own producers.
 Grants (§4.5): the game chooses which consumer classes see which
 projection; extension is a game-side wrapper schema embedding the
@@ -1153,9 +1153,9 @@ engine's.
 ### WP-5.2 The front-of-house instance root (§8.2)
 
 Title/connect/settings/saveload become views of an engine-provided
-`foh` instance root mounting `front.ogh`; loading a small second
+`foh` instance root mounting `front.masque`; loading a small second
 root. A game may replace the root's document **wholesale**
-(celia's `menu.ogh` in Appendix A.1 does exactly this) — the
+(celia's `menu.masque` in Appendix A.1 does exactly this) — the
 engine contribution that survives replacement is the schemas,
 intent vocabularies, and producers, never the surfaces. Pause/settings/saveload additionally register as **view
 nodes spliced under game-named roots** — `front::register`
@@ -1191,9 +1191,9 @@ off against.
 ### P6C — stargazer-celia-game
 
 1. **Table + split** (Appendix A.1): roots `menu`, `lobby`,
-   `arena` under structural `session`; documents `paperwork.ogh` /
-   `menu.ogh` / `lobby.ogh` / `arena.ogh` per the split map in the
-   audit (client.ogh line ranges: shared kit 24-52, 140-310,
+   `arena` under structural `session`; documents `paperwork.masque` /
+   `menu.masque` / `lobby.masque` / `arena.masque` per the split map in the
+   audit (client.masque line ranges: shared kit 24-52, 140-310,
    370-457, 781-789; menu screens 314-368, 459-489, 798-826;
    lobby 68-100, 497-713; arena 732-776).
 2. **Hazard, checked in review:** `lobby_ui.focused`
@@ -1201,7 +1201,7 @@ off against.
    to the lobby silently loses pane focus across every match.
 3. Root `host_state` deletes (headings become per-document
    literals; dead `status` keys at `cx.rs:403-409` and
-   `client.ogh:834` delete). `project_root` (`cx.rs:384-410`)
+   `client.masque:834` delete). `project_root` (`cx.rs:384-410`)
    deletes. The `pick` handler's direct write (`routes.rs:79`)
    becomes intent-only — §5.4's same-tick commit keeps it
    zero-lag; verify by eye and by the WP-2.2 test.
@@ -1223,8 +1223,8 @@ off against.
    `routes.rs:49-55` deletes); pause a child view of the four
    playable table views; `settings` one multi-parent node;
    **saveload not registered** (caps-gated off,
-   `client.rs:155, 1577-1579`). Documents `stationery.ogh` /
-   `foyer.ogh` / `table.ogh` (split map: shared 303-330, 347-583,
+   `client.rs:155, 1577-1579`). Documents `stationery.masque` /
+   `foyer.masque` / `table.masque` (split map: shared 303-330, 347-583,
    2614-2760; foyer 2308-2613, 2761-2774, 3221-3226; table the
    rest; records 15-286 delete).
 2. Forced single-writer merge: `waiting` projected from two sites
@@ -1329,7 +1329,7 @@ minimal repoint moves `ul-editor` off `shell`: delete `shell/`
 
 ```
 /                        structural; child by SessionLevel
-├─ menu                  ROOT → menu.ogh
+├─ menu                  ROOT → menu.masque
 │  ├─ title              view (default)
 │  │  ├─ connect         view
 │  │  ├─ settings        view  ← shared node
@@ -1337,9 +1337,9 @@ minimal repoint moves `ul-editor` off `shell`: delete `shell/`
 │  └─ loading            view (while connect_status)
 └─ session               structural; owns session scope (focused
    │                     character, stage, seats)
-   ├─ lobby              ROOT → lobby.ogh
+   ├─ lobby              ROOT → lobby.masque
    │  └─ pause           view → settings (same shared node)
-   └─ arena              ROOT → arena.ogh  (draw slot: fight painter)
+   └─ arena              ROOT → arena.masque  (draw slot: fight painter)
       └─ pause           view → settings
 ```
 
@@ -1347,10 +1347,10 @@ minimal repoint moves `ul-editor` off `shell`: delete `shell/`
 
 ```
 /                        structural; session? → table : foyer
-├─ foyer                 ROOT → foyer.ogh
+├─ foyer                 ROOT → foyer.masque
 │  ├─ title              view (default) → connect, settings
 │  └─ loading            view
-└─ table                 ROOT → table.ogh   (session lifetime)
+└─ table                 ROOT → table.masque   (session lifetime)
    ├─ holding            view (default until first snapshot)
    ├─ seating            view
    ├─ wheel              view (promoted)
@@ -1415,14 +1415,14 @@ the ledger says why not.
 
 **untold_lore:** `chrome::project` + helpers (~590 ln);
 `every_declared_key_is_projected`;
-`every_declared_raise_reaches_a_handler` (+ their .ogh string
+`every_declared_raise_reaches_a_handler` (+ their .masque string
 parsers); `UlGame::project_root` / `project_views` / `mounted_ui`;
 `RAISES` / `ENGINE_RAISES` + mpsc loop; `crossing::side_of`;
 `drive_music`/`drive_backdrop`/`drive_crossing` memo-diffs;
 `intent_from_raise`; `WORLD_SCREENS`; `brings_own_document`;
 `Held`; both `host_state {}` blocks as provider declarations.
 
-**regency:** record block client.ogh:15-286; `host_state {}`;
+**regency:** record block client.masque:15-286; `host_state {}`;
 schema-conformance test (lobby.rs:1052-1101); raise/screen guard
 tests (client.rs:2026-2059); the 16 `!=`-guard sites;
 `panels_dirty` / `take_panels_dirty`; `wants_exit_to_menu`;
@@ -1444,4 +1444,4 @@ hand-mirrored `MenuItem`/`SettingRow`/`SlotRow` records.
 mechanism; `Route::{read_state, draw, occludes}`;
 `own_ui`/`mounted_ui`/`ui_crossing`/`ui_departing`;
 `FrontCx` getters; `menu_music_playing`; the `RaiseArg` mpsc;
-record blocks in `front.ogh`.
+record blocks in `front.masque`.

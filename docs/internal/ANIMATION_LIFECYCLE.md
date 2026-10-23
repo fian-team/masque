@@ -1,4 +1,4 @@
-# Ogham — Widget Lifecycle (Initial / Exit / Presence)
+# Masque — Widget Lifecycle (Initial / Exit / Presence)
 
 > **Status: Live contract.**
 >
@@ -69,7 +69,7 @@ sequencing — see "Presence" below.
 
 Authoring shape:
 
-```ogh
+```masque
 Flex {
   initial: { opacity: 0, transform: { translate_y: -12 } },
   style: {
@@ -137,7 +137,7 @@ The builder (`create_flex_widget`):
 
 Authoring:
 
-```ogh
+```masque
 Flex {
   key: "save-button",
   exit: { opacity: 0, transform: { translate_y: -8 } },
@@ -292,7 +292,7 @@ Once a widget is exiting:
 
 Authoring:
 
-```ogh
+```masque
 Presence {
   key: current_route_id,
   mode: "wait",   // optional; default "pop"

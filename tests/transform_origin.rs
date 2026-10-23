@@ -8,11 +8,11 @@
 
 use std::collections::HashMap;
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::vocabulary::scan_source;
-use ogham::widget::WidgetRef;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::vocabulary::scan_source;
+use masque::widget::WidgetRef;
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -29,14 +29,14 @@ fn find_keyed(node: &WidgetRef, key: &str) -> Option<WidgetRef> {
     children.iter().find_map(|c| find_keyed(c, key))
 }
 
-fn mounted(src: &str, state: &[(&str, Value)]) -> Ogham {
+fn mounted(src: &str, state: &[(&str, Value)]) -> Masque {
     let config = RuntimeConfig::new().with_host_state(
         state
             .iter()
             .map(|(k, v)| (k.to_string(), v.clone()))
             .collect::<HashMap<_, _>>(),
     );
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
@@ -44,7 +44,7 @@ fn mounted(src: &str, state: &[(&str, Value)]) -> Ogham {
 }
 
 /// The pivot `render_effects` hands the surface, and the fill's rect.
-fn pivot(o: &Ogham, key: &str) -> ((f32, f32), (f32, f32, f32, f32)) {
+fn pivot(o: &Masque, key: &str) -> ((f32, f32), (f32, f32, f32, f32)) {
     let node = find_keyed(&o.get_ui().root, key).expect("the keyed widget");
     let g = node.lock().unwrap();
     let fx = g.render_effects().expect("a transformed widget has effects");
@@ -117,13 +117,13 @@ fn a_scaled_fill_draining_is_paint() {
 
 #[test]
 fn the_vocabulary_knows_the_key_and_its_words() {
-    let clean = scan_source("t.ogh", &bar(r#"transform_origin: "top_left","#));
+    let clean = scan_source("t.masque", &bar(r#"transform_origin: "top_left","#));
     assert!(clean.is_empty(), "{clean:?}");
-    let map = scan_source("t.ogh", &bar(r#"transform_origin: { x: 0, y: 0.5 },"#));
+    let map = scan_source("t.masque", &bar(r#"transform_origin: { x: 0, y: 0.5 },"#));
     assert!(map.is_empty(), "{map:?}");
 
-    let wrong_word = scan_source("t.ogh", &bar(r#"transform_origin: "start","#));
+    let wrong_word = scan_source("t.masque", &bar(r#"transform_origin: "start","#));
     assert_eq!(wrong_word.len(), 1, "{wrong_word:?}");
-    let wrong_key = scan_source("t.ogh", &bar(r#"transform_origin: { left: 0 },"#));
+    let wrong_key = scan_source("t.masque", &bar(r#"transform_origin: { left: 0 },"#));
     assert_eq!(wrong_key.len(), 1, "{wrong_key:?}");
 }

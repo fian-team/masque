@@ -23,7 +23,7 @@ impl Axis {
 /// property, deliberately decoupled from event listeners. A widget can
 /// consume clicks without inviting them (a scroll surface, a drag
 /// capture, an opaque panel that only swallows presses) and, conversely,
-/// declare `Pointer` on something whose handler lives elsewhere. Ogham
+/// declare `Pointer` on something whose handler lives elsewhere. Masque
 /// only *classifies*; the host renders the actual glyph from
 /// [`UI::hovered_cursor`](crate::widget::UI::hovered_cursor). The enum starts small
 /// (interactive / not) and can grow — `Grab`, `Text` — without breaking
@@ -80,7 +80,7 @@ pub struct FlexStyle {
     /// of event listeners: authored where the affordance lives, resolved
     /// leaf-wins by [`UI::hovered_cursor`](crate::widget::UI::hovered_cursor) so a
     /// child inherits its interactive parent's cursor for free. Does not
-    /// affect layout or paint — Ogham never draws the cursor.
+    /// affect layout or paint — Masque never draws the cursor.
     pub cursor: CursorRole,
     /// Scroll containers only: keep the view pinned to the END of the
     /// content as it grows — the chat-log convention. The first layout
@@ -1168,7 +1168,7 @@ impl CornerShape {
 
 /// Per-corner shape for a box. Each corner can independently be sharp,
 /// rounded, or chamfered. The `corner_radius:` and `corner_chamfer:`
-/// Ogham style keys both write into this field — when both target the
+/// Masque style keys both write into this field — when both target the
 /// same corner the later property in the style map wins (matches the
 /// generic style-map duplicate-key rule).
 #[derive(Debug, Default, Clone, Copy, PartialEq)]

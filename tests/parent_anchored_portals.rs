@@ -11,13 +11,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::skia::SkiaEnv;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::{PortalEntry, Surface};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::{PortalEntry, Surface};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -73,7 +73,7 @@ let main = fn () {{
     )
 }
 
-fn mounted(src: &str) -> (Ogham, Log) {
+fn mounted(src: &str) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let mut config = RuntimeConfig::new();
     for name in ["face_press", "popover_press", "sibling_press"] {
@@ -83,27 +83,27 @@ fn mounted(src: &str) -> (Ogham, Log) {
             Ok(Value::Void)
         });
     }
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     for _ in 0..3 {
         o.frame(W, H, DT).expect("frame");
     }
     (o, log)
 }
 
-fn draw(o: &mut Ogham) {
+fn draw(o: &mut Masque) {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     env.draw(o.get_ui_mut());
 }
 
-fn only_entry(o: &Ogham) -> PortalEntry {
+fn only_entry(o: &Masque) -> PortalEntry {
     let layers = &o.get_ui().portal_layers;
     assert_eq!(layers.len(), 1, "one portal entry");
     layers.iter_paint_order().next().cloned().unwrap()
 }
 
-fn press(o: &mut Ogham, x: f32, y: f32) -> bool {
+fn press(o: &mut Masque, x: f32, y: f32) -> bool {
     o.get_ui_mut().call_event(&Event::with_point(
         "mouse_down".to_string(),
         Point::new(x, y),

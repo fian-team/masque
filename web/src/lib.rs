@@ -1,4 +1,4 @@
-//! The browser stage: one Ogham document drawn into a CPU raster surface
+//! The browser stage: one Masque document drawn into a CPU raster surface
 //! whose pixels a page copies into a `<canvas>`.
 //!
 //! [`Stage`] is the whole host, written against plain Rust types so it
@@ -9,15 +9,15 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::skia::SkiaEnv;
-use ogham::skia_safe::{surfaces, AlphaType, Color, ColorType, ImageInfo};
-use ogham::widget::event::{Event, KeyModifiers};
-use ogham::widget::point::Point;
-use ogham::widget::style::CursorRole;
-use ogham::widget::Surface;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::skia_safe::{surfaces, AlphaType, Color, ColorType, ImageInfo};
+use masque::widget::event::{Event, KeyModifiers};
+use masque::widget::point::Point;
+use masque::widget::style::CursorRole;
+use masque::widget::Surface;
+use masque::Masque;
 
 /// The family the stage's text draws in unless a document names another.
 pub const FONT_FAMILY: &str = "Geist";
@@ -60,7 +60,7 @@ pub fn modifiers(bits: u32) -> KeyModifiers {
 }
 
 pub struct Stage {
-    ogham: Option<Ogham>,
+    masque: Option<Masque>,
     env: SkiaEnv,
     /// Logical size and device pixel ratio.
     width: f32,
@@ -85,7 +85,7 @@ impl Stage {
     /// It draws nothing until [`Self::set_source`] succeeds.
     pub fn new(event_names: Vec<String>) -> Self {
         let mut stage = Self {
-            ogham: None,
+            masque: None,
             env: SkiaEnv::new(raster(1, 1)),
             width: 1.0,
             height: 1.0,
@@ -120,11 +120,11 @@ impl Stage {
                 Ok(Value::Void)
             });
         }
-        match Ogham::from_source(source, config) {
-            Ok(mut ogham) => {
-                ogham.register_font_data(FONT_FAMILY, FONTS);
-                ogham.set_default_font(FONT_FAMILY);
-                self.ogham = Some(ogham);
+        match Masque::from_source(source, config) {
+            Ok(mut masque) => {
+                masque.register_font_data(FONT_FAMILY, FONTS);
+                masque.set_default_font(FONT_FAMILY);
+                self.masque = Some(masque);
                 self.error = None;
                 self.dirty = true;
                 Ok(())
@@ -147,10 +147,10 @@ impl Stage {
     /// and values the builder ignores, one per line. Not errors; the
     /// document draws regardless.
     pub fn notes(&self) -> String {
-        let Some(ogham) = &self.ogham else {
+        let Some(masque) = &self.masque else {
             return String::new();
         };
-        ogham
+        masque
             .vocabulary_violations()
             .iter()
             .map(|v| v.to_string())
@@ -218,8 +218,8 @@ impl Stage {
     }
 
     fn call(&mut self, event: &Event) -> bool {
-        match &mut self.ogham {
-            Some(ogham) => ogham.get_ui_mut().call_event(event),
+        match &mut self.masque {
+            Some(masque) => masque.get_ui_mut().call_event(event),
             None => false,
         }
     }
@@ -228,17 +228,17 @@ impl Stage {
     /// `FRAME_*` bits. A frame without [`FRAME_REPAINTED`] means the
     /// page can stop its animation loop until the next input.
     pub fn frame(&mut self, dt: f32) -> Result<u32, String> {
-        let Some(ogham) = &mut self.ogham else {
+        let Some(masque) = &mut self.masque else {
             return Ok(0);
         };
         let (width, height) = (self.width, self.height);
-        ogham.set_screen_size(width, height);
-        if let Err(e) = ogham.update() {
+        masque.set_screen_size(width, height);
+        if let Err(e) = masque.update() {
             let message = e.to_string();
             self.error = Some(message.clone());
             return Err(message);
         }
-        let ui = ogham.get_ui_mut();
+        let ui = masque.get_ui_mut();
         ui.tick_animations(dt.min(1.0 / 30.0));
         // Read the damage before `layout`, which clears the repaint flag
         // when it runs a full pass.
@@ -280,12 +280,12 @@ impl Stage {
     }
 
     /// The live document, for tests.
-    pub fn ogham(&self) -> Option<&Ogham> {
-        self.ogham.as_ref()
+    pub fn masque(&self) -> Option<&Masque> {
+        self.masque.as_ref()
     }
 }
 
-fn raster(w: i32, h: i32) -> ogham::skia_safe::Surface {
+fn raster(w: i32, h: i32) -> masque::skia_safe::Surface {
     surfaces::raster_n32_premul((w, h)).expect("raster surface")
 }
 
@@ -345,7 +345,7 @@ fn push_json_string(out: &mut String, s: &str) {
 mod tests {
     use super::*;
 
-    const HERO: &str = include_str!("../tests/hero.ogh");
+    const HERO: &str = include_str!("../tests/hero.masque");
 
     fn hero() -> Stage {
         let mut stage = Stage::new(vec!["clicked".to_string()]);
@@ -390,7 +390,7 @@ mod tests {
     fn the_hero_draws_its_stage_and_buttons() {
         let stage = hero();
         // The golden the wasm build is compared against (`web/test.sh`).
-        if let Ok(path) = std::env::var("OGHAM_STAGE_GOLDEN") {
+        if let Ok(path) = std::env::var("MASQUE_STAGE_GOLDEN") {
             std::fs::write(path, stage.pixels()).expect("golden written");
         }
         assert_eq!(stage.pixel_size(), (1200, 800));
@@ -434,7 +434,7 @@ mod tests {
         let before = stage.pixels().to_vec();
         assert!(stage.set_source("let main = fn () { Flex {").is_err());
         assert!(stage.error().is_some());
-        assert!(stage.ogham().is_some());
+        assert!(stage.masque().is_some());
         stage.frame(0.016).unwrap();
         assert_eq!(stage.pixels(), &before[..]);
         stage.set_source(HERO).unwrap();

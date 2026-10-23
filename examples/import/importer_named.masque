@@ -1,4 +1,4 @@
-import { button } from "imported.ogh";
+import { button } from "imported.masque";
 
 let main = fn () {
   button("Hello from named import")

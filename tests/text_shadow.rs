@@ -3,13 +3,13 @@
 //! fill. The pixel test drives a real `SkiaEnv` over an offscreen raster
 //! surface, because what a shadow promises is where it lands.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::skia::SkiaEnv;
-use ogham::widget::style::{Color, Shadow, TextStyle};
-use ogham::widget::text_widget::TextWidget;
-use ogham::widget::vocabulary::scan_source;
-use ogham::widget::{RenderContext, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::skia::SkiaEnv;
+use masque::widget::style::{Color, Shadow, TextStyle};
+use masque::widget::text_widget::TextWidget;
+use masque::widget::vocabulary::scan_source;
+use masque::widget::{RenderContext, WidgetRef};
+use masque::Masque;
 
 fn find_text(node: &WidgetRef) -> Option<WidgetRef> {
     let children = {
@@ -23,7 +23,7 @@ fn find_text(node: &WidgetRef) -> Option<WidgetRef> {
 }
 
 fn shadows_of(src: &str) -> Vec<Shadow> {
-    let mut o = Ogham::from_source(src, RuntimeConfig::default()).expect("from_source");
+    let mut o = Masque::from_source(src, RuntimeConfig::default()).expect("from_source");
     o.frame(400.0, 300.0, 1.0 / 60.0).expect("frame");
     let text = find_text(&o.get_ui().root).expect("a Text in the tree");
     let g = text.lock().unwrap();
@@ -76,14 +76,14 @@ fn no_shadow_key_is_no_shadow() {
 #[test]
 fn the_vocabulary_checks_a_text_shadow() {
     let clean = scan_source(
-        "fixture.ogh",
+        "fixture.masque",
         r#"let main = fn () { Text { text: "x", style: {
             shadow: { color: { r: 0, g: 0, b: 0, a: 1 }, blur: 1, offset_x: 0, offset_y: 1 },
         } } };"#,
     );
     assert!(clean.is_empty(), "{:?}", clean.iter().map(|v| &v.path).collect::<Vec<_>>());
     let wrong: Vec<String> = scan_source(
-        "fixture.ogh",
+        "fixture.masque",
         r#"let main = fn () { Text { text: "x", style: {
             shadow: { color: { r: 0, g: 0, b: 0, a: 1 }, offsetY: 1 },
         } } };"#,
@@ -95,7 +95,7 @@ fn the_vocabulary_checks_a_text_shadow() {
 }
 
 fn red_under(env: &mut SkiaEnv, style: &TextStyle) -> usize {
-    env.surface.canvas().clear(ogham::skia_safe::Color::WHITE);
+    env.surface.canvas().clear(masque::skia_safe::Color::WHITE);
     env.draw_text("MMMM", style, 10.0, 10.0, 200.0);
     let info = env.surface.image_info();
     let mut px = vec![0u8; (info.width() * info.height() * 4) as usize];
@@ -125,7 +125,7 @@ fn red_under(env: &mut SkiaEnv, style: &TextStyle) -> usize {
 #[test]
 fn a_shadow_paints_at_its_offset() {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     let mut env = SkiaEnv::new_with_dpi_scale(surface, 1.0);
     let plain = TextStyle::builder().size(40.0).color(Color::new(0, 0, 0, 255)).build();
     let shadowed = TextStyle::builder()

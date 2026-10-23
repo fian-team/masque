@@ -1,45 +1,45 @@
 {
-  "name": "ogham-lang",
-  "displayName": "Ogham Language",
-  "description": "Language support for the Ogham UI language (.ogh files)",
+  "name": "masque-lang",
+  "displayName": "Masque Language",
+  "description": "Language support for the Masque UI language (.masque files)",
   "version": "0.1.0",
   "publisher": "fian",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fian-team/ogham"
+    "url": "https://github.com/fian-team/masque"
   },
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": ["Programming Languages"],
   "activationEvents": [
-    "onLanguage:ogham"
+    "onLanguage:masque"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "ogham",
-        "aliases": ["Ogham", "ogham"],
-        "extensions": [".ogh"],
+        "id": "masque",
+        "aliases": ["Masque", "masque"],
+        "extensions": [".masque"],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "ogham",
-        "scopeName": "source.ogham",
-        "path": "./syntaxes/ogham.tmLanguage.json"
+        "language": "masque",
+        "scopeName": "source.masque",
+        "path": "./syntaxes/masque.tmLanguage.json"
       }
     ],
     "configuration": {
-      "title": "Ogham",
+      "title": "Masque",
       "properties": {
-        "ogham.lspPath": {
+        "masque.lspPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the ogham-lsp binary. Leave empty to use 'ogham-lsp' from PATH."
+          "description": "Path to the masque-lsp binary. Leave empty to use 'masque-lsp' from PATH."
         }
       }
     }

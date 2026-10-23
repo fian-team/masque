@@ -1,4 +1,4 @@
-# Ogham — Widget Tree (Builder + Reconciliation)
+# Masque — Widget Tree (Builder + Reconciliation)
 
 > **Status: Live contract.**
 >
@@ -200,7 +200,7 @@ to drain correctly.
 If the new root is the same `Arc` as the current root,
 `UpdateResult::UNCHANGED`. Otherwise, lock the current root and
 call `Widget::update(new_root)`. The result bubbles up to
-`Ogham::update`, which calls `mark_needs_layout`,
+`Masque::update`, which calls `mark_needs_layout`,
 `mark_needs_boundary_layout`, or `mark_needs_repaint` based on
 the flags.
 
@@ -500,7 +500,7 @@ sat inside a transformed / scrolled subtree.
   manually for this case.
 
   *Drift indicators:*
-  - A drag preview built as an explicit Portal in `.ogh`
+  - A drag preview built as an explicit Portal in `.masque`
     (would double-paint with the synthesized one).
 
 ---
@@ -529,7 +529,7 @@ without each widget needing direct access to the UI.
 
 `UI::clear_lifecycle_state` clears both pending vecs (plus the
 focus stack and `portal_layers` entries). Called by
-`Ogham::reload_file` / `recompile_from_source` before swapping
+`Masque::reload_file` / `recompile_from_source` before swapping
 in a new UI, to keep stale prefixes from the previous module
 out of the new one's drain processing.
 

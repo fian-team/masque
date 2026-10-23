@@ -7,16 +7,16 @@
 //! `Key::Character(_)` is suppressed; Escape, F-keys, arrows,
 //! Tab, and modifiers always pass through.
 //!
-//! These tests exercise the ogham-side surface
+//! These tests exercise the masque-side surface
 //! (`UI::consumes_character_key`). The lorekeeper-side input
 //! pump's adoption is Pass 2 work — see
 //! `UL_ADOPTION_READINESS.md` §2.2.
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::text_input_widget::TextInputWidget;
-use ogham::widget::{Widget, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::text_input_widget::TextInputWidget;
+use masque::widget::{Widget, WidgetRef, UI};
 
 fn make_flex() -> WidgetRef {
     Arc::new(Mutex::new(FlexWidget::new()))

@@ -440,7 +440,7 @@ pub struct UI {
 /// exactly the path a `Portal { anchor: … }` uses. Nothing about
 /// it is special-cased in the renderer any more.
 ///
-/// The `__` prefix is reserved: the builder rejects `.ogh`
+/// The `__` prefix is reserved: the builder rejects `.masque`
 /// anchors starting with it, so no userspace Portal can attach
 /// itself to the drag cursor by naming this id.
 pub const DRAG_PREVIEW_ANCHOR: &str = "__drag_preview";
@@ -545,7 +545,7 @@ impl UI {
     /// frame doesn't force a repaint it didn't earn.
     ///
     /// For world-anchored chrome the host projects world → screen
-    /// itself and passes the result. Ogham does not learn about
+    /// itself and passes the result. Masque does not learn about
     /// cameras, and must not.
     pub fn set_anchor(&mut self, id: impl Into<String>, point: Point) {
         let id = id.into();
@@ -597,7 +597,7 @@ impl UI {
 
     /// Drop any in-flight drag preview. Used by hosts that need to
     /// abort a drag without firing `drag_end` — e.g., when an
-    /// orchestrator swaps which Ogham is active mid-drag. Idempotent.
+    /// orchestrator swaps which Masque is active mid-drag. Idempotent.
     pub fn clear_active_drag(&mut self) {
         if self.active_drag_preview.is_some() {
             self.active_drag_preview = None;
@@ -1116,7 +1116,7 @@ impl UI {
     /// vs right-click handling can diverge cleanly.
     /// Whether a pointer press at `point` would be consumed by the chrome:
     /// the side-effect-free twin of `call_event("mouse_down", …)` — no
-    /// listeners fire, no focus moves. Hosts that mix ogham chrome with
+    /// listeners fire, no focus moves. Hosts that mix masque chrome with
     /// their own canvas-layer hit-testing (world hover, tooltips, click
     /// selection) should gate that layer on this, or the world keeps
     /// reacting underneath panels. Checks portal layers in hit-test order,
@@ -1620,7 +1620,7 @@ impl UI {
             if now.duration_since(*start).as_secs_f32() >= 1.0 {
                 if self.layout_count > 5 {
                     eprintln!(
-                        "[ogham] WARNING: {} full layout passes in the last second \
+                        "[masque] WARNING: {} full layout passes in the last second \
                          (rerender={}, event={}, anim={}, dims={}) \
                          — check for unnecessary dirty-marking; a change inside a \
                          fixed-size box costs a boundary pass, which is not counted",
@@ -2035,7 +2035,7 @@ impl UI {
         self.active_drag_preview = None;
         // Drop host-set anchors. Per INTENT §7 a reload drops
         // what it cannot verify still means anything, and an
-        // anchor id is a name in the *old* `.ogh` — the reloaded
+        // anchor id is a name in the *old* `.masque` — the reloaded
         // program may not have a Portal for it any more. Hosts
         // that set an anchor per frame re-establish it on the
         // next one; hosts that set it once must re-set it after
@@ -2624,7 +2624,7 @@ pub trait Widget: Downcast {
 
     /// Re-seed this widget at its `initial_style` and retarget springs
     /// toward `declared_style`, then cascade to children. Used by the
-    /// host to re-play entry animations when an Ogham instance is
+    /// host to re-play entry animations when a Masque instance is
     /// re-activated after an earlier exit. Widgets with no
     /// `initial_style` (or no enabled transitions) are no-ops.
     fn restart_entry_animation(&mut self) {}

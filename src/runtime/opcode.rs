@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::runtime::value::Value;
 
 // ---------------------------------------------------------------------------
-// OpCode – the instruction set for the Ogham bytecode VM
+// OpCode – the instruction set for the Masque bytecode VM
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]

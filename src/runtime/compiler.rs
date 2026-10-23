@@ -37,7 +37,7 @@ pub(crate) const BUILTINS: &[&str] = &[
 
 /// Host-state key carrying the active route path: an array of screen ids,
 /// outermost first. The host owns it; a document reads it only through
-/// `outlet`, never by name (`ogham INTENT §10` — ogham never navigates
+/// `outlet`, never by name (`masque INTENT §10` — masque never navigates
 /// itself).
 pub const ROUTE_PATH_KEY: &str = "__route_path";
 
@@ -51,11 +51,11 @@ pub const ROUTE_KEY: &str = "__route_key";
 /// The module-level local a screen's view compiles to.
 ///
 /// Named by *index* rather than by id, because a screen id is a route id
-/// and route ids are not ogham identifiers — `map-edit` would scan as
+/// and route ids are not masque identifiers — `map-edit` would scan as
 /// three tokens. The index is the screen's position in the schema's
 /// (sorted) map, so it is stable across the two places that compute it.
 fn screen_fn_name(index: usize) -> String {
-    format!("__ogh_screen_{}", index)
+    format!("__masque_screen_{}", index)
 }
 
 /// The host-state key a screen's own `state` field reads.
@@ -102,7 +102,7 @@ let outlet_wait = fn () { Flex { style: {} } };";
 ///
 /// **And they stack** (`stack: true`), which is what makes more than one
 /// visible view work at all: a path whose deeper node does not occlude
-/// resolves to two ids, `__ogh_dispatch` renders both, and consecutive
+/// resolves to two ids, `__masque_dispatch` renders both, and consecutive
 /// children of a flow would sit side by side rather than one over the
 /// other. Stacking is done by the Presence's own layout — every child on
 /// the whole content box, the deeper one last and therefore on top and
@@ -121,23 +121,23 @@ fn outlet_source(screen_ids: &[String]) -> String {
         .map(|(i, id)| format!("    {:?} => {}(),\n", id, screen_fn_name(i)))
         .collect();
     format!(
-        "let __ogh_dispatch = fn (__ogh_id: string) {{
-  match __ogh_id {{
+        "let __masque_dispatch = fn (__masque_id: string) {{
+  match __masque_id {{
 {arms}    _ => Flex {{ style: {{}} }},
   }}
 }};
-let __ogh_outlet = fn (__ogh_mode: string) {{
+let __masque_outlet = fn (__masque_mode: string) {{
   Presence {{
     key: {route_key},
-    mode: __ogh_mode,
+    mode: __masque_mode,
     stack: true,
-    children: for (__ogh_i in 0..{path}.length()) {{
-      __ogh_dispatch({path}[__ogh_i])
+    children: for (__masque_i in 0..{path}.length()) {{
+      __masque_dispatch({path}[__masque_i])
     }},
   }}
 }};
-outlet = fn () {{ __ogh_outlet(\"pop\") }};
-outlet_wait = fn () {{ __ogh_outlet(\"wait\") }};",
+outlet = fn () {{ __masque_outlet(\"pop\") }};
+outlet_wait = fn () {{ __masque_outlet(\"wait\") }};",
         arms = arms,
         path = ROUTE_PATH_KEY,
         route_key = ROUTE_KEY,

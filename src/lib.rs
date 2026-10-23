@@ -1,17 +1,17 @@
-//! # Ogham
+//! # Masque
 //!
 //! A UI language and framework inspired by DOM, CSS/Flexbox, and React.
 //!
-//! Ogham provides a custom language (`.ogh` files), a scanner/parser,
+//! Masque provides a custom language (`.masque` files), a scanner/parser,
 //! a bytecode compiler + VM runtime, a Flexbox-based widget tree, and
 //! a Skia rendering backend.
 //!
 //! ## Quick start
 //!
 //! ```rust,no_run
-//! use ogham::runtime::config::RuntimeConfig;
+//! use masque::runtime::config::RuntimeConfig;
 //!
-//! let ogham = ogham::Ogham::from_source(
+//! let masque = masque::Masque::from_source(
 //!     r#"let main = fn () { 42 };"#,
 //!     RuntimeConfig::default(),
 //! ).expect("parse and execute");
@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 use skia_safe::textlayout::FontCollection;
 use skia_safe::{FontMgr, Typeface};
 
-/// The exact `skia_safe` Ogham links against, re-exported for hosts that
+/// The exact `skia_safe` Masque links against, re-exported for hosts that
 /// paint through the [`Canvas`](widget::canvas_widget) hatch.
 ///
 /// [`Painter::canvas`](widget::canvas_widget::Painter::canvas) hands back a
@@ -33,7 +33,7 @@ use skia_safe::{FontMgr, Typeface};
 /// binary — the drawing calls then don't typecheck, with an error message
 /// that blames the wrong thing. Go through this re-export instead.
 ///
-/// This is the only backend-native surface Ogham exposes; see
+/// This is the only backend-native surface Masque exposes; see
 /// [`INTENT.md`](../docs/internal/INTENT.md) §6.
 pub use skia_safe;
 
@@ -45,9 +45,9 @@ pub mod scanner;
 pub mod skia;
 pub mod widget;
 
-/// Top-level Ogham instance that owns the runtime, widget tree, and
+/// Top-level Masque instance that owns the runtime, widget tree, and
 /// optional file watcher.
-pub struct Ogham {
+pub struct Masque {
     ui: widget::UI,
     watcher: Option<file_watcher::FileWatcher>,
     config: runtime::config::RuntimeConfig,
@@ -65,7 +65,7 @@ pub struct Ogham {
     image_root: Option<PathBuf>,
 }
 
-/// What one [`Ogham::frame`] call did.
+/// What one [`Masque::frame`] call did.
 ///
 /// `rerendered` is the old bare-bool return. `reloaded` exists because a
 /// hot reload used to happen silently inside `frame`, and the two answers
@@ -109,8 +109,8 @@ impl std::fmt::Display for ReloadRefused {
 
 impl std::error::Error for ReloadRefused {}
 
-impl Ogham {
-    /// Create an Ogham instance from a file path with file watching enabled.
+impl Masque {
+    /// Create a Masque instance from a file path with file watching enabled.
     /// Watches the main file and every imported file so that changes in any of them trigger a rerender.
     pub fn watch(
         path: String,
@@ -138,7 +138,7 @@ impl Ogham {
         Ok(instance)
     }
 
-    /// Create an Ogham instance from source code (no file watching)
+    /// Create a Masque instance from source code (no file watching)
     pub fn from_source(
         source: &str,
         config: runtime::config::RuntimeConfig,
@@ -303,7 +303,7 @@ impl Ogham {
     ///
     /// The order is the whole point: the candidate is built and offered to
     /// `accept` **before** the running instance is touched at all. Every
-    /// early return above the swap leaves this `Ogham` exactly as it was.
+    /// early return above the swap leaves this `Masque` exactly as it was.
     fn reload_file_if(
         &mut self,
         path: &str,
@@ -387,7 +387,7 @@ impl Ogham {
         let paths = Self::paths_to_watch(path, &self.runtime);
         match file_watcher::FileWatcher::new(paths) {
             Ok(watcher) => self.watcher = Some(watcher),
-            Err(e) => eprintln!("ogham: the watch set could not be rebuilt: {e:?}"),
+            Err(e) => eprintln!("masque: the watch set could not be rebuilt: {e:?}"),
         }
     }
 
@@ -452,7 +452,7 @@ impl Ogham {
     /// to derive their own input-gating booleans (e.g. UL
     /// replaces its manual `overlay_active: bool` with one
     /// derivation: `let overlay_active =
-    /// ogham.has_input_blocking_portal();`).
+    /// masque.has_input_blocking_portal();`).
     pub fn has_input_blocking_portal(&self) -> bool {
         self.ui.has_input_blocking_portal()
     }
@@ -478,7 +478,7 @@ impl Ogham {
     }
 
     /// Place the anchor `id` at `point`. A
-    /// `Portal { anchor: "<id>" }` in the `.ogh` seats its
+    /// `Portal { anchor: "<id>" }` in the `.masque` seats its
     /// subtree there instead of at the slot it was declared in;
     /// paint, hit-testing, occlusion and nesting all follow,
     /// because the anchor resolves into the same
@@ -491,7 +491,7 @@ impl Ogham {
     /// the same point twice is a no-op.
     ///
     /// World-anchored chrome projects world → screen host-side
-    /// and passes the result: Ogham does not know what a camera
+    /// and passes the result: Masque does not know what a camera
     /// is. Anchors do **not** survive a hot reload (INTENT §7) —
     /// a host that sets an anchor once must re-set it after one.
     pub fn set_anchor(&mut self, id: impl Into<String>, point: widget::point::Point) {
@@ -597,7 +597,7 @@ impl Ogham {
     /// The font families registered on this instance, in registration
     /// order.
     ///
-    /// A document names a family and ogham falls back to a system face
+    /// A document names a family and masque falls back to a system face
     /// for one it does not know — silently, because a missing font is not
     /// an error. So "the typefaces are registered" is a thing a host has
     /// to be able to assert, and it could not.
@@ -770,7 +770,7 @@ impl Ogham {
         self.update()
     }
 
-    /// Read an Ogham state variable by name from the runtime.
+    /// Read a Masque state variable by name from the runtime.
     pub fn get_state(&self, name: &str) -> Option<runtime::value::Value> {
         self.with_runtime_mut(|rt| rt.get_state(name))
     }
@@ -784,13 +784,13 @@ impl Ogham {
 
     /// Begin exiting the entire UI tree. Cascades [`Widget::begin_exit`]
     /// from the root. Returns `true` if at least one widget has an exit
-    /// animation in flight (the host should keep ticking this Ogham and
+    /// animation in flight (the host should keep ticking this Masque and
     /// poll [`Self::is_exit_complete_root`]) or `false` if there was
-    /// nothing to animate (the host can drop / replace this Ogham
+    /// nothing to animate (the host can drop / replace this Masque
     /// immediately).
     ///
     /// Used by host-side orchestrators that sequence transitions
-    /// between multiple Ogham instances (route swaps, modal stacks).
+    /// between multiple Masque instances (route swaps, modal stacks).
     pub fn begin_exit_root(&mut self) -> bool {
         let root = self.ui.root.clone();
         let mut g = root.lock().expect("widget lock poisoned");
@@ -820,7 +820,7 @@ impl Ogham {
 
     /// Re-seed every widget that declared `initial:` back to its
     /// initial style and retarget springs toward `declared_style`.
-    /// Call when promoting a previously-mounted Ogham to active so
+    /// Call when promoting a previously-mounted Masque to active so
     /// its entry animations replay. Widgets without `initial:` (or
     /// without enabled transitions) are no-ops.
     ///
@@ -840,8 +840,8 @@ impl Ogham {
         rt.lock().expect("runtime lock poisoned").request_rerender();
     }
 
-    /// Cancel any in-flight drag preview on this Ogham. Used by the
-    /// host orchestrator before swapping the active Ogham so a drag
+    /// Cancel any in-flight drag preview on this Masque. Used by the
+    /// host orchestrator before swapping the active Masque so a drag
     /// originated from the outgoing UI doesn't leak across the
     /// transition. Idempotent.
     pub fn cancel_active_drag(&mut self) {
@@ -867,7 +867,7 @@ impl Ogham {
 
         // Self-heal a stranded host-orchestrated exit. `begin_exit_root` puts the
         // root into an exiting state that only `restart_entry_animations` /
-        // `cancel_exit_root` clears; a host that exits this Ogham and later
+        // `cancel_exit_root` clears; a host that exits this Masque and later
         // re-shows it without that paired call would otherwise reconcile into a
         // blank ghost (a common orchestrator foot-gun). Reaching here means a
         // rerender is pending — the host is actively pushing this UI's live

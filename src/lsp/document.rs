@@ -1,6 +1,6 @@
-use ogham::parser::{Function, SyntaxError};
-use ogham::runtime::schema::ModuleSchema;
-use ogham::scanner::Token;
+use masque::parser::{Function, SyntaxError};
+use masque::runtime::schema::ModuleSchema;
+use masque::scanner::Token;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::Url;
 
@@ -35,9 +35,9 @@ impl Document {
     /// Cheap to call on every keystroke (nothing is cached
     /// across calls).
     pub fn analyze(&mut self) {
-        let mut scanner = ogham::scanner::Scanner::new(self.source.clone());
+        let mut scanner = masque::scanner::Scanner::new(self.source.clone());
         self.tokens = scanner.scan();
-        let mut parser = ogham::parser::Parser::new(self.tokens.clone());
+        let mut parser = masque::parser::Parser::new(self.tokens.clone());
         self.ast = parser.parse().ok();
         // Schema resolution is best-effort: only attempt it when
         // the parser produced an AST. Failures surface as a

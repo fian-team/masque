@@ -2,7 +2,7 @@
 //!
 //! A `host_state {}` block restates the provider's shapes, so a rename on
 //! the provider's side refuses at load: the two copies of the shape stop
-//! agreeing and [`Kind::compare`](structure) names the field. A `select`
+//! agreeing and [`Kind::compare`](carte) names the field. A `select`
 //! deliberately carries **names only** (`APPLICATION.md` §4.1, §4.6) —
 //! shapes are the provider's declaration and a document has no business
 //! restating them — and that inversion costs exactly that refusal. With
@@ -36,7 +36,7 @@
 //!   `hud`, and refusing it would be worse than the gap being closed.
 //!
 //! Nothing here decides whether a read is *wrong* — that needs the
-//! provider's reflection, which lives in the structure framework, which
+//! provider's reflection, which lives in Carte, which
 //! this crate has never heard of (§2). This module answers one question in
 //! the document's own language: which dotted paths does it read?
 

@@ -3,7 +3,7 @@
 > **Status: Audit result — no timer primitive shipped.**
 > Companion to `PHASE_2_5_M4_PLAN.md`'s "audit + ship-if-
 > missing" framing. The audit ran; no script-callable
-> set_timeout/set_interval primitive exists in ogham today;
+> set_timeout/set_interval primitive exists in masque today;
 > no immediate UL-adoption use case requires one. Documented
 > here so the next agent picking up tooltips/toasts has a
 > clear path.
@@ -12,7 +12,7 @@
 
 ## Findings
 
-**Existing scheduling infrastructure** in ogham:
+**Existing scheduling infrastructure** in masque:
 - `tick_animations(dt)` per-frame walk via the Widget trait
   (`src/widget/mod.rs:980`). Drives spring interpolation for
   styling transitions (opacity, transform, color).
@@ -23,13 +23,13 @@
   state changes, not delays.
 
 **Existing scheduling in UL** (per UI_RUNTIME.md §5 prediction):
-- `panel_transition` in `main.ogh:10` is a spring config
+- `panel_transition` in `main.masque:10` is a spring config
   object (`{ opacity: fast_spring, transform: fast_spring, ... }`),
   NOT a timer. The phase plan's hint that this implied a
   timer primitive was incorrect.
 - No other timer-like patterns surfaced in the audit.
 
-**Conclusion**: ogham has no script-callable timer primitive.
+**Conclusion**: masque has no script-callable timer primitive.
 UL doesn't currently use one (none of the per-UI patterns in
 `UL_ADOPTION_READINESS.md` §4 require it).
 
@@ -59,7 +59,7 @@ UI_RUNTIME §5:
 
 ### API
 
-```ogh
+```masque
 let timer_id = set_timeout(1000, fn () { event("timer_fired"); });
 clear_timeout(timer_id);
 
@@ -138,7 +138,7 @@ need.
   PHASE_2_5_M4_TIMER_AUDIT.md."
 - `PHASE_2_5_IMPLEMENTATION.md` M4 section trailer: this
   audit result + design sketch.
-- The Ogham skill `SKILL.md` doesn't currently mention
+- The Masque skill `SKILL.md` doesn't currently mention
   timers; nothing to update there.
 
 ---

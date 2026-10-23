@@ -5,11 +5,11 @@
 //! are deliberately separate; these tests pin that the resolved cursor is
 //! leaf-wins and that empty / non-declaring regions stay `Default`.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::widget::event::Event;
-use ogham::widget::point::Point;
-use ogham::widget::style::CursorRole;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::widget::event::Event;
+use masque::widget::point::Point;
+use masque::widget::style::CursorRole;
+use masque::Masque;
 
 const DT: f32 = 1.0 / 60.0;
 const W: f32 = 800.0;
@@ -53,8 +53,8 @@ const SRC: &str = r##"
     };
 "##;
 
-fn settled() -> Ogham {
-    let mut o = Ogham::from_source(SRC, RuntimeConfig::default()).expect("from_source");
+fn settled() -> Masque {
+    let mut o = Masque::from_source(SRC, RuntimeConfig::default()).expect("from_source");
     // A couple of frames to lay out (and settle any entry animation).
     for _ in 0..8 {
         o.frame(W, H, DT).expect("frame");
@@ -63,7 +63,7 @@ fn settled() -> Ogham {
 }
 
 /// Route a pointer move so the UI re-tags its hover chain, then read it back.
-fn hover(o: &mut Ogham, x: f32, y: f32) -> (CursorRole, bool) {
+fn hover(o: &mut Masque, x: f32, y: f32) -> (CursorRole, bool) {
     let ui = o.get_ui_mut();
     ui.call_event(&Event::with_point(
         "mouse_move".to_string(),

@@ -1,9 +1,9 @@
-# Ogham — Cross-Cutting Design Intent
+# Masque — Cross-Cutting Design Intent
 
 > **Status: Live contract.**
 >
 > This document records the cross-cutting principles that span
-> Ogham's subsystems and don't have a single natural home in any
+> Masque's subsystems and don't have a single natural home in any
 > one of them. Subsystem-specific tenets live alongside their
 > subsystem and follow the same rule + *Why* + *Drift indicators*
 > shape.
@@ -61,7 +61,7 @@ duplicate the work or run user code to give hovers.
 
 ## 2. Host state flows in, events flow out.
 
-`.ogh` code can *read* host state via plain identifiers (the VM's
+`.masque` code can *read* host state via plain identifiers (the VM's
 `GetState` opcode falls through to `GetHostState`) but cannot
 mutate it. Mutation is the host's job, triggered by `event(name,
 ...)` calls leaving the runtime. There is no `SetHostState`
@@ -73,7 +73,7 @@ user code.
 **Why this matters:** the asymmetry is what keeps the runtime
 re-entrant. The VM never has to reason about handlers writing
 state mid-execution and triggering a rerender from inside a
-rerender. Edits never write host state from `.ogh`; they leave as
+rerender. Edits never write host state from `.masque`; they leave as
 `event(name, ...)` calls carrying the change — for schema-described
 state, a `(path, op)` the host applies via `editable::apply()` (see
 §12) — and the VM observes the result on the *next* render, not via
@@ -88,7 +88,7 @@ a return value.
 - A `widget::Widget` that calls back into the runtime mid-render
   to push host state.
 - Adding a synchronous `request_host_value(name)` primitive in
-  `.ogh` code rather than reading host state ambiently and emitting
+  `.masque` code rather than reading host state ambiently and emitting
   an event.
 
 ---
@@ -106,7 +106,7 @@ implies replacement. Spring state, hover state, scroll position,
 focus, and the widget's `Arc` identity all survive a successful
 reconcile.
 
-**Why this matters:** every animation in Ogham — hover springs,
+**Why this matters:** every animation in Masque — hover springs,
 entry transitions, exit ghosts, smooth scroll — depends on a
 widget instance outliving the rerender that produced it. The
 moment a rerender drops a widget and recreates it, its springs
@@ -202,7 +202,7 @@ through the widget tree; backends multiply by their own DPI scale.
 
 **Why this matters:** the seam is **not** kept for backend
 portability — Skia is the only impl and GPU/tile-baking lives
-*outside* Ogham, so there is no second backend coming
+*outside* Masque, so there is no second backend coming
 (IDENTITY_AND_SCOPE §2). It survives as a **paint-isolation + test
 seam**: it keeps `skia_safe` out of `widget/` so layout, hit-test,
 and animation stay backend-pure and unit-testable, and it blocks
@@ -254,7 +254,7 @@ a fresh widget tree is constructed by the builder. The live UI
 then `reconcile`s against it. Same-key, same-shape widgets
 preserve animation/hover/scroll state; structural changes drop
 state silently. The runtime's component-state map is **not**
-preserved across a reload — `Ogham::reload` swaps in a brand-new
+preserved across a reload — `Masque::reload` swaps in a brand-new
 `Runtime`. Host-injected state is re-applied from `RuntimeConfig`.
 
 **Why this matters:** hot reload exists to be cheap and
@@ -349,11 +349,11 @@ share a single discipline.
 
 ---
 
-## 10. Ogham is a UI framework for Rust applications, not a standalone app platform.
+## 10. Masque is a UI framework for Rust applications, not a standalone app platform.
 
-The host (a Rust program) owns all state and logic; Ogham is a
-projection surface over it — `.ogh` renders host state and emits
-events. Ogham is *not* a JavaScript/React replacement or a
+The host (a Rust program) owns all state and logic; Masque is a
+projection surface over it — `.masque` renders host state and emits
+events. Masque is *not* a JavaScript/React replacement or a
 standalone application runtime. The four-pass pipeline (§1, §8) is
 kept as real option value toward richer in-language logic later; the
 standalone-app surface is not.
@@ -368,10 +368,10 @@ first. Conflating "UI for Rust apps" with "JS killer" made both worse
 (IDENTITY_AND_SCOPE §1).
 
 **Drift indicators:**
-- New surface that presupposes "Ogham *is* the application" rather
+- New surface that presupposes "Masque *is* the application" rather
   than a projection over a Rust host.
-- A rival typed-host-state layer reappearing (the `OghamState` /
-  `OghamMsg` shape) instead of the single `editable` vocabulary
+- A rival typed-host-state layer reappearing (the `MasqueState` /
+  `MasqueMsg` shape) instead of the single `editable` vocabulary
   (§11, §12).
 - `client` treated as a shipping platform rather than a dev
   previewer.
@@ -403,14 +403,14 @@ letting moddable UI invent its own structure (view-defined → local).
 Universalizing the schema was tried and rejected — it turned a
 bounded editor tool into a framework-wide tax (IDENTITY_AND_SCOPE §3).
 One schema vocabulary (`editable`) avoids the rival-typed-state drift
-that killed `OghamState`.
+that killed `MasqueState`.
 
 **Drift indicators:**
 - Host-defined semantic state (current character, save-relevant
   selection) living in a local `state` cell — saves and deep-links
   silently lose it.
 - A second schema / description system standing up beside `editable`.
-- Schema-described state mutated in place from `.ogh` instead of via
+- Schema-described state mutated in place from `.masque` instead of via
   events the host applies (violates §2).
 - A push to schema *all* host state "for uniformity."
 
@@ -422,7 +422,7 @@ A `#[derive(editable)]` Rust struct round-trips through §2's
 host-state-in / events-out with no per-type hand-written glue:
 
 - **Read** projects `&T` into a *nested* `Value` node tree — true to
-  the struct's structure, never flattened — that a recursive `.ogh`
+  the struct's structure, never flattened — that a recursive `.masque`
   `field_node` renders; every container nests under a uniform
   `children`.
 - **Write** leaves as a `(path, op)` event the host applies via
@@ -433,17 +433,17 @@ host-state-in / events-out with no per-type hand-written glue:
   (`scalar(&Kind, &str)`); **serde is never in the UI read path**. The
   union discriminant is the `$variant` sigil.
 
-`editable` stays a pure leaf (serde only, no Ogham); Ogham stays
+`editable` stays a pure leaf (serde only, no Masque); Masque stays
 domain-agnostic; the **host composes** the two (the `Value`-building
-visitor lives host-side). No second crate, no `OghamRead` /
-`OghamWrite`.
+visitor lives host-side). No second crate, no `MasqueRead` /
+`MasqueWrite`.
 
 **Why this matters:** the consumers proved the need by building
-`editable` *outside* Ogham when the renderer-coupled typed layer
+`editable` *outside* Masque when the renderer-coupled typed layer
 failed them (IDENTITY_AND_SCOPE §1). One derive driving both
 directions is what prevents the read/write drift that recurs whenever
 a second description of the same data exists (serde tagging vs. the
-discriminant; `OghamState` vs. the renderer). A nested,
+discriminant; `MasqueState` vs. the renderer). A nested,
 true-to-structure projection means new schemas just work without a
 bespoke flattening.
 
@@ -451,13 +451,13 @@ bespoke flattening.
 - serde (`Serialize` / `serde_json::Value`) on the UI *read* path —
   a rival description that drifts from `apply` (the live example was
   the flat `schema_form.rs`).
-- A second derive or schema system for the read (e.g. `OghamRead` /
-  `OghamWrite` traits over `editable`).
+- A second derive or schema system for the read (e.g. `MasqueRead` /
+  `MasqueWrite` traits over `editable`).
 - A flattened node projection (depth-tagged rows) instead of the
   nested tree.
 - A `SetHostState`-style write path instead of events + host
   `apply()` (violates §2).
-- `editable` gaining a dependency on the Ogham crate (the coupling
-  that killed `OghamState`).
+- `editable` gaining a dependency on the Masque crate (the coupling
+  that killed `MasqueState`).
 - Sentinel keys (`__add` / `__objdel`) reappearing instead of
   explicit container ops mapped 1:1 to `FieldOp`.

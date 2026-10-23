@@ -1,4 +1,4 @@
-import "imported.ogh";
+import "imported.masque";
 
 let main = fn () {
   button("Hello, world!")

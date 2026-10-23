@@ -10,12 +10,12 @@ use crate::goto_definition;
 use crate::hover;
 use crate::semantic_tokens;
 
-pub struct OghamLanguageServer {
+pub struct MasqueLanguageServer {
     client: Client,
     store: Mutex<DocumentStore>,
 }
 
-impl OghamLanguageServer {
+impl MasqueLanguageServer {
     pub fn new(client: Client) -> Self {
         Self {
             client,
@@ -25,7 +25,7 @@ impl OghamLanguageServer {
 }
 
 #[tower_lsp::async_trait]
-impl LanguageServer for OghamLanguageServer {
+impl LanguageServer for MasqueLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
@@ -56,7 +56,7 @@ impl LanguageServer for OghamLanguageServer {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::INFO, "ogham-lsp initialized")
+            .log_message(MessageType::INFO, "masque-lsp initialized")
             .await;
     }
 
@@ -228,7 +228,7 @@ fn collect_diagnostics(doc: &crate::document::Document) -> Vec<Diagnostic> {
 
     // 1. Scanner errors (Error tokens).
     for token in &doc.tokens {
-        if let ogham::scanner::TokenType::Error(msg) = &token.token_type {
+        if let masque::scanner::TokenType::Error(msg) = &token.token_type {
             let line = token.line.saturating_sub(1) as u32;
             let col = token.column.saturating_sub(1) as u32;
             diagnostics.push(Diagnostic {
@@ -237,7 +237,7 @@ fn collect_diagnostics(doc: &crate::document::Document) -> Vec<Diagnostic> {
                     Position::new(line, col + token.length as u32),
                 ),
                 severity: Some(DiagnosticSeverity::ERROR),
-                source: Some("ogham".to_string()),
+                source: Some("masque".to_string()),
                 message: msg.clone(),
                 ..Default::default()
             });
@@ -247,7 +247,7 @@ fn collect_diagnostics(doc: &crate::document::Document) -> Vec<Diagnostic> {
     // 2. Parser errors. Re-run the parser here (cheap, gives us
     //    the typed Err shape rather than relying on the cached
     //    Option<Function> in the Document).
-    let mut parser = ogham::parser::Parser::new(doc.tokens.clone());
+    let mut parser = masque::parser::Parser::new(doc.tokens.clone());
     let parsed = parser.parse();
     if let Err(err) = &parsed {
         diagnostics.push(syntax_error_to_diagnostic(err));
@@ -267,8 +267,8 @@ fn collect_diagnostics(doc: &crate::document::Document) -> Vec<Diagnostic> {
     //    variants (e.g. UndefinedVariable in loose mode) aren't
     //    LSP-actionable.
     if let Ok(module) = parsed {
-        if let Err(ogham::runtime::error::VMError::StrictMode(err)) =
-            ogham::runtime::compiler::Compiler::compile_module(&module)
+        if let Err(masque::runtime::error::VMError::StrictMode(err)) =
+            masque::runtime::compiler::Compiler::compile_module(&module)
         {
             diagnostics.push(syntax_error_to_diagnostic(&err));
         }
@@ -279,7 +279,7 @@ fn collect_diagnostics(doc: &crate::document::Document) -> Vec<Diagnostic> {
 
 /// Convert a [`SyntaxError`] into an LSP [`Diagnostic`], rendering
 /// the optional `note:` / `help:` lines into the message field.
-fn syntax_error_to_diagnostic(err: &ogham::parser::SyntaxError) -> Diagnostic {
+fn syntax_error_to_diagnostic(err: &masque::parser::SyntaxError) -> Diagnostic {
     let line = err.line.saturating_sub(1) as u32;
     let col = err.column.saturating_sub(1) as u32;
     // length 0 falls back to a one-character highlight, matching the
@@ -287,13 +287,13 @@ fn syntax_error_to_diagnostic(err: &ogham::parser::SyntaxError) -> Diagnostic {
     // explicitly via `SyntaxError::with_length`.
     let length = if err.length > 0 { err.length as u32 } else { 1 };
     let severity = match err.severity {
-        ogham::parser::DiagnosticLevel::Error => DiagnosticSeverity::ERROR,
-        ogham::parser::DiagnosticLevel::Warning => DiagnosticSeverity::WARNING,
+        masque::parser::DiagnosticLevel::Error => DiagnosticSeverity::ERROR,
+        masque::parser::DiagnosticLevel::Warning => DiagnosticSeverity::WARNING,
     };
     Diagnostic {
         range: Range::new(Position::new(line, col), Position::new(line, col + length)),
         severity: Some(severity),
-        source: Some("ogham".to_string()),
+        source: Some("masque".to_string()),
         message: format_diagnostic_message(&err.message, err.note.as_deref(), err.help.as_deref()),
         ..Default::default()
     }

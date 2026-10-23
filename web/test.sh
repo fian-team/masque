@@ -5,7 +5,7 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(dirname "$here")
 golden="$root/target/stage-golden.rgba"
-(cd "$root" && OGHAM_STAGE_GOLDEN="$golden" cargo test -q -p ogham-web)
+(cd "$root" && MASQUE_STAGE_GOLDEN="$golden" cargo test -q -p masque-web)
 # shellcheck disable=SC1091
 source "$here/env.sh"
 node "$here/tests/smoke.mjs" "$golden"

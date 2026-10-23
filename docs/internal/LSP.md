@@ -1,10 +1,10 @@
-# Ogham — LSP Server (`ogham-lsp`)
+# Masque — LSP Server (`masque-lsp`)
 
 > **Status: Live contract.**
 >
 > The Language Server Protocol implementation that ships with
-> Ogham. Provides hover, goto-definition, document symbols,
-> semantic tokens, and basic diagnostics for `.ogh` files. This
+> Masque. Provides hover, goto-definition, document symbols,
+> semantic tokens, and basic diagnostics for `.masque` files. This
 > doc covers what the server does and what's load-bearing about
 > *how* it does it.
 
@@ -29,7 +29,7 @@
 ## At a glance
 
 ```
-.ogh edit
+.masque edit
   → did_open / did_change (tower-lsp)
   → DocumentStore.open / get_mut
     Document::analyze:
@@ -79,7 +79,7 @@ What's **not** provided:
 - No incremental semantic tokens (`semanticTokens/full/delta`).
 
 These are deliberate omissions. The server ships what's
-load-bearing for `.ogh` editing today; missing features are
+load-bearing for `.masque` editing today; missing features are
 fair game.
 
 ---
@@ -103,13 +103,13 @@ fair game.
   feature for a later, opt-in path — not the default.
 
   *Drift indicators:*
-  - `use ogham::runtime::` in `src/lsp/`.
-  - `use ogham::widget::` in `src/lsp/`.
-  - LSP code that reads `.ogh` source from a file other than
+  - `use masque::runtime::` in `src/lsp/`.
+  - `use masque::widget::` in `src/lsp/`.
+  - LSP code that reads `.masque` source from a file other than
     the buffer (would be a side-channel that bypasses the
     document store).
 
-- **LSP positions are 0-indexed; Ogham spans are 1-indexed.**
+- **LSP positions are 0-indexed; Masque spans are 1-indexed.**
   Conversion happens at the boundary in `server.rs`. The server
   adds 1 to incoming `(line, character)` before passing to
   analyzers; analyzers return `Span`s, which the server
@@ -165,7 +165,7 @@ fair game.
   Lifecycle conditional-registration warnings are the only
   semantic check that flows through the LSP today; the
   schema-diagnostic engine (`src/diagnostics/`) is a separate
-  consumer (`ogham check` CLI) and is not yet wired into the
+  consumer (`masque check` CLI) and is not yet wired into the
   LSP — see open questions.
 
   *Drift indicators:*
@@ -185,7 +185,7 @@ fair game.
   byte offsets converted from UTF-16 code units. After all
   edits land, `analyze` re-scans + re-parses the whole text.
 
-  *Why:* full re-analyze is fast enough for `.ogh` files. The
+  *Why:* full re-analyze is fast enough for `.masque` files. The
   byte/UTF-16 conversion (`byte_offset_of_utf16_cu`) is the
   load-bearing part for editors that send UTF-16 offsets (most
   do; LSP says they should).
@@ -290,13 +290,13 @@ Token modifiers: `DECLARATION, READONLY` (the latter for
 ## Building and running
 
 ```sh
-cargo build --bin ogham-lsp        # build
-./target/debug/ogham-lsp           # run (stdio transport)
+cargo build --bin masque-lsp        # build
+./target/debug/masque-lsp           # run (stdio transport)
 ```
 
 There's a VS Code extension in `editors/vscode/`. Set
-`ogham.lspPath` in the extension settings to the built binary
-path; defaults to `"ogham-lsp"` on `$PATH`.
+`masque.lspPath` in the extension settings to the built binary
+path; defaults to `"masque-lsp"` on `$PATH`.
 
 ---
 
@@ -311,7 +311,7 @@ path; defaults to `"ogham-lsp"` on `$PATH`.
   document store (and, eventually, across imports).
 - **No cross-file analysis.** Goto-def, references, and
   workspace symbols all stop at the file boundary. A workspace
-  index of all `.ogh` files would help; it would also need a
+  index of all `.masque` files would help; it would also need a
   watch mechanism so external edits invalidate the cache.
 - **No formatter.** A canonical formatter would solve a lot of
   authoring grief (especially with widget literal indentation).
@@ -327,16 +327,16 @@ path; defaults to `"ogham-lsp"` on `$PATH`.
   enforcing them at the runtime layer — opt-in static checking
   on top of dynamic typing.
 - **Schema-diagnostic engine integration.** The engine in
-  `src/diagnostics/` validates a `.ogh` AST against a typed-
-  bindings manifest emitted by `#[derive(OghamState)]` /
-  `#[derive(OghamMsg)]` and powers the `ogham check` CLI. The
-  LSP doesn't currently invoke it (no `use ogham::diagnostics`
-  in `src/lsp/`). Wiring it through would let a `.ogh` file's
+  `src/diagnostics/` validates a `.masque` AST against a typed-
+  bindings manifest emitted by `#[derive(MasqueState)]` /
+  `#[derive(MasqueMsg)]` and powers the `masque check` CLI. The
+  LSP doesn't currently invoke it (no `use masque::diagnostics`
+  in `src/lsp/`). Wiring it through would let a `.masque` file's
   references to `host_state` / `events` declarations surface
   drift against the host's current Rust types directly in the
   editor. See [SCHEMA_DIAGNOSTICS.md](SCHEMA_DIAGNOSTICS.md).
 - **Performance: per-edit full re-parse.** Fine for typical UI
-  files. A pathological 10k-line `.ogh` would re-scan +
+  files. A pathological 10k-line `.masque` would re-scan +
   re-parse on every keystroke. Incremental parsing (tree-sitter
   shaped) is the long-term answer.
 - **No support for the LSP's "code lens"** (showing inline

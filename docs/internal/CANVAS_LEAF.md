@@ -1,4 +1,4 @@
-# Ogham — The `Canvas` leaf: a host-painted, layout-participating widget
+# Masque — The `Canvas` leaf: a host-painted, layout-participating widget
 
 > **Status: complete. M0–M4 shipped 2026-08-06; M5 (the regency
 > migration, §8) landed the same day in `regency` as `fb40a6a`, and the
@@ -27,7 +27,7 @@
 > any existing tenet's behaviour. It *does* require an explicit,
 > narrowly-scoped amendment to [`INTENT.md`](INTENT.md) §6 — see §6.
 >
-> Naming follows lorekeeper's rule for ogham-side work: the vocabulary
+> Naming follows lorekeeper's rule for masque-side work: the vocabulary
 > stays application-neutral (`Canvas`, `painter`, `anchor`, `layer` —
 > no game-domain terms).
 
@@ -49,14 +49,14 @@ Regency's quick-time-event dial is that case, shipped:
   `ManorScreen::wheel_center` (`regency-client/src/manor.rs:4091`) is
   hand-rolled column layout: a `min`/`max` clamp seating the dial above
   the search card, with a gap.
-- **It is layout-coupled to ogham chrome in both directions.** The
+- **It is layout-coupled to masque chrome in both directions.** The
   Skia side holds `const SEARCH_CARD_HEIGHT: f32 = 96.0` — a hardcoded
-  guess at the measured height of an *ogham* widget, with the comment
+  guess at the measured height of an *masque* widget, with the comment
   *"Only the geometry test uses it — the chrome measures the real card
   — but the dial has to be seated above where that card will stand."*
   Meanwhile `ManorScreen::search_card` returns
   `SEARCH_CARD_LIFT_UNDER_WHEEL` (40) instead of `SEARCH_CARD_LIFT`
-  (118) while the dial is live, so the ogham chrome reflows because of
+  (118) while the dial is live, so the masque chrome reflows because of
   the canvas.
 - **A test holds the guess in place.**
   `the_dial_and_what_hangs_under_it_stay_on_the_screen`
@@ -86,12 +86,12 @@ Half the plumbing is built and has **zero consumers**:
   (`src/runtime/config.rs:112`).
 - `Runtime::from_source` merges them into the `WidgetRegistry`
   (`src/runtime/mod.rs:676`), overriding built-ins on a name collision.
-- `Ogham::reload_file` clones the config into the new `Runtime`
+- `Masque::reload_file` clones the config into the new `Runtime`
   (`src/lib.rs:194`), so registrations **already survive hot reload** —
   the same way event handlers do.
 - The builder resolves widget identifiers case-insensitively through
   the registry (`src/widget/builder.rs:292`), so `MyThing { … }` in a
-  `.ogh` already routes to a host factory today.
+  `.masque` already routes to a host factory today.
 
 So a host can already put a custom widget in the tree. What it cannot
 do is **paint** one: `RenderContext` offers `fill_rect`,
@@ -107,9 +107,9 @@ to implement the 20-method `Widget` trait just to draw a dial.
 
 ## 3. The design
 
-### 3.1 `.ogh` surface
+### 3.1 `.masque` surface
 
-```ogh
+```masque
 Canvas {
   painter: "wheel_dial",          // names a host-registered painter
   props: { radius: dial_r, dance: dancing },   // optional, Value map
@@ -126,13 +126,13 @@ Canvas {
 participates in flex layout exactly like `Image` does today, but takes
 `width`/`height` from `style` (including `"grow"` / `"shrink"`) rather
 than as bare required numbers — the `Image` mistake
-(`stargazer-celia-game/docs/OGHAM_GAPS.md` §8) is not repeated.
+(`stargazer-celia-game/docs/MASQUE_GAPS.md` §8) is not repeated.
 
 `painter` is a **required** string. An unregistered painter name is a
 loud error, not a silent blank — see §3.5.
 
 `props` is an optional `Value` map handed to the painter verbatim each
-frame. It is the *only* channel from `.ogh` into the painter; the
+frame. It is the *only* channel from `.masque` into the painter; the
 painter reads host state through the host's own Rust, not through the
 VM. This keeps INTENT §2 intact: nothing flows out of the painter.
 
@@ -182,7 +182,7 @@ capture `Arc<Mutex<…>>` host state exactly as event handlers already do.
 | Concern | Mechanism |
 |---|---|
 | Registration | `RuntimeConfig::with_painter(name, f)` → `painters: HashMap<String, CanvasPainter>`. Applied in `Runtime::from_source` beside `custom_widgets`. **Survives hot reload for free** (config is cloned into the new Runtime). |
-| Lookup | `Runtime.painters`, cloned into the `CanvasWidget` at build time by `create_canvas_widget` — same shape as `widget_registry.clone()` in `Ogham::update`. |
+| Lookup | `Runtime.painters`, cloned into the `CanvasWidget` at build time by `create_canvas_widget` — same shape as `widget_registry.clone()` in `Masque::update`. |
 | Layout | `CanvasWidget` implements `get_dimensions` / `get_fixed_width` / `get_fixed_height` from its `FlexStyle` `Size`, reusing `LayoutContext::effective_width`/`effective_height`. |
 | Paint | `Widget::render` → `ctx.with_local_canvas(rect, &mut |p| painter(p, &props))`. |
 | Events | Reuse the `Image` leaf's `handle_event` shape: hit-test `contains_point`, fire matching `event_listeners`. `blocks_interactions()` returns `true` iff it has any pointer listener — same rule as Flex. |
@@ -259,7 +259,7 @@ painter change; missing/unknown painter errors.
 (~60 LOC + 3 tests) `painters` on config and `Runtime`; applied in
 `from_source`; threaded into the widget at build. Tests: a painter
 registered pre-`watch` still paints after a `reload()`; a painter
-registered on two Ogham instances doesn't cross-contaminate.
+registered on two Masque instances doesn't cross-contaminate.
 
 **M3 — Events + occlusion.** *(Shipped.)* (~80 LOC + 5 tests) `handle_event` over
 `event_listeners`; `blocks_point` / `blocks_interactions` returning true
@@ -270,14 +270,14 @@ gate depends on).
 
 **M4 — Docs.** *(Shipped.)* `AGENTS.md` gains a "Host-painted `Canvas`" section (the
 integration guide is where library users actually look — see
-`OGHAM_GAPS.md` §2 for what happens when it isn't there); `SURFACE.md`
+`MASQUE_GAPS.md` §2 for what happens when it isn't there); `SURFACE.md`
 gains the coordinate contract; `INTENT.md` §6 gains the amendment in §6
-below; `examples/canvas.ogh` + a tiny painter in the `client` binary so
+below; `examples/canvas.masque` + a tiny painter in the `client` binary so
 the feature is discoverable by the two routes people actually use.
 
 **M5 — Regency migration.** *(Outstanding.)* See `REGENCY_CANVAS_MIGRATION` in §8.
 
-**Estimate:** ~520 LOC + ~20 tests in ogham; ~2 person-days. Lorekeeper
+**Estimate:** ~520 LOC + ~20 tests in masque; ~2 person-days. Lorekeeper
 priced the equivalent at "~+400 engine lines"; the delta is the
 `Painter` ergonomics and the config plumbing, both of which buy back
 the hot-reload story.
@@ -290,7 +290,7 @@ the hot-reload story.
 Everything above landed as written except for the following. The plan
 was drafted from a code read; these are the things building it surfaced.
 
-1. **`ogham::skia_safe` is re-exported from the crate root.** Not in the
+1. **`masque::skia_safe` is re-exported from the crate root.** Not in the
    plan, but mandatory in practice: `Painter::canvas()` returns a
    `skia_safe::Canvas`, so a host must name Skia types, and a host that
    depends on `skia-safe` independently can end up with *two* copies in
@@ -397,7 +397,7 @@ rather than quietly violated. Proposed addition:
 - A painter registered post-hoc on the live `Runtime` instead of on
   `RuntimeConfig` — it will vanish on the next hot reload, silently.
 - `SEARCH_CARD_HEIGHT`-shaped constants reappearing: any host arithmetic
-  that hardcodes a *measured* ogham dimension. That is the exact debt
+  that hardcodes a *measured* masque dimension. That is the exact debt
   this feature exists to delete.
 - A full-screen `Canvas` filling the viewport under a transparent shell.
   That's case B and it already works; a `Canvas` there is pure overhead.
@@ -411,7 +411,7 @@ rather than quietly violated. Proposed addition:
 Everything the dial *thinks* stays in Rust: `WheelFeel`, the smoothed
 clock, the server's needle arithmetic, the `WheelCue` audio queue, the
 preroll window. INTENT §2 and §10 are untouched — the painter is host
-code, not `.ogh`.
+code, not `.masque`.
 
 Steps:
 
@@ -421,7 +421,7 @@ Steps:
    Pure mechanical: strip `wheel_center`'s output from the body.
 2. **Register it** in `chrome.rs`'s `RuntimeConfig` chain, capturing the
    `Arc<Mutex<…>>` the chrome already holds for its intent channel.
-3. **Declare it in `client.ogh`** as a `Canvas` in the existing chrome
+3. **Declare it in `client.masque`** as a `Canvas` in the existing chrome
    column, above the search card, with `dial_size` projected as host
    state (`wheel_radius(h) * WHEEL_MAX_SWELL * 2.0 + WHEEL_RING_OUT * 2.0`
    stays Rust — it's the painter's own reach, not a seating constant).

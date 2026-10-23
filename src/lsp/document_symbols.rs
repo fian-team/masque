@@ -1,4 +1,4 @@
-use ogham::parser::*;
+use masque::parser::*;
 use tower_lsp::lsp_types::{DocumentSymbol, Position, Range, SymbolKind};
 
 fn span_to_range(span: &Span) -> Range {

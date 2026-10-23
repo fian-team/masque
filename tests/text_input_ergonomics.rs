@@ -9,15 +9,15 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::widget::event::{Event, KeyModifiers};
-use ogham::widget::image::ImageCache;
-use ogham::widget::point::Point;
-use ogham::widget::style::{Border, Color, Corners, TextStyle};
-use ogham::widget::text_input_widget::TextInputWidget;
-use ogham::widget::{RenderContext, Widget, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::widget::event::{Event, KeyModifiers};
+use masque::widget::image::ImageCache;
+use masque::widget::point::Point;
+use masque::widget::style::{Border, Color, Corners, TextStyle};
+use masque::widget::text_input_widget::TextInputWidget;
+use masque::widget::{RenderContext, Widget, WidgetRef};
+use masque::Masque;
 
 const W: f32 = 800.0;
 const H: f32 = 600.0;
@@ -50,7 +50,7 @@ let main = fn () {
 };
 "#;
 
-fn mounted(src: &str) -> (Ogham, Log) {
+fn mounted(src: &str) -> (Masque, Log) {
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let mut config = RuntimeConfig::new();
     for name in ["blur_a", "blur_b", "button"] {
@@ -64,12 +64,12 @@ fn mounted(src: &str) -> (Ogham, Log) {
             Ok(Value::Void)
         });
     }
-    let mut o = Ogham::from_source(src, config).expect("the document mounts");
+    let mut o = Masque::from_source(src, config).expect("the document mounts");
     o.frame(W, H, DT).expect("frame");
     (o, log)
 }
 
-fn press(o: &mut Ogham, x: f32, y: f32) {
+fn press(o: &mut Masque, x: f32, y: f32) {
     o.get_ui_mut().call_event(&Event::with_point(
         "mouse_down".to_string(),
         Point::new(x, y),
@@ -78,12 +78,12 @@ fn press(o: &mut Ogham, x: f32, y: f32) {
         .call_event(&Event::with_point("mouse_up".to_string(), Point::new(x, y)));
 }
 
-fn keydown(o: &mut Ogham, code: u32) -> bool {
+fn keydown(o: &mut Masque, code: u32) -> bool {
     o.get_ui_mut()
         .call_event(&Event::keydown(code, None, KeyModifiers::default()))
 }
 
-fn field(o: &Ogham, index: usize) -> WidgetRef {
+fn field(o: &Masque, index: usize) -> WidgetRef {
     o.get_ui().root.lock().unwrap().get_children()[index].clone()
 }
 
@@ -341,7 +341,7 @@ let main = fn () {
     );
 }
 
-fn chord(o: &mut Ogham, code: u32, shift: bool) -> bool {
+fn chord(o: &mut Masque, code: u32, shift: bool) -> bool {
     let modifiers = KeyModifiers {
         ctrl: true,
         shift,
@@ -351,7 +351,7 @@ fn chord(o: &mut Ogham, code: u32, shift: bool) -> bool {
         .call_event(&Event::keydown(code, None, modifiers))
 }
 
-fn value_and_selection(o: &Ogham) -> (String, usize, usize) {
+fn value_and_selection(o: &Masque) -> (String, usize, usize) {
     let input = field(o, 0);
     let g = input.lock().unwrap();
     let input = g.downcast_ref::<TextInputWidget>().unwrap();

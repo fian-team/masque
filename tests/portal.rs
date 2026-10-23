@@ -9,9 +9,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::widget::{builder, portal_widget::PortalWidget, PortalInfo, Widget};
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::widget::{builder, portal_widget::PortalWidget, PortalInfo, Widget};
 
 // BridgeError doesn't impl Debug for its WidgetRef-bearing
 // VMError variant — wrap with a helper that flattens the
@@ -31,7 +31,7 @@ impl<'a> std::fmt::Debug for DebugBridgeError<'a> {
     }
 }
 
-fn build_root(src: &str) -> ogham::widget::WidgetRef {
+fn build_root(src: &str) -> masque::widget::WidgetRef {
     let runtime = Arc::new(Mutex::new(Runtime::from_source(src, None).expect("parse")));
     let module = {
         let rt = runtime.lock().unwrap();
@@ -41,7 +41,7 @@ fn build_root(src: &str) -> ogham::widget::WidgetRef {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value)
         .expect("build widget tree")
 }
@@ -77,7 +77,7 @@ fn closed_portal_with_ghosts_still_exposes_children() {
     let mut p = PortalWidget::new();
     p.open = false;
     p.inner.children.push(Arc::new(Mutex::new(
-        ogham::widget::flex_widget::FlexWidget::new(),
+        masque::widget::flex_widget::FlexWidget::new(),
     )));
     assert_eq!(
         p.get_children().len(),
@@ -87,7 +87,7 @@ fn closed_portal_with_ghosts_still_exposes_children() {
 }
 
 #[test]
-fn portal_built_from_ogh_with_open_true() {
+fn portal_built_from_masque_with_open_true() {
     let src = r#"
 let main = fn () {
   Portal {
@@ -111,7 +111,7 @@ let main = fn () {
 }
 
 #[test]
-fn portal_built_from_ogh_with_focus_trap_true() {
+fn portal_built_from_masque_with_focus_trap_true() {
     let src = r#"
 let main = fn () {
   Portal {
@@ -155,7 +155,7 @@ let main = fn () {
 "#;
     // The builder runs at execute_module's wrap-up — but
     // execute_module returns the widget VALUE, then the host
-    // (lib::Ogham::new) calls widget_value_to_widget_ref,
+    // (lib::Masque::new) calls widget_value_to_widget_ref,
     // which is where the type-check fires. Replicate that here.
     let runtime = Arc::new(Mutex::new(Runtime::from_source(src, None).expect("parse")));
     let module = {
@@ -166,7 +166,7 @@ let main = fn () {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let result = builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value);
     let err = match result {
         Ok(_) => panic!("non-array children should be rejected"),
@@ -198,7 +198,7 @@ let main = fn () {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let result = builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value);
     if result.is_ok() {
         panic!("non-widget array element should be rejected");
@@ -257,7 +257,7 @@ let main = fn () {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let root =
         builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value).expect("build");
 
@@ -290,7 +290,7 @@ let main = fn () {
 // Phase 2.5 M0 — layer system tests
 // -----------------------------------------------------------------
 
-use ogham::widget::portal_layer::PortalLayer;
+use masque::widget::portal_layer::PortalLayer;
 
 #[test]
 fn portal_with_no_layer_property_defaults_to_overlay_modal() {
@@ -331,7 +331,7 @@ fn portal_layer_property_rejects_unknown_layer_name() {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let result = builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value);
     let err = match result {
         Ok(_) => panic!("unknown layer 'modal' should be rejected"),
@@ -356,7 +356,7 @@ fn portal_layer_property_rejects_non_string_value() {
         let mut rt = runtime.lock().unwrap();
         rt.execute_module(&module).expect("execute")
     };
-    let registry = ogham::widget::builder::WidgetRegistry::with_defaults();
+    let registry = masque::widget::builder::WidgetRegistry::with_defaults();
     let result = builder::widget_value_to_widget_ref(&registry, &runtime, &widget_value);
     if result.is_ok() {
         panic!("non-string layer should be rejected");
@@ -365,7 +365,7 @@ fn portal_layer_property_rejects_non_string_value() {
 
 #[test]
 fn multiple_portals_in_same_layer_stack_lifo() {
-    use ogham::widget::{PortalEntry, PortalLayers};
+    use masque::widget::{PortalEntry, PortalLayers};
     let mut layers = PortalLayers::new();
     let p1 = make_portal_widget(PortalLayer::Tooltip);
     let p2 = make_portal_widget(PortalLayer::Tooltip);
@@ -386,7 +386,7 @@ fn multiple_portals_in_same_layer_stack_lifo() {
 
 #[test]
 fn multiple_portals_across_layers_paint_low_to_high() {
-    use ogham::widget::PortalLayers;
+    use masque::widget::PortalLayers;
     let mut layers = PortalLayers::new();
     let modal = make_portal_widget(PortalLayer::OverlayModal);
     let tooltip = make_portal_widget(PortalLayer::Tooltip);
@@ -407,7 +407,7 @@ fn multiple_portals_across_layers_paint_low_to_high() {
 
 #[test]
 fn iter_hit_test_order_walks_high_priority_first_then_lifo() {
-    use ogham::widget::PortalLayers;
+    use masque::widget::PortalLayers;
     let mut layers = PortalLayers::new();
     let modal = make_portal_widget(PortalLayer::OverlayModal);
     let tooltip = make_portal_widget(PortalLayer::Tooltip);
@@ -432,7 +432,7 @@ fn closed_portal_with_ghosts_still_routes_through_layer() {
     p.open = false;
     p.layer = PortalLayer::Popover;
     p.inner.children.push(Arc::new(Mutex::new(
-        ogham::widget::flex_widget::FlexWidget::new(),
+        masque::widget::flex_widget::FlexWidget::new(),
     )));
     let info = p.as_portal().expect("is portal");
     assert_eq!(info.layer, PortalLayer::Popover);
@@ -443,19 +443,19 @@ fn closed_portal_with_ghosts_still_routes_through_layer() {
 }
 
 // Helpers for the unit-style layer tests above.
-fn make_portal_widget(layer: PortalLayer) -> ogham::widget::WidgetRef {
+fn make_portal_widget(layer: PortalLayer) -> masque::widget::WidgetRef {
     let mut p = PortalWidget::new();
     p.open = true;
     p.layer = layer;
     Arc::new(Mutex::new(p))
 }
 
-fn entry_for(widget: ogham::widget::WidgetRef, layer: PortalLayer) -> ogham::widget::PortalEntry {
-    ogham::widget::PortalEntry {
+fn entry_for(widget: masque::widget::WidgetRef, layer: PortalLayer) -> masque::widget::PortalEntry {
+    masque::widget::PortalEntry {
         widget,
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer,
         focus_trap: false,
-        cursor: ogham::widget::portal_layer::CursorPreference::Inherit,
+        cursor: masque::widget::portal_layer::CursorPreference::Inherit,
     }
 }

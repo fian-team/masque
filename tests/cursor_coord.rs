@@ -7,10 +7,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::portal_layer::{CursorPreference, PortalLayer};
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::{PortalEntry, Widget, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::portal_layer::{CursorPreference, PortalLayer};
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::{PortalEntry, Widget, WidgetRef, UI};
 
 fn make_flex() -> WidgetRef {
     Arc::new(Mutex::new(FlexWidget::new()))
@@ -19,7 +19,7 @@ fn make_flex() -> WidgetRef {
 fn entry_for(portal: &WidgetRef, layer: PortalLayer, cursor: CursorPreference) -> PortalEntry {
     PortalEntry {
         widget: portal.clone(),
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer,
         focus_trap: false,
         cursor,

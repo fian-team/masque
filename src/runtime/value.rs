@@ -1,4 +1,4 @@
-//! Runtime value representation for all Ogham types.
+//! Runtime value representation for all Masque types.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use crate::runtime::{descriptor::WidgetDescriptor, opcode::VMClosure};
 
-/// A dynamically-typed value produced and consumed by the Ogham runtime.
+/// A dynamically-typed value produced and consumed by the Masque runtime.
 #[derive(Clone, Debug)]
 pub enum Value {
     Integer(i32),
@@ -96,80 +96,80 @@ impl fmt::Display for Value {
     }
 }
 
-/// Trait for converting Rust values into Ogham `Value`s.
-pub trait IntoOghamValue {
-    fn into_ogham_value(self) -> Value;
+/// Trait for converting Rust values into Masque `Value`s.
+pub trait IntoMasqueValue {
+    fn into_masque_value(self) -> Value;
 }
 
-impl IntoOghamValue for i32 {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for i32 {
+    fn into_masque_value(self) -> Value {
         Value::Integer(self)
     }
 }
 
-impl IntoOghamValue for u32 {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for u32 {
+    fn into_masque_value(self) -> Value {
         Value::Integer(self as i32)
     }
 }
 
-impl IntoOghamValue for u64 {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for u64 {
+    fn into_masque_value(self) -> Value {
         Value::Integer(self as i32)
     }
 }
 
-impl IntoOghamValue for f32 {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for f32 {
+    fn into_masque_value(self) -> Value {
         Value::Float(self as f64)
     }
 }
 
-impl IntoOghamValue for f64 {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for f64 {
+    fn into_masque_value(self) -> Value {
         Value::Float(self)
     }
 }
 
-impl IntoOghamValue for bool {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for bool {
+    fn into_masque_value(self) -> Value {
         Value::Boolean(self)
     }
 }
 
-impl IntoOghamValue for String {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for String {
+    fn into_masque_value(self) -> Value {
         Value::String(self)
     }
 }
 
-impl IntoOghamValue for &str {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for &str {
+    fn into_masque_value(self) -> Value {
         Value::String(self.to_string())
     }
 }
 
-impl<T: IntoOghamValue> IntoOghamValue for Option<T> {
-    fn into_ogham_value(self) -> Value {
+impl<T: IntoMasqueValue> IntoMasqueValue for Option<T> {
+    fn into_masque_value(self) -> Value {
         match self {
-            Some(v) => v.into_ogham_value(),
+            Some(v) => v.into_masque_value(),
             None => Value::Void,
         }
     }
 }
 
-impl<T: IntoOghamValue> IntoOghamValue for Vec<T> {
-    fn into_ogham_value(self) -> Value {
+impl<T: IntoMasqueValue> IntoMasqueValue for Vec<T> {
+    fn into_masque_value(self) -> Value {
         Value::array(
             self.into_iter()
-                .map(|v| v.into_ogham_value())
+                .map(|v| v.into_masque_value())
                 .collect::<Vec<_>>(),
         )
     }
 }
 
-impl IntoOghamValue for Value {
-    fn into_ogham_value(self) -> Value {
+impl IntoMasqueValue for Value {
+    fn into_masque_value(self) -> Value {
         self
     }
 }

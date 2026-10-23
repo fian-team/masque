@@ -254,7 +254,7 @@ Payload typing flows through.
    `UI::dispatch_drag_move`; on release, `UI::dispatch_drag_end`
    which uses hit_test_drop_target.
 8. **Coordinate with lorekeeper-side input pump**: same
-   pattern as P25-M2's key suppression — ogham exposes the
+   pattern as P25-M2's key suppression — masque exposes the
    API, lorekeeper consumes. Cross-repo timing is safe in
    either order.
 
@@ -310,7 +310,7 @@ Payload typing flows through.
 
 - All M0 + M1 tests pass.
 - UL builds clean.
-- Smoke: a test `.ogh` with a drag-source widget and a
+- Smoke: a test `.masque` with a drag-source widget and a
   drop-target widget can complete a full drag-drop cycle
   via simulated mouse events.
 
@@ -410,7 +410,7 @@ the wiring is straightforward.
   that disappear without a corresponding drain event (e.g.
   widgets that drop immediately without entering exit
   animation). Document the dual policy.
-- `Ogham::tick(dt)` new method that runs the canonical
+- `Masque::tick(dt)` new method that runs the canonical
   per-frame sequence: tick_animations → process_drain_queues
   → check_for_changes → reconcile if needed.
 
@@ -425,7 +425,7 @@ the wiring is straightforward.
    `process_drain_queues`. Path-disappear fallback runs
    for paths that didn't generate a drain event (M1 behavior
    preserved as a safety net).
-4. **`Ogham::tick(dt)`**: optional convenience method
+4. **`Masque::tick(dt)`**: optional convenience method
    wrapping the per-frame sequence. Hosts can call it OR
    continue calling individual methods.
 5. **Update test infra**: `tests/drain_time_unmount.rs`
@@ -473,7 +473,7 @@ the wiring is straightforward.
 - UL builds clean.
 - Smoke: a Portal-housed dialog with `exit:` style fades
   out THEN unmount fires (not at exit-begin). Verify via
-  `event("test_log", "...")` in the .ogh.
+  `event("test_log", "...")` in the .masque.
 
 ---
 
@@ -538,13 +538,13 @@ the default impl handles it.
 P3-M1 needs the lorekeeper input pump to call
 `UI::dispatch_drag_*` methods. Same coordination shape as
 P25-M2's key suppression:
-- Ogham lands first → API exists, lorekeeper still uses
+- Masque lands first → API exists, lorekeeper still uses
   raw mouse events; drag events never fire; existing UL
   click behavior unchanged.
 - Lorekeeper lands first → calls API methods that don't
-  exist yet; build break. Land ogham first.
+  exist yet; build break. Land masque first.
 
-Recommend: ogham M1 ships, lorekeeper integration follows
+Recommend: masque M1 ships, lorekeeper integration follows
 in a separate workstream.
 
 ### Drag-during-portal-close edge cases
@@ -585,7 +585,7 @@ resolution (consumer convention).
 | 4 | drag_preview rendering interacts unexpectedly with cursor-attached layer's other contents | Low | Low | cursor-attached layer is rare in current use (no other consumers); drag_preview is the canonical use | M2 |
 | 5 | Drain-time unmount fires too late (UI feels laggy) | Low | Low | Drain happens at exit-animation completion (typical 200-400ms). Same latency as Phase 2 design intended. UL audit confirmed acceptable | M3 |
 | 6 | contextmenu event collides with widgets that use right-click for other things | Low | Low | Default behavior preserved for widgets without `contextmenu` listeners | M2 |
-| 7 | Cross-repo coordination delay (lorekeeper input pump for drag) | Medium | Low | Both orders safe; ogham can land first and wait for lorekeeper integration | M1 |
+| 7 | Cross-repo coordination delay (lorekeeper input pump for drag) | Medium | Low | Both orders safe; masque can land first and wait for lorekeeper integration | M1 |
 
 ---
 
@@ -721,7 +721,7 @@ docs+skill revision pass.
   `hit_test_drag_target(point)`, `hit_test_drop_target(payload, point)`.
   Hit-test walks portal layers high→low then base tree;
   honors Block backdrop policy.
-- All four exposed on `Ogham::dispatch_*` for hosts.
+- All four exposed on `Masque::dispatch_*` for hosts.
 - 12 tests in `tests/drag_events.rs`.
 
 ### P3-M2 — drag_preview + contextmenu
@@ -738,7 +738,7 @@ docs+skill revision pass.
   `contextmenu` listener on the deepest widget at the point
   (uses M1's `hit_test_drag_target` walker). Builder
   registers `contextmenu` like other mouse events.
-- `Ogham::dispatch_contextmenu` exposed for hosts.
+- `Masque::dispatch_contextmenu` exposed for hosts.
 - 6 tests in `tests/drag_preview.rs` + 3 in
   `tests/contextmenu.rs`.
 
@@ -746,7 +746,7 @@ docs+skill revision pass.
 
 - `Runtime::process_drain_queues(&mut UI)` consumes UI's
   `pending_cancelled_unmount_prefixes` (cancels first) and
-  `pending_drained_prefixes` (then flushes). `Ogham::update`
+  `pending_drained_prefixes` (then flushes). `Masque::update`
   calls it after `ui.reconcile()` and runs
   `pre_layout_drain` again so the freshly-promoted hooks
   fire in the same frame.
@@ -777,5 +777,5 @@ docs+skill revision pass.
 - `LIFECYCLE_AND_PORTAL.md` mentions Phase 3.
 - `UL_ADOPTION_READINESS.md` §2.3 marked closed.
 - Memory updated.
-- "What's next": docs + Ogham-skill revision pass, then UL
+- "What's next": docs + Masque-skill revision pass, then UL
   Pass 2 begins.

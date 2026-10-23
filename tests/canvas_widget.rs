@@ -11,18 +11,18 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::runtime::value::Value;
-use ogham::runtime::Runtime;
-use ogham::skia::SkiaEnv;
-use ogham::widget::canvas_widget::{CanvasWidget, Painter};
-use ogham::widget::event::Event;
-use ogham::widget::image::ImageCache;
-use ogham::widget::point::Point;
-use ogham::widget::rect::Rect;
-use ogham::widget::style::{Border, Color, Corners, CursorRole, TextStyle};
-use ogham::widget::{builder, RenderContext, Surface, WidgetRef};
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::runtime::Runtime;
+use masque::skia::SkiaEnv;
+use masque::widget::canvas_widget::{CanvasWidget, Painter};
+use masque::widget::event::Event;
+use masque::widget::image::ImageCache;
+use masque::widget::point::Point;
+use masque::widget::rect::Rect;
+use masque::widget::style::{Border, Color, Corners, CursorRole, TextStyle};
+use masque::widget::{builder, RenderContext, Surface, WidgetRef};
+use masque::Masque;
 
 const DT: f32 = 1.0 / 60.0;
 const W: f32 = 800.0;
@@ -45,7 +45,7 @@ fn describe(err: &builder::BridgeError) -> String {
 }
 
 /// Build a widget tree straight from source, so the builder's accept /
-/// reject behaviour is observable without going through `Ogham`.
+/// reject behaviour is observable without going through `Masque`.
 fn try_build_root(src: &str, config: RuntimeConfig) -> Result<WidgetRef, String> {
     let runtime = Arc::new(Mutex::new(
         Runtime::from_source(src, Some(config)).expect("parse"),
@@ -101,15 +101,15 @@ fn try_find_canvas(node: &WidgetRef) -> Option<WidgetRef> {
 }
 
 /// Read the laid-out rect of the tree's single `Canvas`.
-fn canvas_rect(o: &Ogham) -> Rect {
+fn canvas_rect(o: &Masque) -> Rect {
     let canvas = find_canvas(&o.get_ui().root);
     let g = canvas.lock().unwrap();
     g.get_layout_rect().cloned().expect("canvas laid out")
 }
 
 /// Run enough frames to lay out and settle.
-fn settled(src: &str, config: RuntimeConfig) -> Ogham {
-    let mut o = Ogham::from_source(src, config).expect("from_source");
+fn settled(src: &str, config: RuntimeConfig) -> Masque {
+    let mut o = Masque::from_source(src, config).expect("from_source");
     for _ in 0..8 {
         o.frame(W, H, DT).expect("frame");
     }
@@ -119,7 +119,7 @@ fn settled(src: &str, config: RuntimeConfig) -> Ogham {
 /// An offscreen Skia environment at the given DPI scale.
 fn raster_env(dpi: f32) -> SkiaEnv {
     let surface =
-        ogham::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
+        masque::skia_safe::surfaces::raster_n32_premul((256, 256)).expect("raster surface");
     SkiaEnv::new_with_dpi_scale(surface, dpi)
 }
 
@@ -456,7 +456,7 @@ fn registered_painter_runs_during_draw_with_the_laid_out_size() {
 }
 
 /// Painters registered on `RuntimeConfig` survive a hot reload for the same
-/// reason event handlers do: `Ogham::reload` rebuilds the runtime *from the
+/// reason event handlers do: `Masque::reload` rebuilds the runtime *from the
 /// config*. A painter added post-hoc to a live `Runtime` would vanish here.
 #[test]
 fn painter_registered_before_watch_still_paints_after_reload() {
@@ -466,12 +466,12 @@ fn painter_registered_before_watch_still_paints_after_reload() {
         counter.fetch_add(1, Ordering::SeqCst);
     });
 
-    let dir = std::env::temp_dir().join(format!("ogham-canvas-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("masque-canvas-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("tmp dir");
-    let path = dir.join("canvas_reload.ogh");
+    let path = dir.join("canvas_reload.masque");
     std::fs::write(&path, FIXED_SRC).expect("write");
 
-    let mut o = Ogham::watch(path.to_string_lossy().to_string(), config).expect("watch");
+    let mut o = Masque::watch(path.to_string_lossy().to_string(), config).expect("watch");
     for _ in 0..4 {
         o.frame(W, H, DT).expect("frame");
     }
@@ -494,7 +494,7 @@ fn painter_registered_before_watch_still_paints_after_reload() {
     std::fs::remove_file(&path).ok();
 }
 
-/// Two `Ogham` instances with separate configs keep separate painter maps:
+/// Two `Masque` instances with separate configs keep separate painter maps:
 /// registration is per-config, never process-global.
 #[test]
 fn painters_do_not_cross_contaminate_between_instances() {
@@ -551,7 +551,7 @@ let main = fn () {
 };
 "#;
 
-fn listening(counter: Arc<AtomicUsize>) -> Ogham {
+fn listening(counter: Arc<AtomicUsize>) -> Masque {
     let config = inert_config(&["dial"]).with_event_handler("dial_press", move |_args| {
         counter.fetch_add(1, Ordering::SeqCst);
         Ok(Value::Boolean(true))
@@ -633,12 +633,12 @@ let main = fn () {
 
 // ── M4 — the shipped example ───────────────────────────────────────────
 
-/// `examples/canvas.ogh` plus the `client` binary's `"demo_dial"` painter
+/// `examples/canvas.masque` plus the `client` binary's `"demo_dial"` painter
 /// are the two routes by which anyone discovers this feature. A broken
 /// example is a feature nobody finds, so keep it building.
 #[test]
 fn the_shipped_example_builds_and_declares_canvases() {
-    let src = std::fs::read_to_string("examples/canvas.ogh").expect("examples/canvas.ogh");
+    let src = std::fs::read_to_string("examples/canvas.masque").expect("examples/canvas.masque");
     let root = try_build_root(&src, inert_config(&["demo_dial"])).expect("example should build");
     let canvas = find_canvas(&root);
     let g = canvas.lock().unwrap();

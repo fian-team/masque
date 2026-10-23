@@ -1,4 +1,4 @@
-import "./button.ogh";
+import "./button.masque";
 
 let view_three = fn (set_view: function) {
   Flex {

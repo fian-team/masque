@@ -1,4 +1,4 @@
-# Ogham — Language Front-End (Scanner + Parser)
+# Masque — Language Front-End (Scanner + Parser)
 
 > **Status: Live contract.**
 >
@@ -13,7 +13,7 @@
 ## At a glance
 
 ```
-Source (UTF-8 .ogh)
+Source (UTF-8 .masque)
   → Scanner          src/scanner/
       Vec<Token>     (one-shot lex; comments stripped; errors as tokens)
   → Parser           src/parser/
@@ -168,12 +168,12 @@ screen "world" {
 
 A `screen` declares **one routable surface**: an id, the slice of host
 state that surface alone reads, and the view it renders. It is the surface
-half of the structure framework's routing (`APPLICATION.md` §3); the rules that
+half of Carte's routing (`APPLICATION.md` §3); the rules that
 matter here:
 
 - **The id is a route id, not an identifier.** `"map-edit"` is legal and
   would scan as three tokens if screens were named after it — so the
-  compiler names each screen's closure `__ogh_screen_<index>` by its
+  compiler names each screen's closure `__masque_screen_<index>` by its
   position in the (sorted) schema map.
 - **`state` is optional; `view` is not.** A screen with no slice reads
   only the root scope, which is common. A screen with no view is an
@@ -218,7 +218,7 @@ matter here:
   A single-view path is unaffected — one child on the whole content box
   is where a flow's first child already was.
 - **A document never navigates.** There is no way to *set* the path from
-  inside ogham, and that is `INTENT §10` holding rather than an
+  inside masque, and that is `INTENT §10` holding rather than an
   omission.
 
 Screen fields are seeded with their declared default (or an empty value
@@ -435,8 +435,8 @@ intended.
 ### What crosses an import
 
 ```
-import "./stationery.ogh";                  // everything it declares
-import { plate, rule } from "./stationery.ogh";   // only these
+import "./stationery.masque";                  // everything it declares
+import { plate, rule } from "./stationery.masque";   // only these
 ```
 
 Three things cross, and they arrive by three different routes:
@@ -458,7 +458,7 @@ than an oversight. A selection is what the mounting document *reads*,
 and it reads the same fields wherever the helper that reads them
 lives. A shared module's `events {}` is that module's whole
 vocabulary — the **union over every mount**, because the file has to
-compile under all of them. regency's `stationery.ogh` is the live
+compile under all of them. regency's `stationery.masque` is the live
 case: it declares `join`, which only the foyer accepts, beside
 `confirm`, which only the table does. Handing that union to each
 importing document would have both of them claiming raises they never
@@ -479,10 +479,10 @@ be worse than the gap.
 crosses an import; it does not make the importing file strict. This
 is not a nicety — the failure it prevents cost two debugging cycles
 in untold_lore's migration and named the wrong file both times. A
-loose `front.ogh` reading `continue_world` out of the
+loose `front.masque` reading `continue_world` out of the
 root's host state was refused, naming `continue_world`, because a
-`settings.ogh` it imported had gained a `select`; nothing in
-`front.ogh` had changed. So `binds_top_level_names` and `is_strict`
+`settings.masque` it imported had gained a `select`; nothing in
+`front.masque` had changed. So `binds_top_level_names` and `is_strict`
 ask what *this file* declared, while `binds` and `bound_names` — the
 names available to resolve — see everything the graph brought in.
 Without that split, `host_state {}` and `select` could not coexist
@@ -510,20 +510,20 @@ pre-scanned direct imports would reject a helper that then ran
 perfectly.
 
 The one asymmetry is narrowing, and it is execution's too:
-`import { a } from "x.ogh"` narrows *x's own* declarations to `a`,
+`import { a } from "x.masque"` narrows *x's own* declarations to `a`,
 and whatever `x` imported arrives beside it unnarrowed. The walk
 reproduces that rather than the tidier rule, because two answers
 is the bug.
 
 **Resolution order** is embedded source (keyed by the import string
 exactly as written) → prefix mapping → project root, with a missing
-`.ogh` extension supplied. `ImportSpace` is that policy written
+`.masque` extension supplied. `ImportSpace` is that policy written
 down once; a standalone schema load with no host configuration
 roots it at the document's own directory.
 
 **A hot edit re-derives the watch set.** The files a document is
 made of are a *reading* of its import graph, not a fact about the
-mount, so `Ogham::reload` rebuilds the watcher from the runtime
+mount, so `Masque::reload` rebuilds the watcher from the runtime
 that just took over. An edit that adds an import starts watching
 the module it added; an edit to any module reloads every document
 that mounts it.

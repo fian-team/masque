@@ -1,4 +1,4 @@
-# Ogham — Text-Input Ergonomics
+# Masque — Text-Input Ergonomics
 
 > **Status: implementation tracker.** Captures the design contract, the staged
 > implementation, and the host-seam audit for the text-input / focus ergonomics
@@ -42,7 +42,7 @@ the seam is half-built and unused. This work finishes it.
   Layout reads it via `LayoutContext`; the widget caches the (ref-counted)
   `FontCollection` handle at `layout()` time so `handle_event` (click-to-caret)
   and `render` (caret + scroll) can measure too. `skia.rs` shares the
-  ogham→skia `TextStyle` geometry mapping so paint and measurement can't drift.
+  masque→skia `TextStyle` geometry mapping so paint and measurement can't drift.
 - **[DECIDED] E2 — selection model.** `cursor_position: usize` →
   `Selection { anchor, caret }` (byte offsets, kept on **char boundaries** —
   std-only, kills the panic and unblocks non-ASCII typing). Collapsed
@@ -52,7 +52,7 @@ the seam is half-built and unused. This work finishes it.
   also the right primitive for future sliders.
 - **[DECIDED] Stage 5 — clipboard intent.** Copy/cut/paste route as an intent
   through `EventContext` (mirroring `request_focus`) for the host to fulfil
-  against the window owner; `arboard` is the host-side impl. Keeps Ogham
+  against the window owner; `arboard` is the host-side impl. Keeps Masque
   embeddable under the editable seam (lorekeeper owns the real window).
 - **[DECIDED] tab order — tree order.** No new DSL surface; traversal walks the
   live tree in render order. An explicit `tab_index:` prop is a later option.
@@ -175,7 +175,7 @@ letting it reach game hotkeys. Three additions ride the same precedent:
    text out, paste text in); `UI::call_event` drains it and the host services
    it against the window via `arboard`. The widget never touches a clipboard
    crate directly — Wayland ties the clipboard to the window owner, which is the
-   host, not Ogham.
+   host, not Masque.
 
 Confirm these three against the lorekeeper input pump during Stage 3/5.
 
@@ -191,7 +191,7 @@ Confirm these three against the lorekeeper input pump during Stage 3/5.
   none claims it — a document that binds `ctrl_arrowleft` takes it from
   every field under it.
 - **`multiline:`.** The height-coupled rule above left a fixed-height
-  "textarea" (UL's and small_mercies' `field_node.ogh`, `height: 64`)
+  "textarea" (UL's and small_mercies' `field_node.masque`, `height: 64`)
   scrolling one line sideways. `multiline: true` wraps at any height;
   lines that overflow a fixed height scroll vertically (`scroll_y`, kept
   caret-visible in `update_scroll`) and clip to the content box.

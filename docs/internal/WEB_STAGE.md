@@ -1,4 +1,4 @@
-# Web stage: Ogham in a browser
+# Web stage: Masque in a browser
 
 Status: **complete 2026-10-19.** Phases 0–4 merged to main from the `web` worktree (since removed); Phases 5–6 are in `masque-website` (`apps/masque`).
 
@@ -75,9 +75,9 @@ widget tree, layout and Skia renderer in the browser. The source pane
 becomes editable. Today the right pane is `StagePreview.tsx`, an HTML
 imitation of three counter buttons.
 
-Naming: the site says Masque and this repository says Ogham. Nothing is
-renamed by this plan. New code in this repo uses `ogham`, and the website
-keeps calling it Masque.
+Naming: when this plan ran, the site said Masque and this repository said
+Ogham; nothing was renamed by this plan. The repository has since been
+renamed to Masque as well.
 
 ---
 
@@ -86,7 +86,7 @@ keeps calling it Masque.
 Measured on 2026-10-18, at `756e5f6`.
 
 - **The hero script is real.** The source string in `StageDemo.tsx`
-  goes through `Ogham::from_source` with
+  goes through `Masque::from_source` with
   `RuntimeConfig::with_strict_vocabulary()`, then `update()` and
   `layout(600, 400)`, with no error and no vocabulary violations. The
   stage can run exactly what it shows.
@@ -100,7 +100,7 @@ Measured on 2026-10-18, at `756e5f6`.
   font manager, so there are no system fonts but typefaces can still be
   created from bytes. It has no `wasm32-unknown-unknown` platform.
 - **The host hooks mostly exist already:**
-  - Fonts: `Ogham::register_font` / `RuntimeConfig::with_font`, which
+  - Fonts: `Masque::register_font` / `RuntimeConfig::with_font`, which
     feed a `TypefaceFontProvider`, plus `with_default_font`. They read
     file paths.
   - Imports without a filesystem: `RuntimeConfig::with_embedded_sources`.
@@ -115,7 +115,7 @@ Measured on 2026-10-18, at `756e5f6`.
 - **Native-only dependencies are unconditional library dependencies:**
   `tokio` (`rt-multi-thread`) and `tower-lsp`, used only by `src/lsp/`;
   `notify`, used only by `file_watcher.rs`; and skia-safe's `vulkan`
-  feature, which ogham's own code doesn't use (`SkiaEnv` wraps any
+  feature, which masque's own code doesn't use (`SkiaEnv` wraps any
   `skia_safe::Surface`, and the Vulkan surface is lorekeeper's).
 - **No threads.** Nothing in `src/` spawns one. `Arc<Mutex<Runtime>>`
   is fine on single-threaded wasm.
@@ -123,8 +123,8 @@ Measured on 2026-10-18, at `756e5f6`.
   emscripten's in-memory filesystem (MEMFS), and `Instant` maps to
   `performance.now()`. `Pad`'s double-click timer and the layout-window
   timer need no changes.
-- **Every consumer depends on `path = "../../ogham"`**: lorekeeper's
-  app, front, driver, contract, editable-ogham and ogham_preview, plus
+- **Every consumer depends on `path = "../../masque"`**: lorekeeper's
+  app, front, driver, contract, editable-masque and masque_preview, plus
   untold_lore's ul-editor. A worktree at another path is invisible to
   all of them, and that is what keeps them compiling.
 - **`masque-website` is not a git repository.** It needs `git init`
@@ -166,14 +166,14 @@ renderer that isn't the shipped one.
 ## 2. Worktree and gates
 
 ```sh
-git worktree add ../ogham-web -b web     # from /home/rowan/Projects/ogham
+git worktree add ../masque-web -b web     # from /home/rowan/Projects/masque
 ```
 
 This is a deliberate exception to the single-branch rule. The rule
 allows isolation for a spike that might break things, and Phase 1 is
-exactly that. Main and every consumer stay on `../ogham`. The `web`
+exactly that. Main and every consumer stay on `../masque`. The `web`
 branch is rebased onto main before each phase. It merges back as a fast
-forward only after Phase 4, when the changes inside the `ogham` crate
+forward only after Phase 4, when the changes inside the `masque` crate
 are proven. Phases 5–6 live in the website repository, and the stage
 artefact is copied there.
 
@@ -204,7 +204,7 @@ worktree's `cargo test` is green.
 
 ### Phase 1: Skia alone in the browser, the go/no-go spike (1–3 days)
 
-This phase is the risk. Do it before touching ogham.
+This phase is the risk. Do it before touching masque.
 
 A throwaway crate in the scratchpad depends on `skia-safe = "0.91"` with
 `textlayout` and without `vulkan`. Built for
@@ -238,7 +238,7 @@ rejected approach in §1, and that is a different and larger plan.
 
 ### Phase 2: native-only dependencies leave the browser build (1 day)
 
-These changes are in the worktree, inside the `ogham` crate. Consumers
+These changes are in the worktree, inside the `masque` crate. Consumers
 must see **no difference**.
 
 Gate by target, not by feature:
@@ -263,9 +263,9 @@ skia-safe = { version = "0.91.0", features = ["textlayout"] }  # ± default-feat
   `reload` paths in `lib.rs` get
   `#[cfg(not(target_os = "emscripten"))]`. `from_source` is the
   browser's constructor.
-- `ogham-lsp` and `ogham-vocab` are binaries, and a browser host builds
+- `masque-lsp` and `masque-vocab` are binaries, and a browser host builds
   only the library, so they need nothing.
-- Add `Ogham::register_font_data(family, &[&[u8]])` beside
+- Add `Masque::register_font_data(family, &[&[u8]])` beside
   `register_font`. `register_font` becomes a wrapper that reads the
   files and calls it. This is additive. A browser carries its fonts with
   `include_bytes!`, and could otherwise write them into MEMFS first, but
@@ -284,7 +284,7 @@ root is unchanged compared with main. For consumers, temporarily point
 lorekeeper's app at the worktree with a local, uncommitted path edit,
 run `cargo check`, then revert the edit.
 
-### Phase 3: ogham compiles and renders for emscripten (1–2 days)
+### Phase 3: masque compiles and renders for emscripten (1–2 days)
 
 ```sh
 cargo build --lib --target wasm32-unknown-emscripten
@@ -313,13 +313,13 @@ rounding differs. Record which.
 
 ### Phase 4: the host crate `web/` (2–3 days)
 
-`web/` is a package in this repository: `ogham-web`, a `bin` target,
+`web/` is a package in this repository: `masque-web`, a `bin` target,
 which is how Rust's emscripten target emits `.js` + `.wasm`. It is a
 workspace member with `default-members = ["."]`, so a bare `cargo
 build` or `cargo test` at the root doesn't change.
 
-**Decision 4a (resolved: this repository).** The host lives here. It is a Rust host for Ogham, the browser counterpart of
-lorekeeper's `ogham_preview`. Its native unit tests run with the rest
+**Decision 4a (resolved: this repository).** The host lives here. It is a Rust host for Masque, the browser counterpart of
+lorekeeper's `masque_preview`. Its native unit tests run with the rest
 of the repository, and the website only consumes two files. The
 independence test is unaffected because it reads only the root
 manifest.
@@ -366,12 +366,12 @@ whichever the golden test proves.
 -O3 (then wasm-opt -Oz), panic=abort
 ```
 
-It writes `web/dist/ogham_stage.{js,wasm}` and a `manifest.json` with
+It writes `web/dist/masque_stage.{js,wasm}` and a `manifest.json` with
 the commit hash, the build date and the sizes.
 
 #### Tests
 
-- **Native unit tests** for the host logic, `cargo test -p ogham-web`:
+- **Native unit tests** for the host logic, `cargo test -p masque-web`:
   - pointer down/up at counter 1's centre twice → its text reads
     `Counter 1 2` and the others read 0;
   - a bad `set_source` leaves the old tree up and the error readable;
@@ -388,16 +388,16 @@ base gate. Build lorekeeper and ul-editor against the result: they
 follow main, so this is the real check that consumers are unchanged.
 Then fast-forward main. Phases 5–6 don't touch this crate's code. Remove
 the worktree, or keep it for Phase 6's possible
-`Ogham::reload_source` (decision 6b).
+`Masque::reload_source` (decision 6b).
 
 ### Phase 5: the website stage (2 days, in `masque-website`)
 
-- `scripts/sync-stage.mjs` copies `ogham-web/web/dist/*` into
+- `scripts/sync-stage.mjs` copies `masque-web/web/dist/*` into
   `public/stage/`.
 - **Decision 5a (resolved: committed).** The built artefacts are
   committed to the site, with `manifest.json`. The
   site then builds with no emsdk, the bundle is reproducible, and the
-  manifest says which Ogham commit it is.
+  manifest says which Masque commit it is.
 - `src/components/LiveStage.tsx` (`"use client"`):
   - **Server-rendered placeholder.** `StagePreview` stays as the
     server-rendered content, so there is something to see with no
@@ -444,9 +444,9 @@ loaded lazily.
   keeps the last good render. A Reset button restores the original
   script.
 - **Decision 6b (resolved: rebuild and reset).** `from_source` documents have no
-  path, so `Ogham::reload` is a no-op for them, and v1 rebuilds, which
+  path, so `Masque::reload` is a no-op for them, and v1 rebuilds, which
   resets every `state` (counters go back to 0 on each edit). That is
-  accepted. A small additive `Ogham::reload_source(&str)`, doing for a
+  accepted. A small additive `Masque::reload_source(&str)`, doing for a
   source string what `reload_file` does for a path, stays available as
   later work if keeping state across edits starts to matter.
 
@@ -457,7 +457,7 @@ stage live, fixing the typo recovers, and Reset works.
 
 - `AGENTS.md`: a `web/` row in the module table, and the browser host
   as a third mode beside library and standalone. The table also still
-  lists `crates/ogham-derive/` and `src/cli/`, which no longer exist;
+  lists `crates/masque-derive/` and `src/cli/`, which no longer exist;
   fix them in passing or separately.
 - `docs/internal/SURFACE.md`: the raster-in-wasm host as a second
   reference consumer of `SkiaEnv`.
@@ -485,7 +485,7 @@ stage live, fixing the typo recovers, and Reset works.
 | 0 Toolchain | ½ |
 | 1 Skia spike (go/no-go) | 1–3 |
 | 2 Dependency gates | 1 |
-| 3 Ogham on emscripten + golden | 1–2 |
+| 3 Masque on emscripten + golden | 1–2 |
 | 4 Host crate + merge back | 2–3 |
 | 5 Website stage | 2 |
 | 6 Editable source | 1–2 |

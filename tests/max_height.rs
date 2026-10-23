@@ -3,10 +3,10 @@
 //! its ceiling with one that stays below it, so a ceiling that clamped
 //! everything, or nothing, fails one of them.
 
-use ogham::runtime::config::RuntimeConfig;
-use ogham::widget::vocabulary::scan_source;
-use ogham::widget::WidgetRef;
-use ogham::Ogham;
+use masque::runtime::config::RuntimeConfig;
+use masque::widget::vocabulary::scan_source;
+use masque::widget::WidgetRef;
+use masque::Masque;
 
 fn find(node: &WidgetRef, key: &str) -> Option<WidgetRef> {
     let children = {
@@ -19,14 +19,14 @@ fn find(node: &WidgetRef, key: &str) -> Option<WidgetRef> {
     children.iter().find_map(|c| find(c, key))
 }
 
-fn height_of(o: &Ogham, key: &str) -> f32 {
+fn height_of(o: &Masque, key: &str) -> f32 {
     let node = find(&o.get_ui().root, key).unwrap_or_else(|| panic!("no widget keyed {key}"));
     let g = node.lock().unwrap();
     g.get_layout_rect().expect("laid out").height
 }
 
-fn settled(src: &str) -> Ogham {
-    let mut o = Ogham::from_source(src, RuntimeConfig::default()).expect("from_source");
+fn settled(src: &str) -> Masque {
+    let mut o = Masque::from_source(src, RuntimeConfig::default()).expect("from_source");
     for _ in 0..4 {
         o.frame(800.0, 600.0, 1.0 / 60.0).expect("frame");
     }
@@ -70,7 +70,7 @@ let main = fn () {
 #[test]
 fn the_vocabulary_knows_the_key() {
     let found = scan_source(
-        "fixture.ogh",
+        "fixture.masque",
         r#"let main = fn () { Flex { style: { max_height: 120 } } };"#,
     );
     assert!(found.is_empty(), "{:?}", found.iter().map(|v| &v.path).collect::<Vec<_>>());

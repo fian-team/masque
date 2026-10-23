@@ -1,4 +1,4 @@
-//! Spring-driven style transitions for Ogham widgets.
+//! Spring-driven style transitions for Masque widgets.
 //!
 //! The framework compares the old and new style at reconciliation time. For
 //! any style property declared in `transition: { ... }`, a spring is set up

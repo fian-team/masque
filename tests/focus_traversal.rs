@@ -6,10 +6,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use ogham::widget::flex_widget::FlexWidget;
-use ogham::widget::portal_widget::PortalWidget;
-use ogham::widget::text_input_widget::TextInputWidget;
-use ogham::widget::{PortalEntry, WidgetRef, UI};
+use masque::widget::flex_widget::FlexWidget;
+use masque::widget::portal_widget::PortalWidget;
+use masque::widget::text_input_widget::TextInputWidget;
+use masque::widget::{PortalEntry, WidgetRef, UI};
 
 fn input() -> WidgetRef {
     Arc::new(Mutex::new(TextInputWidget::new()))
@@ -113,7 +113,7 @@ fn traversal_confined_to_focus_trap_subtree() {
     let info = modal.lock().unwrap().as_portal().unwrap();
     ui.portal_layers.push(PortalEntry {
         widget: modal.clone(),
-        viewport_rect: ogham::widget::rect::Rect::zero(),
+        viewport_rect: masque::widget::rect::Rect::zero(),
         layer: info.layer,
         focus_trap: info.focus_trap,
         cursor: info.cursor,

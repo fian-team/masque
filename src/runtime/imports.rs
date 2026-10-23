@@ -29,7 +29,7 @@
 //! identifier and runs perfectly.
 //!
 //! The one asymmetry is narrowing, and it is execution's: `import { a } from
-//! "x.ogh"` narrows *`x`'s own* declarations to `a`, and whatever `x`
+//! "x.masque"` narrows *`x`'s own* declarations to `a`, and whatever `x`
 //! imported arrives beside it unnarrowed, because `x`'s imports were copied
 //! into the shared environment before the narrowing happened. This walk
 //! does the same thing rather than the tidier thing, because the tidier
@@ -46,11 +46,11 @@ use crate::scanner::Scanner;
 ///
 /// Two kinds of import path, and they are answered differently:
 ///
-/// - A **named** path — `"@lib/widgets.ogh"`, `"widgets.ogh"` — names a
+/// - A **named** path — `"@lib/widgets.masque"`, `"widgets.masque"` — names a
 ///   library or a document at the project root. Three lookups in this
 ///   order: an embedded source keyed by the path exactly as written, then
 ///   a prefix mapping, then the project root.
-/// - A **relative** path — `"./widgets.ogh"`, `"../kit/widgets.ogh"` —
+/// - A **relative** path — `"./widgets.masque"`, `"../kit/widgets.masque"` —
 ///   names a file *next to the document that wrote it*, and resolves
 ///   against that document's own directory. Nothing else is consulted.
 ///
@@ -59,14 +59,14 @@ use crate::scanner::Scanner;
 /// The embedded map is one flat namespace with no notion of where the
 /// importing document lives, and it used to be consulted first for every
 /// path, relative ones included. So a host that carried an in-memory
-/// library under a key like `"./widgets.ogh"` captured **every** document's
-/// `import "./widgets.ogh"`, whatever directory that document was in and
+/// library under a key like `"./widgets.masque"` captured **every** document's
+/// `import "./widgets.masque"`, whatever directory that document was in and
 /// whatever sat next to it on disk. The import said "the file beside me"
 /// and meant "whatever the host happened to register under that spelling".
 /// Nothing reported it: the wrong file parses, binds its names, and draws.
 ///
-/// That was live in this workspace. A game mounted an editor's `.ogh`
-/// library as embedded sources keyed `"./widgets.ogh"`, `"./theme.ogh"`
+/// That was live in this workspace. A game mounted an editor's `.masque`
+/// library as embedded sources keyed `"./widgets.masque"`, `"./theme.masque"`
 /// and five more; the game's own documents sat in a different crate's
 /// directory. The day either side grew a file of a name the other had
 /// registered, every relative import of it would have silently crossed the
@@ -74,7 +74,7 @@ use crate::scanner::Scanner;
 /// this and remains the advice — but the advice was load-bearing, which is
 /// what made it a defect rather than a style.
 ///
-/// A missing `.ogh` extension is added.
+/// A missing `.masque` extension is added.
 ///
 /// Relative resolution needs the importing document, which every caller
 /// knows: [`walk_into`] carries the parent it descended from, and
@@ -163,7 +163,7 @@ impl ImportSpace {
         // library capture another crate's siblings.
         if is_relative(path_str) {
             if let Some(dir) = from.and_then(Path::parent) {
-                return Some(Located::File(with_ogh(dir.join(path_str))));
+                return Some(Located::File(with_masque(dir.join(path_str))));
             }
         }
 
@@ -174,11 +174,11 @@ impl ImportSpace {
         for (prefix, base) in &self.import_paths {
             if let Some(rest) = path_str.strip_prefix(prefix.as_str()) {
                 let rest = rest.strip_prefix('/').unwrap_or(rest);
-                return Some(Located::File(with_ogh(base.join(rest))));
+                return Some(Located::File(with_masque(base.join(rest))));
             }
         }
 
-        Some(Located::File(with_ogh(
+        Some(Located::File(with_masque(
             self.project_root.as_ref()?.join(path_str),
         )))
     }
@@ -192,16 +192,16 @@ pub(crate) enum Located {
 
 /// A path that names a file beside the document that wrote it.
 ///
-/// Only `./` and `../` — a bare `"widgets.ogh"` is a **named** import and
+/// Only `./` and `../` — a bare `"widgets.masque"` is a **named** import and
 /// goes to the library and the project root, which is what it has always
-/// meant here and what `examples/import/importer.ogh` relies on.
+/// meant here and what `examples/import/importer.masque` relies on.
 fn is_relative(path_str: &str) -> bool {
     path_str.starts_with("./") || path_str.starts_with("../")
 }
 
-fn with_ogh(mut path: PathBuf) -> PathBuf {
+fn with_masque(mut path: PathBuf) -> PathBuf {
     if path.extension().is_none() {
-        path.set_extension("ogh");
+        path.set_extension("masque");
     }
     path
 }
@@ -333,7 +333,7 @@ mod tests {
     use super::*;
 
     fn scratch(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("ogham-imports-{}-{tag}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("masque-imports-{}-{tag}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("scratch dir");
         dir
@@ -348,13 +348,13 @@ mod tests {
     #[test]
     fn a_walk_reaches_a_module_two_imports_away() {
         let dir = scratch("transitive");
-        std::fs::write(dir.join("palette.ogh"), "let ink = \"#101010\";\n").expect("write");
+        std::fs::write(dir.join("palette.masque"), "let ink = \"#101010\";\n").expect("write");
         std::fs::write(
-            dir.join("stationery.ogh"),
-            "import \"./palette.ogh\";\nrecord Card { title: string };\nlet rule = fn () { ink };\n",
+            dir.join("stationery.masque"),
+            "import \"./palette.masque\";\nrecord Card { title: string };\nlet rule = fn () { ink };\n",
         )
         .expect("write");
-        let module = parse("import \"./stationery.ogh\";\nlet main = fn () { rule() };\n");
+        let module = parse("import \"./stationery.masque\";\nlet main = fn () { rule() };\n");
 
         let found = walk(&module, &ImportSpace::rooted_at(&dir), None);
 
@@ -371,14 +371,14 @@ mod tests {
     #[test]
     fn a_named_import_narrows_the_module_it_names_and_nothing_below_it() {
         let dir = scratch("narrowing");
-        std::fs::write(dir.join("palette.ogh"), "let ink = \"#101010\";\n").expect("write");
+        std::fs::write(dir.join("palette.masque"), "let ink = \"#101010\";\n").expect("write");
         std::fs::write(
-            dir.join("stationery.ogh"),
-            "import \"./palette.ogh\";\nlet rule = fn () { ink };\nlet seal = fn () { ink };\n",
+            dir.join("stationery.masque"),
+            "import \"./palette.masque\";\nlet rule = fn () { ink };\nlet seal = fn () { ink };\n",
         )
         .expect("write");
         let module =
-            parse("import { rule } from \"./stationery.ogh\";\nlet main = fn () { rule() };");
+            parse("import { rule } from \"./stationery.masque\";\nlet main = fn () { rule() };");
 
         let found = walk(&module, &ImportSpace::rooted_at(&dir), None);
 
@@ -395,9 +395,9 @@ mod tests {
     #[test]
     fn a_cycle_is_walked_once() {
         let dir = scratch("cycle");
-        std::fs::write(dir.join("a.ogh"), "import \"./b.ogh\";\nlet a = 1;\n").expect("write");
-        std::fs::write(dir.join("b.ogh"), "import \"./a.ogh\";\nlet b = 2;\n").expect("write");
-        let module = parse("import \"./a.ogh\";\nlet main = fn () { a };");
+        std::fs::write(dir.join("a.masque"), "import \"./b.masque\";\nlet a = 1;\n").expect("write");
+        std::fs::write(dir.join("b.masque"), "import \"./a.masque\";\nlet b = 2;\n").expect("write");
+        let module = parse("import \"./a.masque\";\nlet main = fn () { a };");
 
         let found = walk(&module, &ImportSpace::rooted_at(&dir), None);
 
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn an_import_that_does_not_resolve_contributes_nothing() {
         let dir = scratch("missing");
-        let module = parse("import \"./nowhere.ogh\";\nlet main = fn () { 1 };");
+        let module = parse("import \"./nowhere.masque\";\nlet main = fn () { 1 };");
         let found = walk(&module, &ImportSpace::rooted_at(&dir), None);
         assert!(found.values.is_empty());
         assert!(found.files.is_empty());

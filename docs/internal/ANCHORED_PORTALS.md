@@ -1,4 +1,4 @@
-# Ogham — Anchored portal entries: chrome at host-computed coordinates
+# Masque — Anchored portal entries: chrome at host-computed coordinates
 
 > **Status: complete. M0–M5 shipped 2026-08-06; M6 (the regency tooltip
 > migration, §6) landed the same day in `regency` as `fb40a6a`. §7
@@ -22,13 +22,13 @@
 > Drafted 2026-08-06. Closes the second deferral in lorekeeper
 > `docs/CANVAS_COMPOSITION.md` §3 ("Anchored portal entries (deferred)").
 >
-> This plan adds one Portal property, one `UI`/`Ogham` API pair, and a
+> This plan adds one Portal property, one `UI`/`Masque` API pair, and a
 > position override in one place in the Skia Pass-A walk. It changes no
 > tenet, no language surface, and no existing widget.
 >
 > Companion to [`CANVAS_LEAF.md`](CANVAS_LEAF.md). The two features are
 > **inverse seams** and are deliberately separate: a `Canvas` is host
-> *paint* positioned by ogham *layout*; an anchored portal is ogham
+> *paint* positioned by masque *layout*; an anchored portal is masque
 > *content* positioned by host *geometry*. Neither substitutes for the
 > other.
 
@@ -38,7 +38,7 @@
 
 **Cursor-following chrome.** Regency's action tooltip
 (`ManorScreen::draw_tooltip`, `regency-client/src/manor.rs:4558`) is
-~90 lines of Skia that exists only because ogham chrome cannot follow
+~90 lines of Skia that exists only because masque chrome cannot follow
 the pointer. It hand-rolls: multi-run coloured text on one line, a
 rounded card with a hairline, edge clamping
 (`x.min(w - card_w - 8.0).max(8.0)`), and flip-above-when-overflowing
@@ -50,24 +50,24 @@ direct text-draw sites. `CANVAS_COMPOSITION.md` names this exact case:
 
 > **Build when** a live surface actually wants map-anchored chrome —
 > most plausibly the player client's nameplates/status chips, or when a
-> game's hand-painted map text starts re-hitting ogham-class text bugs
-> (#4, #14, #17) that the ogham text stack has already fixed.
+> game's hand-painted map text starts re-hitting masque-class text bugs
+> (#4, #14, #17) that the masque text stack has already fixed.
 
 The second condition has effectively fired: regency has independently
 reimplemented tracking (`draw_tracked_centered`), engraving
 (`draw_engraved_centered`), centred layout, and word wrap
-(`wheel.rs`'s `wrap()`) in `regency-sheet`, while ogham's own text stack
+(`wheel.rs`'s `wrap()`) in `regency-sheet`, while masque's own text stack
 carries the fixes for LEARNINGS #4 (invisible centred text), #14
 (intrinsic-width wrapping) and #17 (string escapes). **Two independently
 buggy text stacks in one binary**, and only one of them is maintained.
 
 **Popovers generally.** Lorekeeper's ref-picker
-(`editor_host/data/ui/widgets.ogh`'s `ref_picker`) is mounted separately
+(`editor_host/data/ui/widgets.masque`'s `ref_picker`) is mounted separately
 by the host because a popover cannot be positioned at the field that
 opened it.
 
-All three want the same thing: *an ogham subtree, laid out and painted
-by ogham, at a viewport position the host computes each frame.*
+All three want the same thing: *a masque subtree, laid out and painted
+by masque, at a viewport position the host computes each frame.*
 
 ---
 
@@ -115,16 +115,16 @@ it.
 
 ## 3. The design
 
-### 3.1 `.ogh` surface
+### 3.1 `.masque` surface
 
-```ogh
+```masque
 Portal {
   layer: "tooltip",
   anchor: "action-tooltip",          // NEW: names a host-set anchor
   anchor_policy: "flip",             // NEW, optional: "clamp" | "flip" | "raw"
   anchor_offset: { x: 14, y: 22 },   // NEW, optional: applied before policy
   open: tooltip_open,
-  children: [ ... ordinary ogham chrome ... ],
+  children: [ ... ordinary masque chrome ... ],
 }
 ```
 
@@ -140,7 +140,7 @@ Portal {
     viewport with an 8 px inset.
   - `"flip"` — clamp horizontally; vertically, if the box would overrun
     the bottom, place it *above* the anchor instead. This is exactly
-    regency's tooltip rule, and it is the one thing `.ogh` cannot express
+    regency's tooltip rule, and it is the one thing `.masque` cannot express
     today because it needs the measured size.
 - **`anchor_offset`** — a fixed nudge applied before policy, so a
   cursor tooltip sits below-right of the pointer rather than under it.
@@ -152,8 +152,8 @@ purely additive.
 
 ```rust
 // Per frame, before `frame()`/`draw()`:
-ogham.set_anchor("action-tooltip", cursor_x, cursor_y);
-ogham.clear_anchor("hover-room-label");   // or just stop setting it
+masque.set_anchor("action-tooltip", cursor_x, cursor_y);
+masque.clear_anchor("hover-room-label");   // or just stop setting it
 ```
 
 On `UI`:
@@ -174,7 +174,7 @@ per frame. `clear_lifecycle_state()` (hot reload) clears them, matching
 INTENT §7: a reload drops what it cannot verify still means anything.
 
 For world-space anchors the host projects world → screen itself and
-calls `set_anchor`. Ogham does not learn about cameras, and must not.
+calls `set_anchor`. Masque does not learn about cameras, and must not.
 
 ### 3.3 Where the override happens
 
@@ -200,7 +200,7 @@ why paint, nesting, hit-test, focus and occlusion all follow for free.
 
 **Size is available.** `local_rect` is the portal's laid-out rect from
 the layout pass that already ran this frame, so `flip` and `clamp` have
-a real measured height to work with. This is the piece `.ogh` cannot
+a real measured height to work with. This is the piece `.masque` cannot
 reach and the reason the policy lives here rather than in the language.
 
 ### 3.4 Missing anchors, and other loud failures
@@ -226,7 +226,7 @@ problem of silent degradation:
 ## 4. Milestones
 
 **M0 — Anchor storage + API.** *(Shipped.)* (~70 LOC + 4 tests) `UI.anchors`;
-`set_anchor` / `clear_anchor` / `clear_anchors` / `anchor`; `Ogham`
+`set_anchor` / `clear_anchor` / `clear_anchors` / `anchor`; `Masque`
 forwarders; cleared by `clear_lifecycle_state`. Tests: set/get/clear;
 survives a rerender; cleared by hot reload.
 
@@ -261,10 +261,10 @@ milestone is what proves the generalisation is actually general — if
 it doesn't fit, the design is wrong and M0–M3 should be revisited.
 
 **M5 — Docs.** *(Shipped.)* `AGENTS.md` gains an "Anchored portals" section under
-the existing Portal docs (per `OGHAM_GAPS.md` §2: a feature absent from
+the existing Portal docs (per `MASQUE_GAPS.md` §2: a feature absent from
 `AGENTS.md` is a feature consumers will conclude does not exist);
 `LIFECYCLE_AND_PORTAL.md` gains the anchor contract;
-`examples/portals/anchored_tooltip.ogh`.
+`examples/portals/anchored_tooltip.masque`.
 
 **M6 — Regency migration.** *(Outstanding.)* §6.
 
@@ -305,7 +305,7 @@ was drafted from a code read; these are the things building it surfaced.
    ceremony for nothing — every consumer takes `as_portal()`'s return by
    value and reads fields off it. `#[derive(Clone, Debug)]` now.
 
-3. **The `__` anchor-id prefix is reserved and rejected in `.ogh`.** Not
+3. **The `__` anchor-id prefix is reserved and rejected in `.masque`.** Not
    in the plan. M4 puts the drag preview at `__drag_preview`; without
    the reservation a userspace `Portal { anchor: "__drag_preview" }`
    would silently attach itself to the drag cursor. Eight lines in the
@@ -324,7 +324,7 @@ was drafted from a code read; these are the things building it surfaced.
    does; and a flipped card in a short viewport still gets pulled back
    under the top inset instead of off-screen. The plan specified neither.
 
-6. **`Ogham::set_anchor` takes a `Point`, not two `f32`s.** §3.2's host
+6. **`Masque::set_anchor` takes a `Point`, not two `f32`s.** §3.2's host
    example and its `UI` signature disagreed with each other; `Point`
    matches `dispatch_drag_start` and the rest of the pointer-facing API.
 
@@ -333,7 +333,7 @@ was drafted from a code read; these are the things building it surfaced.
    every frame doesn't force a repaint it didn't earn.
 
 8. **`clear_lifecycle_state` clearing anchors is belt-and-braces, not
-   the mechanism.** `Ogham::reload_file` builds a whole new `UI`, whose
+   the mechanism.** `Masque::reload_file` builds a whole new `UI`, whose
    anchor map starts empty — anchors were already going to be dropped by
    a reload. The explicit clear makes the contract true for any other
    caller. The user-visible consequence is worth stating out loud
@@ -356,7 +356,7 @@ was drafted from a code read; these are the things building it surfaced.
     backdrop) since anchored portals resolve during that walk.
 
 **On M4, the falsification test.** It fit. The drag preview's synthesis
-in `SkiaEnv::draw` now calls the same `AnchorContext::resolve` an `.ogh`
+in `SkiaEnv::draw` now calls the same `AnchorContext::resolve` an `.masque`
 Portal does, with `AnchorPolicy::Raw` and no offset, reading the point
 from `UI.anchors["__drag_preview"]`. `tests/drag_preview.rs` passes
 unmodified. The one friction (delta 9) is a frozen public field, not a
@@ -387,13 +387,13 @@ constructing the `PortalEntry` the walk was supposed to produce.
 - **No collision detection against *other* portals.** Policies resolve
   against the viewport only. Two anchored tooltips overlapping is the
   host's problem.
-- **No camera/projection awareness.** The host projects. Ogham must not
+- **No camera/projection awareness.** The host projects. Masque must not
   learn what a camera is.
 - **No inline text spans.** Regency's tooltip paints three coloured runs
   on one line; anchored portals let that become a row of three `Text`
   widgets, which is correct for a single line and wrong if it must wrap.
   Rich text spans are a separate, real gap
-  (`stargazer-celia-game/docs/OGHAM_GAPS.md` should grow an entry) and
+  (`stargazer-celia-game/docs/MASQUE_GAPS.md` should grow an entry) and
   are not in scope here.
 
 ---
@@ -412,11 +412,11 @@ Steps:
    Option<(String, String)>` already exist on `ManorScreen` and are
    already computed each frame. Add them to `chrome_state::ClientChrome`
    — they go through the existing `editable`→`Value` visitor in
-   `ogh_value.rs` with no new glue.
+   `masque_value.rs` with no new glue.
 2. **Set the anchor** from `self.cursor_px` in the per-frame chrome
-   update: `ogham.set_anchor("action-tooltip", cx, cy)` when a tooltip
+   update: `masque.set_anchor("action-tooltip", cx, cy)` when a tooltip
    is live, `clear_anchor` otherwise.
-3. **Write the card in `client.ogh`** as a `Portal { layer: "tooltip",
+3. **Write the card in `client.masque`** as a `Portal { layer: "tooltip",
    anchor: "action-tooltip", anchor_policy: "flip",
    anchor_offset: { x: 14, y: 22 } }` — the offset and policy reproduce
    `draw_tooltip`'s `cx + 14.0` / `cy + 22.0` and its flip rule exactly.
@@ -430,9 +430,9 @@ Steps:
    game rule; it becomes the `open:` condition on the Portal.
 6. **Verify the two typography losses are actually losses.** The card
    currently uses `font::Face::SmallCaps` at 20 px and `Face::Annotation`
-   at 15 px. LEARNINGS #1 recorded "Ogham Text can't letterspace/emboss"
+   at 15 px. LEARNINGS #1 recorded "Masque Text can't letterspace/emboss"
    as a reason to stay in Skia — **that is now false**; `letter_spacing`
-   and outer shadows shipped in `c8a9425`. Confirm the ogham render is
+   and outer shadows shipped in `c8a9425`. Confirm the masque render is
    equivalent before deleting the Skia path, and record the result in
    regency's `LEARNINGS.md` either way. If it is *not* equivalent, that
    is a text-stack gap worth writing down rather than working around.
@@ -454,7 +454,7 @@ and the measured-position query turned out not to be needed.
 
 ### 7.1 Contract
 
-```ogh
+```masque
 Flex {                                  // the face
   mouse_down: fn () { event("toggle"); },
   children: [
@@ -549,7 +549,7 @@ listener the document does, a frame late.
 
 ### 8.1 Contract
 
-```ogh
+```masque
 Flex {                                  // a row
   contextmenu: fn () { event("row_menu", id); },
   children: [ … ],

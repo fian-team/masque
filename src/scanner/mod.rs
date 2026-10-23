@@ -1,4 +1,4 @@
-//! Lexical analysis: converts Ogham source text into a stream of tokens.
+//! Lexical analysis: converts Masque source text into a stream of tokens.
 
 mod token;
 mod token_type;
@@ -6,7 +6,7 @@ mod token_type;
 pub use token::*;
 pub use token_type::*;
 
-/// Scans Ogham source code and produces a vector of [`Token`]s.
+/// Scans Masque source code and produces a vector of [`Token`]s.
 pub struct Scanner {
     /// The input string; the Iris script to be scanned, in other words.
     input: Vec<char>,

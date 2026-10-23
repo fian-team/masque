@@ -1,4 +1,4 @@
-# Ogham — Subsystem Map
+# Masque — Subsystem Map
 
 > **Status: Live contract.**
 >
@@ -42,7 +42,7 @@ collection as a single object the host application can hand to a
 window/event loop without knowing the pipeline internals.
 
 **Invariants:**
-- The `Ogham` struct holds **one** runtime (`Arc<Mutex<Runtime>>`)
+- The `Masque` struct holds **one** runtime (`Arc<Mutex<Runtime>>`)
   and **one** UI; the two are kept in lockstep by `update()`.
 - `tick(inject)` is the canonical per-frame seam: file-change
   check, host-state injection, conditional rerender + reconcile.
@@ -190,31 +190,31 @@ This subsystem has its own document: [`RUNTIME.md`](RUNTIME.md).
 
 ## Typed host bindings
 
-**Problem:** give Rust hosts a typed wrapper around `Ogham` that
+**Problem:** give Rust hosts a typed wrapper around `Masque` that
 moves host state and host events through `#[derive(...)]`-
 generated bridges instead of `HashMap<String, Value>` /
 `Vec<Value>` plumbing — and emit a compile-time schema
-manifest that the `ogham check` CLI / LSP can validate `.ogh`
+manifest that the `masque check` CLI / LSP can validate `.masque`
 files against.
 
 **Invariants:**
-- `TypedOgham<S, M>` wraps an `Ogham` plus the previous frame's
+- `TypedMasque<S, M>` wraps an `Masque` plus the previous frame's
   `S`. `set_state(new)` diffs `new` against the previous `S` and
   only injects the changed top-level fields via
   `Runtime::inject_host_state_if_changed`.
-- Host events delivered to the registered `OghamMsg` decoder turn
+- Host events delivered to the registered `MasqueMsg` decoder turn
   into typed `M` values pushed onto a `VecDeque`; consumers drain
   via `poll_msg` / `drain_msgs`.
-- The `#[derive(OghamState)]` / `#[derive(OghamMsg)]` macros each
+- The `#[derive(MasqueState)]` / `#[derive(MasqueMsg)]` macros each
   emit a manifest fragment (`binding_module`, top-level fields /
-  variants and their Ogham types). The `ogham check` CLI loads
-  the manifest at `.ogh` analysis time so a typo in
+  variants and their Masque types). The `masque check` CLI loads
+  the manifest at `.masque` analysis time so a typo in
   `event("setvolume", v)` flags as an error before run.
 
-**Authority:** `src/typed.rs` (`TypedOgham`, `OghamState`,
-`OghamMsg`); `crates/ogham-derive/` (proc-macros);
+**Authority:** `src/typed.rs` (`TypedMasque`, `MasqueState`,
+`MasqueMsg`); `crates/masque-derive/` (proc-macros);
 `src/diagnostics/manifest.rs` (manifest format consumed by
-`ogham check`).
+`masque check`).
 
 ---
 
@@ -268,7 +268,7 @@ component get distinct state.
 
 ## Lifecycle hooks (mount / unmount / effect / cleanup)
 
-**Problem:** let `.ogh` code attach side-effects to a widget's
+**Problem:** let `.masque` code attach side-effects to a widget's
 mount, unmount, and dependency changes — without the React
 rules-of-hooks problem ("must be called unconditionally in the
 same order every render").
@@ -322,7 +322,7 @@ in `src/parser/mod.rs` (`parse_mount`, `parse_unmount`,
 
 ## Imports and modules
 
-**Problem:** allow `.ogh` files to import bindings from other
+**Problem:** allow `.masque` files to import bindings from other
 files, with cycle detection and caching.
 
 **Invariants:**
@@ -330,7 +330,7 @@ files, with cycle detection and caching.
   top-level binding) and `import [a, b] from "./path";` (named).
 - Path resolution: explicit prefixes from `RuntimeConfig::with_import_path`
   win first; otherwise the path is joined onto the project root.
-  Missing extensions get `.ogh` appended.
+  Missing extensions get `.masque` appended.
 - Cycle detection uses a `loading_stack` of canonical paths;
   re-entering a path mid-load returns `VMError::ImportCycle`.
 - Already-loaded imports are served from `cache`; the cache is
@@ -589,7 +589,7 @@ top of `mouse_down` / `mouse_move` / `mouse_up`.
 
 **Invariants:**
 
-- **Ogham runs the gesture; the host reads it.** `UI::call_event`
+- **Masque runs the gesture; the host reads it.** `UI::call_event`
   arms a press on the deepest `drag_payload` widget, starts the drag
   past its `drag_dead_zone:` (default 4px), owns the pointer while it
   is live, and drops on the deepest accepting target
@@ -607,13 +607,13 @@ top of `mouse_down` / `mouse_move` / `mouse_up`.
   list; the `accepts_drop:` predicate sees the same value.
 
 - **`contextmenu` is a separate dispatch path, not a
-  reinterpreted `mouse_down`.** `Ogham::dispatch_contextmenu`
+  reinterpreted `mouse_down`.** `Masque::dispatch_contextmenu`
   fires on the deepest widget at the cursor (no automatic
   bubble). This keeps left-click / right-click routes
   independent.
 
 **Authority:** `src/widget/event.rs` (`Event::payload`,
-`DragState`, `EventContext::drag_state`); `Ogham::dispatch_drag_*`
+`DragState`, `EventContext::drag_state`); `Masque::dispatch_drag_*`
 and `dispatch_contextmenu` in `src/lib.rs`;
 `UI::hit_test_drag_target` / `hit_test_drop_target` in
 `src/widget/mod.rs`; drag/drop fields and listener registration on
@@ -636,7 +636,7 @@ declarative tree.
   path prefixes into `TickContext.drained_path_prefixes` (and
   cancelled exits into `cancelled_unmount_prefixes`).
   `UI::tick_animations` moves them onto `UI.pending_drained_prefixes`
-  / `UI.pending_cancelled_prefixes`. `Ogham::process_drain_queues`
+  / `UI.pending_cancelled_prefixes`. `Masque::process_drain_queues`
   forwards them to `Runtime::process_drain_queues`, which fires
   the registered `on_unmount` / `cleanup` hooks under each prefix.
 
@@ -656,7 +656,7 @@ declarative tree.
 `src/widget/mod.rs`; `Runtime::process_drain_queues` /
 `flush_remaining_unmount_candidates` /
 `queue_disappeared_unmounts` in `src/runtime/mod.rs`;
-`Ogham::process_drain_queues` in `src/lib.rs`.
+`Masque::process_drain_queues` in `src/lib.rs`.
 
 ---
 
@@ -702,7 +702,7 @@ implementation; portal-layer two-pass walk in
 ## LSP server
 
 **Problem:** provide hover, goto-definition, document symbols,
-semantic tokens, and basic diagnostics for `.ogh` files in editors
+semantic tokens, and basic diagnostics for `.masque` files in editors
 that speak LSP.
 
 This subsystem has its own document: [`LSP.md`](LSP.md).
@@ -710,7 +710,7 @@ This subsystem has its own document: [`LSP.md`](LSP.md).
 **Invariants:**
 - The LSP depends on `scanner` and `parser` only. It never
   instantiates a `Runtime` or builds a widget tree. (`INTENT §1`.)
-- LSP positions are 0-indexed; Ogham spans are 1-indexed.
+- LSP positions are 0-indexed; Masque spans are 1-indexed.
   Conversion happens at the boundary in `server.rs`.
 - Diagnostics come from three sources: scanner `Error` tokens,
   parser `SyntaxError`, and lifecycle-hook conditional-registration
@@ -726,17 +726,17 @@ This subsystem has its own document: [`LSP.md`](LSP.md).
 
 ## Schema diagnostics
 
-**Problem:** catch drift between a `.ogh` file and the host's
+**Problem:** catch drift between a `.masque` file and the host's
 typed-bindings manifest (top-level identifiers that no longer
 exist, `event(...)` calls whose name / arity doesn't match the
 declared message variants, etc.) at analysis time rather than
 at runtime.
 
 **Invariants:**
-- The schema-diagnostic engine takes a parsed `.ogh` AST plus a
+- The schema-diagnostic engine takes a parsed `.masque` AST plus a
   manifest and emits `Diagnostic`s with `Severity` (Error /
   Warning) and span info. It never loads the runtime.
-- The `ogham check` CLI is the canonical consumer today.
+- The `masque check` CLI is the canonical consumer today.
 - LSP integration (surfacing schema diagnostics alongside
   scanner / parser / lifecycle warnings) is on the roadmap; the
   engine exists in `src/diagnostics/` but the LSP doesn't call
@@ -754,7 +754,7 @@ discussion.
 
 ## File watching and hot reload
 
-**Problem:** rebuild the runtime when any watched `.ogh` file
+**Problem:** rebuild the runtime when any watched `.masque` file
 changes on disk.
 
 **Invariants:**
@@ -771,18 +771,18 @@ changes on disk.
   focus) survives because it lives on the `UI` and reconciles.
   (`INTENT §7`.)
 
-**Authority:** `src/file_watcher.rs`; `Ogham::reload` /
-`Ogham::reload_file` in `src/lib.rs`.
+**Authority:** `src/file_watcher.rs`; `Masque::reload` /
+`Masque::reload_file` in `src/lib.rs`.
 
 ---
 
 ## Standalone client (browser binary)
 
-**Problem:** open a `.ogh` file in a window without an embedding
+**Problem:** open a `.masque` file in a window without an embedding
 host — useful for examples and local development.
 
 **Invariants:**
-- The client is one consumer of the same `Ogham` library; it
+- The client is one consumer of the same `Masque` library; it
   brings its own window/event loop and uses Skia.
 - Nothing in `client/` should leak back into the library — the
   library has to remain embeddable in any window-system context.
