@@ -1,159 +1,311 @@
 # Masque
 
-Masque is a UI language and embeddable runtime for Rust applications. The
-runtime compiles `.masque` source to bytecode, executes it on a stack-based VM,
-and reconciles the resulting widget tree against a live UI. A Skia-based
-backend ships out of the box; alternative backends implement the
-`Surface` trait.
+**A UI language for Rust applications.**
 
-This document is the contributor onboarding map. Library users embedding
-Masque in a host application should read [`AGENTS.md`](AGENTS.md) for the
-integration guide. The design contracts behind each subsystem live in
-[`docs/internal/`](docs/internal/).
+Masque documents are compiled to bytecode, run on a small VM, and turned into
+a Flexbox widget tree. That tree is reconciled frame to frame, with spring
+transitions and exit animations built in. Skia paints it out of the box, and
+any other renderer can implement the `Surface` trait. Your Rust code pushes
+state in and receives events out, so the UI never holds data the host doesn't
+know about. Saving the file updates the running application without
+restarting it.
 
-## Repository layout
+> **Status:** pre-1.0 and not yet on crates.io. The API changes without
+> deprecation cycles.
 
+## Where Masque fits
+
+- **Game UI over a live scene.** Menus, HUDs, inventories and tooltips
+  drawn on top of a 3D renderer you already own. A transparent root lets the
+  scene show through. Portals anchor chrome to a point you project from world
+  space, and `UI::blocks_point` tells your picking code whether the UI is in
+  the way.
+- **Tool and editor chrome in a Rust application.** Panels, inspectors,
+  palettes and dialogs around a viewport that Rust draws. A `Canvas` widget
+  gives your own Skia code a flex-laid-out box when a dial or graph needs
+  pixels that widgets can't express.
+- **Iterating on UI without a rebuild.** Layout, styling and animation live in
+  the document, so you can tune them while the application runs and keep its
+  state.
+- **Hosts with their own renderer.** The core is renderer-agnostic. Implement
+  `Surface` and `RenderContext` and the same document draws wherever you need
+  it.
+
+Masque is a projection of host state. It is not a standalone application
+platform. If you want the UI layer to own the application's data and logic,
+a framework built around that model will suit you better.
+
+## Getting started
+
+Add the crate:
+
+```toml
+[dependencies]
+masque = { git = "https://github.com/fian-team/masque" }
 ```
-masque/
-├─ src/
-│  ├─ lib.rs                  — top-level Masque facade (Arc<Mutex<Runtime>> + UI)
-│  ├─ scanner/                — lexer (.masque source → tokens)
-│  ├─ parser/                 — recursive-descent parser (tokens → AST)
-│  ├─ runtime/                — Runtime, RuntimeConfig, bytecode compiler, VM
-│  ├─ widget/                 — UI struct, widget tree, Surface trait, layout, animation
-│  ├─ skia.rs                 — reference Skia backend
-│  ├─ typed.rs                — TypedMasque<S, M> wrapper for derive-based bindings
-│  ├─ diagnostics/            — schema-diagnostic engine (consumed by `masque check`)
-│  ├─ cli/                    — `masque` CLI binary
-│  ├─ lsp/                    — `masque-lsp` language server binary
-│  ├─ client/                 — standalone .masque viewer binary
-│  └─ file_watcher.rs         — hot-reload file watching
-├─ crates/
-│  └─ masque-derive/           — proc-macros: #[derive(MasqueState)], #[derive(MasqueMsg)]
-├─ examples/                  — runnable .masque programs
-├─ editors/vscode/            — VS Code extension (talks to masque-lsp)
-├─ tests/                     — integration tests (cargo test)
-└─ docs/internal/             — design contracts and per-phase implementation plans
+
+Masque links Skia through [`skia-safe`](https://github.com/rust-skia/rust-skia),
+which downloads prebuilt binaries for common targets. If your host also
+draws with Skia, use the re-exported `masque::skia_safe` so that only one
+copy ends up in your binary.
+
+Write a document, `ui/counter.masque`:
+
+```masque
+host_state { count: int };
+events { increment() };
+
+let main = fn () {
+  Flex {
+    style: {
+      width: "grow",
+      height: "grow",
+      main_alignment: "center",
+      cross_alignment: "center",
+    },
+    children: [
+      Flex {
+        mouse_down: fn () { event("increment"); },
+        style: {
+          padding: 12,
+          corner_radius: 8,
+          background_color: { r: 60, g: 90, b: 120, a: 255 },
+        },
+        children: [
+          Text {
+            text: "Clicked " + count + " times",
+            style: { size: 18, color: { r: 255, g: 255, b: 255, a: 255 } },
+          },
+        ],
+      },
+    ],
+  }
+};
 ```
 
-The crate is a Cargo workspace. `crates/masque-derive` is split out so the
-proc-macro can be a `proc-macro = true` crate without forcing the rest of
-the library to compile in that mode.
+Then mount it from Rust and drive it once per frame:
 
-## Binaries
+```rust
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-The workspace produces two binaries plus the `masque` library crate:
+use masque::runtime::config::RuntimeConfig;
+use masque::runtime::value::Value;
+use masque::skia::SkiaEnv;
+use masque::widget::{event::Event, point::Point, Surface};
+use masque::Masque;
 
-| Binary       | Path                | Purpose                                                           |
-|--------------|---------------------|-------------------------------------------------------------------|
-| `masque`      | `src/cli/main.rs`   | CLI. Currently one subcommand: `check` (validates `.masque` files against typed-bindings manifests). |
-| `masque-lsp`  | `src/lsp/main.rs`   | Language Server (LSP over stdio). Used by the VS Code extension and any LSP-capable editor. |
+let clicks = Arc::new(Mutex::new(0));
 
-## Quick start
+let config = RuntimeConfig::new()
+    .with_host_state(HashMap::from([("count".to_string(), Value::Integer(0))]))
+    .with_event_handler("increment", {
+        let clicks = clicks.clone();
+        move |_args| {
+            *clicks.lock().unwrap() += 1;
+            Ok(Value::Void)
+        }
+    });
+
+// `watch` reloads the document (and everything it imports) when saved.
+let mut masque = Masque::watch("ui/counter.masque".to_string(), config)?;
+
+// Each frame:
+masque.with_runtime_mut(|rt| rt.set_host_state("count", *clicks.lock().unwrap()));
+masque.frame(width, height, dt)?;          // reload, rerender, animate, lay out
+skia_env.draw(masque.get_ui_mut());        // or your own `Surface`
+
+// On input:
+masque
+    .get_ui_mut()
+    .call_event(&Event::with_point("mouse_down".to_string(), Point::new(x, y)));
+```
+
+`examples/` has runnable documents. To open one in a window with hot reload,
+use the previewer in [lorekeeper](https://github.com/fian-team/lorekeeper):
 
 ```sh
-# Build everything (library + 2 binaries).
-cargo build
-
-# Preview an .masque file (hot-reloads on save). The previewer lives in the
-# lorekeeper workspace and runs on the engine's own window host:
-#   cd ../lorekeeper && cargo run -p masque_preview -- ../masque/examples/counter.masque
-
-# Validate every .masque file in the workspace against host bindings.
-cargo run --bin masque -- check --all
-
-# Or validate a single file:
-cargo run --bin masque -- check path/to/ui.masque
-
-# Build and run the LSP (most editors discover it via $PATH).
-cargo build --bin masque-lsp
-./target/debug/masque-lsp        # speaks LSP over stdin/stdout
-
-# Run the test suite.
-cargo test
+cd ../lorekeeper && cargo run -p masque_preview -- ../masque/examples/counter.masque
 ```
 
-The test suite (`tests/*.rs`) doubles as the acceptance suite for the
-language and the runtime. Drag, lifecycle, portal, hot-reload, and typed-
-binding behaviors all have dedicated test files.
+For editor support, build `masque-lsp` (`cargo build --bin masque-lsp`) and
+point the VS Code extension in `editors/vscode/` at it.
 
-## Embedding the library
+## Language tour
 
-Add `masque` as a dependency, build a `RuntimeConfig`, and call
-`Masque::watch` (file-backed, hot-reload) or `Masque::from_source`
-(string-backed, no watcher). Per frame, drive the runtime with `tick`,
-`tick_animations`, `layout`, and `draw`.
+### Values, functions and components
 
-For typed host state and event handling via Rust types rather than
-`HashMap<String, Value>`, derive `MasqueState` and `MasqueMsg` and use
-`TypedMasque::watch_typed`. The derive macros also emit a manifest fragment
-the `masque check` CLI uses to flag stale `.masque` references at analysis
-time.
+Masque is an expression language. A block's last expression is its value, as
+in Rust. A component is just a function that returns a widget.
 
-The full integration recipe — `RuntimeConfig` builder, host-state
-injection, event handlers, hot-reload loop, animation tick, layout pass,
-draw, drag dispatch, contextmenu, drain queues, cursor/key signals, and
-custom rendering backends — lives in [`AGENTS.md`](AGENTS.md).
+```masque
+let accent = { r: 90, g: 120, b: 150, a: 255 };
 
-## Documentation
+let label = fn (text: string, size: int) {
+  Text { text: text, style: { size: size, color: accent } }
+};
 
-- [`AGENTS.md`](AGENTS.md) — integration guide for library consumers and
-  language overview for `.masque` authors.
-- [`docs/internal/ARCHITECTURE.md`](docs/internal/ARCHITECTURE.md) —
-  one-page orientation: pipeline, embedding seam, per-frame loop, module
-  layout, where state lives.
-- [`docs/internal/SUBSYSTEMS.md`](docs/internal/SUBSYSTEMS.md) — subsystem
-  map: invariants, drift indicators, authority files for each piece.
-- [`docs/internal/INTENT.md`](docs/internal/INTENT.md) — cross-cutting
-  design tenets and the rationale behind each.
-- [`docs/internal/GLOSSARY.md`](docs/internal/GLOSSARY.md) — vocabulary
-  used across the contributor docs.
-- Per-subsystem live contracts: `LANGUAGE.md`, `VM.md`, `RUNTIME.md`,
-  `WIDGET_TREE.md`, `FLEX.md`, `STYLE_AND_ANIMATION.md`,
-  `ANIMATION_LIFECYCLE.md`, `EVENTS.md`, `SURFACE.md`, `LSP.md`.
-- Phase implementation trailers (typed bindings, lifecycle + portal,
-  Phase 2.5 UL alignment, Phase 3 drag + drain) — same directory.
+let main = fn () {
+  Flex {
+    style: { direction: "column", gap: 8, padding: 24 },
+    children: [label("Title", 24), label("Subtitle", 14)],
+  }
+};
+```
 
-If a doc disagrees with code, the code wins, but flag the discrepancy —
-the design discipline behind these contracts depends on drift being made
-visible. See `INTENT.md` for the convention.
+A `.masque` document has ten built-in widgets. `Flex` and `Grid` lay things
+out. `Text`, `TextInput` and `Image` (PNG, at a fixed pixel size) show
+content. `Slider` and `Pad` take a value from the pointer. `Canvas` is painted
+by host code. `Presence` and `Portal` cover lifecycle and layering. Sizes are
+`"grow"`, `"shrink"`, a pixel count, or a weighted grow like `{ grow: 2 }`.
 
-## Coding conventions
+### Control flow
 
-- Rust 2021, MSRV 1.80.
-- `rustfmt.toml`: `max_width = 100`. `cargo fmt` before pushing.
-- `cargo clippy --all-targets` should pass cleanly.
-- Inline unit tests in `#[cfg(test)]` modules; integration tests in
-  `tests/`.
-- Public items get `///` doc comments; modules get `//!` headers. Comments
-  on internal items are reserved for non-obvious *why* — naming carries
-  *what*.
-- `Runtime` is shared as `Arc<Mutex<Runtime>>`. The interior is
-  single-threaded; thread safety comes from the wrapper, not the runtime
-  itself.
+`match` and `for` are expressions, so they can sit directly where a widget or
+a list of children is expected. `if` is a statement, so inside a widget use
+`match` instead. `for` runs over integer ranges. A `{` after `=>` opens a
+block, not a map, so a map-valued arm is written as a name bound with `let`.
 
-## Editor support
+```masque
+let selected_bg = { r: 60, g: 90, b: 120, a: 255 };
+let idle_bg = { r: 30, g: 30, b: 30, a: 255 };
 
-The VS Code extension in `editors/vscode/` talks to `masque-lsp` over
-stdio. After building the binary, set `masque.lspPath` in the extension's
-settings (defaults to `masque-lsp` on `$PATH`). Capabilities today:
-diagnostics (scanner + parser + typed-bindings AST validation +
-lifecycle conditional-registration warnings), hover, go-to-definition,
-document symbols, semantic tokens. Completion, find-references, and
-rename are not implemented; see
-[`docs/internal/LSP.md`](docs/internal/LSP.md) for the roadmap.
+let row = fn (item: map, selected: bool) {
+  Flex {
+    style: {
+      padding: 8,
+      background_color: match selected { true => selected_bg, false => idle_bg },
+    },
+    children: [Text { text: item.name }],
+  }
+};
 
-## Contributing
+let main = fn () {
+  Flex {
+    style: { direction: "column" },
+    children: for (i in 0..items.length()) { row(items[i], i == selected_index) },
+  }
+};
+```
 
-Bug reports and pull requests are welcome on the project's issue tracker.
-Before submitting non-trivial work, please read
-[`docs/internal/INTENT.md`](docs/internal/INTENT.md) — the design tenets
-there are load-bearing and the most common review feedback is "this
-violates `INTENT §N`". Phase-scoped implementation plans in
-`docs/internal/PHASE_*.md` capture the contracts that recently-shipped
-work was held against; they are good models for new proposals.
+### Host state and events
 
-Discord: <https://discord.gg/JYfC2baP2y> (Fian Dev community).
+The host pushes data in by name. A document can declare what it reads and
+what it raises, and a declared document is strict: an unknown name is a
+compile error, and so is an undeclared event.
+
+```masque
+host_state { player_name: string, volume: float };
+events { set_volume(float), close() };
+
+let main = fn () {
+  Flex {
+    style: { direction: "column", gap: 12 },
+    children: [
+      Text { text: "Settings for " + player_name },
+      Slider {
+        value: volume, min: 0, max: 1,
+        on_change: fn (v: float) { event("set_volume", v); },
+        style: { width: 240, height: 16 },
+      },
+      Flex {
+        mouse_down: fn () { event("close"); },
+        children: [Text { text: "Done" }],
+      },
+    ],
+  }
+};
+```
+
+`state` declares document-local state that survives rerenders. It suits
+purely presentational things like whether a disclosure is open.
+
+```masque
+let disclosure = fn (title: string, body: string) {
+  state open = false;
+  Flex {
+    mouse_down: fn () { open = !open; },
+    style: { direction: "column" },
+    children: match open {
+      true => [Text { text: title }, Text { text: body }],
+      false => [Text { text: title }],
+    },
+  }
+};
+```
+
+### Animation
+
+When a style value changes, the properties listed in `transition` spring to
+it. `initial` is the style a widget is born at. `exit` is the style it leaves
+with: it stays on screen until that animation settles. A `key` gives the
+widget a stable identity across rerenders.
+
+```masque
+Flex {
+  key: "toast",
+  initial: { opacity: 0, transform: { translate_y: -12 } },
+  exit:    { opacity: 0, transform: { translate_y: -8 } },
+  style: {
+    padding: 12,
+    background_color: { r: 40, g: 44, b: 52, a: 255 },
+    transition: { opacity: "spring", transform: "spring", background_color: "spring" },
+  },
+  hover_style: { background_color: { r: 60, g: 66, b: 78, a: 255 } },
+  children: [Text { text: "Saved" }],
+}
+```
+
+`Presence` animates a swap between whole subtrees, such as pages. When its
+`key` changes, the old content plays its exit while the new content enters.
+
+```masque
+Presence { key: current_page, children: [render_page(current_page)] }
+```
+
+### Layers
+
+`Portal` lifts its children out of the parent's clip and paint order into a
+named layer: `overlay-modal`, `popover`, `tooltip`, `toast` or
+`cursor-attached`. Each layer has its own backdrop and input policy.
+
+```masque
+Flex {
+  children: [
+    Text { text: "Hover me" },
+    Portal {
+      open: "hover",
+      layer: "tooltip",
+      anchor: "parent",
+      children: [Flex { style: { padding: 6 }, children: [Text { text: "A tooltip" }] }],
+    },
+  ],
+}
+```
+
+### Imports
+
+```masque
+import "./theme.masque";                       // everything it defines
+import { button, panel } from "./widgets.masque";  // just these names
+```
+
+The full grammar is in [`docs/internal/LANGUAGE.md`](docs/internal/LANGUAGE.md),
+and the integration guide (input, drag and drop, key chords, custom
+backends) is in [`AGENTS.md`](AGENTS.md).
+
+## Related projects
+
+- **[Carte](https://github.com/fian-team/carte)** is a router and scoped
+  store for Rust applications. It and Masque are deliberately independent:
+  neither depends on the other.
+- **[Lorekeeper](https://github.com/fian-team/lorekeeper)** is the engine
+  that joins them. Its `driver` crate mounts Masque documents under Carte
+  routes, and its `contract` crate checks a document's `select` and
+  `events {}` against the store's schemas under `cargo test`. It is also
+  home to `masque_preview`.
+- **Untold Lore** is a 3D game that draws all of its UI with Masque, and is
+  the project that shapes it.
 
 ## License
 
