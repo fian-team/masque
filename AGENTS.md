@@ -44,7 +44,9 @@ What Masque offers the binding is plain public API: `host_state {}`,
 `select` and `events {}` declarations readable through
 `runtime::schema`, `runtime::imports`, host state as name-to-`Value`
 maps, and the `Masque::reload_if` gate. The design record is
-`docs/internal/APPLICATION.md`. Its paths predate the split.
+`docs/internal/APPLICATION.md`. Its paths predate the split. Its
+Carte sections (§3 routing, §4 the contract, §5 the store) live in
+`../carte/docs/APPLICATION.md`, under the same numbers.
 
 ## Architecture
 
