@@ -720,8 +720,8 @@ answers to one question is how they diverged.
 **Smaller, also open:** untold_lore's `mount_for_test` collapse (check
 the `data_dir == None` error sentence, and whether `blank_document()`
 loses its last caller); untold_lore's crossing record/`ROOMS.md` re-read
-against what the regression taught, and its `PUBLISHING.md` (since deleted) /
-`ENGINE_GAPS.md` / `PLAY_FIRST.md`, all amended before the fix was
+against what the regression taught, and its `PUBLISHING.md`, engine-gaps record
+(both since deleted) / `PLAY_FIRST.md`, all amended before the fix was
 understood; regency's `paused` claim, still `Rc<Cell<bool>>` for a
 stated reason; `FrontOfHouse::reads` being a skippable call; ROOMS.md's
 `presentation` column still shadowing the node's occlusion; the

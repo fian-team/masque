@@ -205,6 +205,7 @@ impl UI {
                 let dy = event.scroll_delta.map_or(0.0, |(_, dy)| dy);
                 if dy != 0.0 {
                     live.turn += dy.signum();
+                    self.wheel_used = true;
                 }
                 self.gesture = Gesture::Live(live);
                 true

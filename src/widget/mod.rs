@@ -96,9 +96,28 @@ pub struct LayoutContext<'a> {
     ///
     /// [`measure_grow_width_as_shrink`]: Self::measure_grow_width_as_shrink
     pub measure_grow_height_as_shrink: bool,
+    /// Which layout pass this is, from [`LayoutContext::next_pass`]; `0`
+    /// for none. A `Flex` remembers what it measured for the length of one
+    /// pass ([`FlexWidget::get_dimensions`]): a shrink parent asks each
+    /// child its size up to four times (a pre-pass and a measure, per
+    /// axis) before its own `layout` asks again, and each ask recursed
+    /// through the whole subtree, so the cost was a power of the nesting
+    /// depth. An inspector seven containers deep spent seven seconds a
+    /// frame laying out the same paragraphs (2026-10-31). Nothing is
+    /// remembered across passes, because the tree changes between them.
+    ///
+    /// [`FlexWidget::get_dimensions`]: crate::widget::flex_widget::FlexWidget
+    pub pass: u64,
 }
 
+static LAYOUT_PASS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
 impl<'a> LayoutContext<'a> {
+    /// A number no earlier layout pass was given, for [`Self::pass`].
+    pub fn next_pass() -> u64 {
+        LAYOUT_PASS.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
     /// This context, flagged for a parent measuring its shrink WIDTH:
     /// grow widths in the measured subtree resolve as content.
     pub fn measuring_width(&self) -> LayoutContext<'a> {
@@ -427,6 +446,10 @@ pub struct UI {
     /// layer. Read by [`UI::hovered_blocks`]: the world under such a
     /// layer gets no vote, exactly as a press there is swallowed.
     hover_obstructed: bool,
+    /// Whether the wheel being dispatched was used as well as claimed:
+    /// written by `call_event` and the drag gesture, taken by
+    /// [`UI::call_wheel`].
+    wheel_used: bool,
     /// The drag gesture: idle, a press armed on a drag source, or a drag
     /// in flight (`drag_gesture`).
     gesture: drag_gesture::Gesture,
@@ -513,6 +536,7 @@ impl UI {
             last_mouse: None,
             captured: None,
             hover_obstructed: false,
+            wheel_used: false,
             gesture: drag_gesture::Gesture::Idle,
         }
     }
@@ -629,6 +653,19 @@ impl UI {
         self.default_font = Some(name);
     }
 
+    /// Dispatch a `scroll` event and report both what claimed it and what
+    /// used it ([`Wheel`]). [`call_event`](Self::call_event) on the same
+    /// event returns [`Wheel::claimed`] alone, which is what a host with a
+    /// world under its chrome needs.
+    pub fn call_wheel(&mut self, event: &Event) -> event::Wheel {
+        self.wheel_used = false;
+        let claimed = self.call_event(event);
+        event::Wheel {
+            claimed,
+            used: std::mem::take(&mut self.wheel_used),
+        }
+    }
+
     pub fn call_event(&mut self, event: &Event) -> bool {
         // A press armed on a drag source, or a drag in flight, sees the
         // event first (`drag_gesture`); a live drag owns the pointer.
@@ -729,9 +766,10 @@ impl UI {
                 self.mark_after_event(&ctx);
             }
             // Every blocking box under the pointer handles a wheel for
-            // routing; the host is told whether it scrolled anything.
+            // routing, and that is what is returned; whether it scrolled
+            // anything is the second fact, read by `call_wheel`.
             if event.name == "scroll" {
-                return ctx.scrolled || ctx.listener_fired;
+                self.wheel_used = ctx.scrolled || ctx.listener_fired;
             }
             handled
         } else {
@@ -1642,6 +1680,7 @@ impl UI {
             default_font: self.default_font.as_deref(),
             measure_grow_width_as_shrink: false,
             measure_grow_height_as_shrink: false,
+            pass: LayoutContext::next_pass(),
         };
 
         let mut root = self.root.lock().expect("widget lock poisoned");
@@ -1690,6 +1729,7 @@ impl UI {
             default_font: self.default_font.as_deref(),
             measure_grow_width_as_shrink: false,
             measure_grow_height_as_shrink: false,
+            pass: LayoutContext::next_pass(),
         };
         self.root
             .lock()

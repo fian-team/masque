@@ -78,6 +78,9 @@ pub struct FlexWidget {
     pub scroll_y_target: f32,
     /// Total content height (computed during layout).
     content_height: f32,
+    /// What [`Widget::get_dimensions`] answered during one layout pass
+    /// ([`LayoutContext::pass`]), keyed by everything it was asked with.
+    measured: std::cell::RefCell<Measured>,
     /// Viewport height (computed during layout).
     viewport_height: f32,
     /// In-flight spring state for any transitioning style properties.
@@ -164,7 +167,67 @@ struct LayoutInput {
     measure_grow_height_as_shrink: bool,
 }
 
+/// One pass's measurements of one `Flex`: the pass, and each question with
+/// its answer. A shrink parent asks a child a handful of distinct
+/// questions, so a list beats a map.
+#[derive(Default)]
+struct Measured {
+    pass: u64,
+    answers: Vec<(MeasureKey, (f32, f32))>,
+}
+
+/// Everything [`Widget::get_dimensions`] is asked with, floats as bits so
+/// that a key is equal exactly when the question is.
+#[derive(PartialEq)]
+struct MeasureKey {
+    grow_width_as_shrink: bool,
+    grow_height_as_shrink: bool,
+    row: bool,
+    sizes: [u32; 5],
+}
+
 impl FlexWidget {
+    /// [`Self::natural_dimensions`] under the `max_width` / `max_height`
+    /// ceilings — what [`Widget::get_dimensions`] answers.
+    #[allow(clippy::too_many_arguments)]
+    fn clamped_dimensions(
+        &self,
+        ctx: &LayoutContext,
+        parent_direction: &Direction,
+        parent_width: f32,
+        parent_available_width: f32,
+        parent_height: f32,
+        parent_available_height: f32,
+        sibling_basis: f32,
+    ) -> (f32, f32) {
+        let (width, height) = self.natural_dimensions(
+            ctx,
+            parent_direction,
+            parent_width,
+            parent_available_width,
+            parent_height,
+            parent_available_height,
+            sibling_basis,
+        );
+
+        // **`max_height` is a ceiling on whatever the rules above chose** —
+        // a shrink, a grow's share, a fixed height alike (CSS's order: the
+        // max wins over the height). Clamped here, at the one door every
+        // parent and this node's own `layout` ask, so no sizing path can
+        // step round it. A `scroll` column clamped this way scrolls what
+        // no longer fits, which is what the key is for.
+        // `max_width` is the same ceiling on the other axis, at the same
+        // door.
+        let width = match self.style.max_width {
+            Some(max) => width.min(max),
+            None => width,
+        };
+        match self.style.max_height {
+            Some(max) => (width, height.min(max)),
+            None => (width, height),
+        }
+    }
+
     /// The size this node would take with no `max_height` — every sizing
     /// rule, unclamped. [`Widget::get_dimensions`] clamps it.
     fn natural_dimensions(
@@ -550,6 +613,7 @@ impl FlexWidget {
             scroll_y: 0.0,
             scroll_y_target: 0.0,
             content_height: 0.0,
+            measured: Default::default(),
             viewport_height: 0.0,
             animations: AnimationState::default(),
             exiting: false,
@@ -632,6 +696,7 @@ impl FlexWidget {
             scroll_y: 0.0,
             scroll_y_target: 0.0,
             content_height: 0.0,
+            measured: Default::default(),
             viewport_height: 0.0,
             animations: AnimationState::default(),
             exiting: false,
@@ -1265,7 +1330,29 @@ impl Widget for FlexWidget {
         parent_available_height: f32,
         sibling_basis: f32,
     ) -> (f32, f32) {
-        let (width, height) = self.natural_dimensions(
+        // Asked already this pass with the same question: the same answer
+        // (`LayoutContext::pass`).
+        let key = (ctx.pass != 0).then(|| MeasureKey {
+            grow_width_as_shrink: ctx.measure_grow_width_as_shrink,
+            grow_height_as_shrink: ctx.measure_grow_height_as_shrink,
+            row: parent_direction.is_row(),
+            sizes: [
+                parent_width.to_bits(),
+                parent_available_width.to_bits(),
+                parent_height.to_bits(),
+                parent_available_height.to_bits(),
+                sibling_basis.to_bits(),
+            ],
+        });
+        if let Some(key) = &key {
+            let measured = self.measured.borrow();
+            if measured.pass == ctx.pass {
+                if let Some((_, answer)) = measured.answers.iter().find(|(k, _)| k == key) {
+                    return *answer;
+                }
+            }
+        }
+        let answer = self.clamped_dimensions(
             ctx,
             parent_direction,
             parent_width,
@@ -1274,16 +1361,15 @@ impl Widget for FlexWidget {
             parent_available_height,
             sibling_basis,
         );
-        // **`max_height` is a ceiling on whatever the rules above chose** —
-        // a shrink, a grow's share, a fixed height alike (CSS's order: the
-        // max wins over the height). Clamped here, at the one door every
-        // parent and this node's own `layout` ask, so no sizing path can
-        // step round it. A `scroll` column clamped this way scrolls what
-        // no longer fits, which is what the key is for.
-        match self.style.max_height {
-            Some(max) => (width, height.min(max)),
-            None => (width, height),
+        if let Some(key) = key {
+            let mut measured = self.measured.borrow_mut();
+            if measured.pass != ctx.pass {
+                measured.pass = ctx.pass;
+                measured.answers.clear();
+            }
+            measured.answers.push((key, answer));
         }
+        answer
     }
 
     fn get_children(&self) -> Vec<WidgetRef> {
@@ -2604,6 +2690,7 @@ mod tests {
             default_font: None,
             measure_grow_width_as_shrink: false,
             measure_grow_height_as_shrink: false,
+            pass: 0,
         }
     }
 
@@ -2700,6 +2787,117 @@ mod tests {
         fn contains_point(&self, _point: &Point) -> bool {
             false
         }
+    }
+
+    /// A leaf that counts how often it is measured.
+    struct CountedLeaf {
+        asked: Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    impl Widget for CountedLeaf {
+        fn get_type(&self) -> &str {
+            "counted"
+        }
+
+        fn get_dimensions(
+            &self,
+            _ctx: &LayoutContext,
+            _parent_direction: &Direction,
+            _parent_width: f32,
+            _parent_available_width: f32,
+            _parent_height: f32,
+            _parent_available_height: f32,
+            _sibling_basis: f32,
+        ) -> (f32, f32) {
+            self.asked.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            (40.0, 20.0)
+        }
+
+        fn get_children(&self) -> Vec<WidgetRef> {
+            Vec::new()
+        }
+
+        fn get_basis(&self, _direction: &Direction) -> f32 {
+            0.0
+        }
+
+        fn get_children_basis(&self) -> f32 {
+            0.0
+        }
+
+        fn get_fixed_width(&self) -> Option<f32> {
+            None
+        }
+
+        fn get_fixed_height(&self) -> Option<f32> {
+            None
+        }
+
+        fn handle_event(&mut self, _event: &Event, _ctx: &mut EventContext, _self_ref: &WidgetRef) -> bool {
+            false
+        }
+
+        #[allow(clippy::too_many_arguments)]
+        fn layout(
+            &mut self,
+            _ctx: &LayoutContext,
+            _cursor_x: f32,
+            _cursor_y: f32,
+            _parent_direction: &Direction,
+            _parent_width: f32,
+            _parent_available_width: f32,
+            _parent_height: f32,
+            _parent_available_height: f32,
+            _sibling_basis: f32,
+        ) {
+        }
+
+        fn update(&mut self, _new_widget: WidgetRef) -> UpdateResult {
+            UpdateResult::replace()
+        }
+
+        fn contains_point(&self, _point: &Point) -> bool {
+            false
+        }
+    }
+
+    /// How often one leaf under `depth` nested shrink boxes, rows and
+    /// columns in turn, is measured by one layout of the outermost.
+    fn leaf_measures(depth: usize, pass: u64) -> usize {
+        let asked = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let mut node: WidgetRef = Arc::new(Mutex::new(CountedLeaf { asked: asked.clone() }));
+        for level in 0..depth {
+            let mut flex = FlexWidget::with_style(
+                FlexStyle::builder()
+                    .width(Size::Shrink)
+                    .height(Size::Shrink)
+                    .direction(if level % 2 == 0 { Direction::Row } else { Direction::Column })
+                    .build(),
+            );
+            flex.add_child(node);
+            node = Arc::new(Mutex::new(flex));
+        }
+        let ctx = LayoutContext { pass, ..test_ctx() };
+        node.lock()
+            .unwrap()
+            .layout(&ctx, 0.0, 0.0, &Direction::Column, 800.0, 800.0, 600.0, 600.0, 0.0);
+        asked.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// **A pass measures a node a bounded number of times, however deep it
+    /// sits** (`LayoutContext::pass`). Without the pass every shrink level
+    /// multiplied the leaf's measurements, which is the fixture's other
+    /// half: the same tree with no pass is asked thousands of times.
+    #[test]
+    fn a_pass_measures_a_deep_leaf_a_bounded_number_of_times() {
+        let unremembered = leaf_measures(10, 0);
+        let remembered = leaf_measures(10, LayoutContext::next_pass());
+        assert!(unremembered > 10_000, "the fixture no longer compounds: {unremembered}");
+        // A leaf is asked a fixed set of distinct questions (59 on
+        // 2026-10-31, against 147,620 with no pass), and four times as
+        // deep asks it no more.
+        assert!(remembered < 100, "measured {remembered} times in one pass");
+        assert_eq!(leaf_measures(40, LayoutContext::next_pass()), remembered);
     }
 
     #[test]
@@ -4465,31 +4663,49 @@ mod tests {
         assert!((opacity_delay(&list.children[1]) - 0.2).abs() < 1e-6);
     }
 
-    /// A wheel is reported handled only while a scroll container can
-    /// move that way: at an end it is not, so a host (the browser
-    /// stage) scrolls the page around it instead.
+    /// A wheel over chrome is **claimed** wherever the chrome is, and
+    /// **used** only while a scroll container can move that way. At an
+    /// end it is not, so a host with a page around the document (the
+    /// browser stage) scrolls the page; it is still claimed, so a host
+    /// with a world under the chrome (a map canvas) keeps it off the
+    /// world. The right-hand box blocks and cannot scroll at all: the
+    /// case where the two facts disagree from the first notch.
     #[test]
-    fn scroll_container_releases_the_wheel_at_its_ends() {
+    fn a_wheel_over_chrome_is_claimed_and_used_only_while_it_scrolls() {
         let src = r##"
             let main = fn () {
               Flex {
-                style: { width: 300, height: 100, direction: "column", overflow: "scroll" },
-                children: [Flex { style: { width: "grow", height: 250 } }],
+                style: { width: 600, height: 100, direction: "row" },
+                block_interactions: false,
+                children: [
+                  Flex {
+                    style: { width: 300, height: 100, direction: "column", overflow: "scroll" },
+                    children: [Flex { style: { width: "grow", height: 250 } }],
+                  },
+                  Flex { style: { width: 200, height: 100 } },
+                ],
               }
             };
         "##;
         let mut o =
             crate::Masque::from_source(src, crate::runtime::config::RuntimeConfig::default())
                 .expect("from_source");
-        o.get_ui_mut().layout(300.0, 100.0);
+        o.get_ui_mut().layout(600.0, 100.0);
         let ui = o.get_ui_mut();
-        let wheel = |dy: f32| Event::scroll(Point::new(50.0, 50.0), 0.0, dy);
+        let wheel = |x: f32, dy: f32| Event::scroll(Point::new(x, 50.0), 0.0, dy);
+        let both = |claimed, used| crate::widget::event::Wheel { claimed, used };
         // Positive dy is towards the top: at the top there is nowhere to go.
-        assert!(!ui.call_event(&wheel(40.0)), "at the top, a wheel up passes");
-        assert!(ui.call_event(&wheel(-100.0)), "a wheel down scrolls");
-        assert!(ui.call_event(&wheel(-100.0)), "to the end, clamped");
-        assert!(!ui.call_event(&wheel(-40.0)), "at the bottom, a wheel down passes");
-        assert!(ui.call_event(&wheel(40.0)), "and a wheel up scrolls again");
+        assert_eq!(ui.call_wheel(&wheel(50.0, 40.0)), both(true, false), "at the top, a wheel up");
+        assert_eq!(ui.call_wheel(&wheel(50.0, -100.0)), both(true, true), "a wheel down scrolls");
+        assert_eq!(ui.call_wheel(&wheel(50.0, -100.0)), both(true, true), "to the end, clamped");
+        assert_eq!(ui.call_wheel(&wheel(50.0, -40.0)), both(true, false), "at the bottom");
+        assert_eq!(ui.call_wheel(&wheel(50.0, 40.0)), both(true, true), "and up scrolls again");
+        // A blocking box with nothing to scroll.
+        assert_eq!(ui.call_wheel(&wheel(400.0, -40.0)), both(true, false), "a box that cannot scroll");
+        assert!(ui.call_event(&wheel(400.0, -40.0)), "call_event reports the claim");
+        assert!(ui.call_event(&wheel(50.0, 40.0)), "at a list's end too");
+        // Past every box: neither.
+        assert_eq!(ui.call_wheel(&wheel(550.0, -40.0)), both(false, false), "open ground");
     }
 
     /// A scroll column offers its children an unbounded main axis: a

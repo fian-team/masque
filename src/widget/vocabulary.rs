@@ -191,6 +191,7 @@ pub const FLEX_STYLE_KEYS: &[&str] = &[
     "main_alignment",
     "margin",
     "max_height",
+    "max_width",
     "opacity",
     "overflow",
     "padding",

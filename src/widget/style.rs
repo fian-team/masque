@@ -59,6 +59,13 @@ pub struct FlexStyle {
     /// with a ceiling grows with its content until it reaches it; with
     /// `overflow: "scroll"` it then scrolls what no longer fits.
     pub max_height: Option<f32>,
+    /// A ceiling on the width the rules above resolve, in logical pixels
+    /// (CSS `max-width`); the width twin of [`Self::max_height`]. A
+    /// `width: "grow"` box with a ceiling takes its share up to it, and a
+    /// parent's `main_alignment` (or `cross_alignment`, in a column) places
+    /// the clamped box in what is left — which is how a centred column of
+    /// readable width is written.
+    pub max_width: Option<f32>,
     pub direction: Direction,
     pub main_alignment: Alignment,
     pub cross_alignment: Alignment,
@@ -315,6 +322,7 @@ impl Default for FlexStyle {
             width: Size::Shrink,
             height: Size::Shrink,
             max_height: None,
+            max_width: None,
             direction: Direction::Row,
             main_alignment: Alignment::Start,
             cross_alignment: Alignment::Start,
@@ -393,6 +401,7 @@ impl FlexStyle {
             && self.width == other.width
             && self.height == other.height
             && self.max_height == other.max_height
+            && self.max_width == other.max_width
             && self.direction == other.direction
             && self.main_alignment == other.main_alignment
             && self.cross_alignment == other.cross_alignment
@@ -462,6 +471,11 @@ impl FlexStyleBuilder {
 
     pub fn max_height(mut self, max_height: f32) -> Self {
         self.style.max_height = Some(max_height);
+        self
+    }
+
+    pub fn max_width(mut self, max_width: f32) -> Self {
+        self.style.max_width = Some(max_width);
         self
     }
 

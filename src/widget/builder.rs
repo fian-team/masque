@@ -425,6 +425,9 @@ fn apply_flex_style_from_map(style: &mut FlexStyle, map: &HashMap<String, Value>
             "max_height" => {
                 style.max_height = value_to_f32(value);
             }
+            "max_width" => {
+                style.max_width = value_to_f32(value);
+            }
             "gap" => {
                 if let Some(g) = value_to_f32(value) {
                     style.gap = g;

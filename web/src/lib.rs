@@ -192,10 +192,15 @@ impl Stage {
         self.call(&Event::with_point(name.to_string(), point).with_modifiers(mods));
     }
 
-    /// True when the document took the wheel (a scroll container moved);
-    /// otherwise the page should scroll instead.
+    /// True when the document used the wheel (a scroll container moved);
+    /// otherwise the page should scroll instead. A wheel the chrome only
+    /// claims is the page's: a browser page chains, a game world does not.
     pub fn wheel(&mut self, x: f32, y: f32, dx: f32, dy: f32) -> bool {
-        self.call(&Event::scroll(Point::new(x, y), dx, dy))
+        let wheel = Event::scroll(Point::new(x, y), dx, dy);
+        match &mut self.masque {
+            Some(masque) => masque.get_ui_mut().call_wheel(&wheel).used,
+            None => false,
+        }
     }
 
     /// `key_code` is the DOM's `keyCode`, which is the code

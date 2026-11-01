@@ -571,6 +571,7 @@ mod tests {
             default_font: None,
             measure_grow_width_as_shrink: false,
             measure_grow_height_as_shrink: false,
+            pass: 0,
         }
     }
 

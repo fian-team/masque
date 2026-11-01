@@ -113,10 +113,30 @@ pub struct EventContext {
     pub needs_layout: bool,
     /// Set true by a scroll container that moved for this `scroll`
     /// event. A wheel over any blocking box counts as handled for
-    /// routing; this says whether it scrolled something, which is
-    /// what `UI::call_event` reports for a wheel, so a host (the
-    /// browser stage) knows whether to scroll what surrounds it.
+    /// routing, and that is what `UI::call_event` reports; this says
+    /// whether it also scrolled something, which `UI::call_wheel`
+    /// reports as [`Wheel::used`].
     pub scrolled: bool,
+}
+
+/// What one wheel did, as the two facts two kinds of host ask for
+/// ([`UI::call_wheel`](super::UI::call_wheel)).
+///
+/// They differ at a scroll container's end and over chrome that does
+/// not scroll: there the wheel is **claimed** but not **used**. A host
+/// with a world under its chrome (a camera, a canvas) forwards a wheel
+/// only when it is not claimed, so the world never moves under a panel.
+/// A host with a page around its document (the browser stage) scrolls
+/// the page whenever it is not used, so a list at its end hands the
+/// wheel on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Wheel {
+    /// Something under the pointer took it: a blocking box, a scroll
+    /// listener, or a drag in flight. What `UI::call_event` returns.
+    pub claimed: bool,
+    /// The document did something with it: a scroll container moved, a
+    /// scroll listener ran, or a drag in flight turned what it carries.
+    pub used: bool,
 }
 
 impl EventContext {
